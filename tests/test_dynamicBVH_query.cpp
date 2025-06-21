@@ -1,11 +1,9 @@
 #include <algorithm>
 #include <cstdint>
-#include <iostream>
 #include <set>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "Random.hpp"
 #include "geometry/AABB.hpp"
 #include "bvh/dynamicBVH.hpp"
 

@@ -2,11 +2,11 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <geometry/Ray.hpp>
 #include <stack>
 #include <vector>
 
 #include "geometry/AABB.hpp"
+#include "geometry/Ray.hpp"
 
 namespace c2d
 {
@@ -36,10 +36,9 @@ class DynamicBVH
 
 public:
     static constexpr uint32_t initialCapacity = 16;
-    static constexpr float defaultAABBMargin = 3.0f; // Expansion for AABBs
     using RaycastInfo = RaycastHit<IdType>;
 
-    DynamicBVH(float fatAABBMargin = defaultAABBMargin);
+    DynamicBVH(float fatAABBMargin = 0.0f);
 
     NodeIndex createNode();
     void destroyNode(NodeIndex nodeId);
@@ -50,6 +49,7 @@ public:
     NodeIndex createProxy(AABB aabb, IdType id);
     void destroyProxy(NodeIndex leafIndex);
 
+    void clear();
     uint32_t size() const { return nodeCount; }
     uint32_t capacity() const { return nodes.size(); }
     
@@ -174,6 +174,16 @@ void DynamicBVH<IdType>::destroyProxy(NodeIndex leafIndex)
 {
     removeLeaf(leafIndex);
     destroyNode(leafIndex);
+}
+
+template <typename IdType>
+void DynamicBVH<IdType>::clear()
+{
+    nodes.clear();
+    nodeCount = 0;
+    rootIndex = -1;
+    nextAvailableIndex = -1;
+    allocateNodes(initialCapacity);
 }
 
 template<typename IdType>

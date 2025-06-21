@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <set>
@@ -82,7 +81,8 @@ TEST_CASE("Node deallocation", "[DynamicBVH]")
 
 TEST_CASE("Create proxy inserts node into tree", "[DynamicBVH]")
 {
-    DynamicBVH<std::string> bvh;
+    constexpr float margin = 3.0f;
+    DynamicBVH<std::string> bvh(margin);
 
     const std::string id1 = "proxy1";
     AABB aabb1(Vec2{0.0f, 0.0f}, Vec2{1.0f, 1.0f});
@@ -110,7 +110,7 @@ TEST_CASE("Create proxy inserts node into tree", "[DynamicBVH]")
     REQUIRE((child2.id == id1 || child2.id == id2));
 
     // Verify AABB of root is the union
-    AABB expected = AABB::combine(aabb1, aabb2).fattened(DynamicBVH<std::string>::defaultAABBMargin);
+    AABB expected = AABB::combine(aabb1, aabb2).fattened(margin);
     REQUIRE(root.aabb.min.x == Approx(expected.min.x));
     REQUIRE(root.aabb.min.y == Approx(expected.min.y));
     REQUIRE(root.aabb.max.x == Approx(expected.max.x));
@@ -280,4 +280,27 @@ TEST_CASE("DynamicBVH proxy update skips tree change for small moves", "[Dynamic
     const auto& node = bvh.getNode(nodeId);
     CHECK(node.aabb.min == largeMove.min - margin);
     CHECK(node.aabb.max == largeMove.max + margin + displacement);
+}
+
+TEST_CASE("DynamicBVH handles moving proxies with remove and reinsert", "[DynamicBVH][Advanced][Move]")
+{
+    constexpr float margin = 0.1f;
+    DynamicBVH<uint32_t> bvh(0.1f);
+
+    NodeIndex idx = bvh.createProxy({Vec2{0,0}, Vec2{1,1}}, 5);
+
+    // Move proxy far away (should require removal and reinsertion)
+    bool moved = bvh.moveProxy(idx, {Vec2{10,10}, Vec2{11,11}}, Vec2{10,10});
+    REQUIRE(moved);
+
+    // Query at old location should NOT find proxy
+    AABB oldArea{Vec2{-1,-1}, Vec2{2,2}};
+    std::vector<uint32_t> hits;
+    hits = bvh.query(oldArea);
+    REQUIRE_FALSE(std::find(hits.begin(), hits.end(), 5) != hits.end());
+
+    // Query at new location should find proxy
+    AABB newArea{Vec2{9,9}, Vec2{12,12}};
+    hits = bvh.query(newArea);
+    REQUIRE(std::find(hits.begin(), hits.end(), 5) != hits.end());
 }
