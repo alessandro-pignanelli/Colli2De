@@ -1,0 +1,12 @@
+{
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "clangd.arguments": ["-log=verbose", 
+                         "-pretty", 
+                         "--background-index"],
+    "clangd.fallbackFlags": [
+        "-isystem${workspaceFolder}/src",
+        "-isystem${workspaceFolder}/include",
+        "-isystem${workspaceFolder}/build/Debug/_deps/catch2-src/src",
+        "-isystem${workspaceFolder}/build/Debug/_deps/catch2-build/generated-includes"
+    ],
+}

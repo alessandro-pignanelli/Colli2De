@@ -1,0 +1,63 @@
+{
+    "env": {
+        "commonIncludePath": [
+            "${workspaceFolder}/include",
+            "${workspaceFolder}/src"
+        ],
+        "testsIncludePath": [
+            "${workspaceFolder}/build/Debug/_deps/catch2-src/src"
+        ]
+    },
+    "configurations": [
+        {
+            "name": "Linux",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "linux-gcc-x86",
+            "includePath": [
+                "${commonIncludePath}",
+                "${testsIncludePath}"
+            ],
+            "browse": {
+                "path": [
+                    "${commonIncludePath}",
+                    "${testsIncludePath}"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "Mac",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "macos-clang-x64",
+            "includePath": [
+                "${commonIncludePath}",
+                "${testsIncludePath}"
+            ],
+            "browse": {
+                "path": [
+                    "${commonIncludePath}",
+                    "${testsIncludePath}"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "Win32",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "windows-msvc-x64",
+            "includePath": [
+                "${commonIncludePath}",
+                "${testsIncludePath}"
+            ],
+            "browse": {
+                "path": [
+                    "${commonIncludePath}",
+                    "${testsIncludePath}"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4,
+    "enableConfigurationSquiggles": true
+}
