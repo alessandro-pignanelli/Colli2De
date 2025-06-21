@@ -16,11 +16,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(catch2)
 
+file(GLOB_RECURSE TESTS "test_*.cpp")
+
 # Unit test executable
-add_executable(Colli2DeTests
-    test_AABB.cpp
-    test_dynamicBVH.cpp
-)
+add_executable(Colli2DeTests ${TESTS})
 
 target_link_libraries(Colli2DeTests
     PRIVATE

@@ -52,6 +52,8 @@ public:
 
 	std::string toString() const;
 
+	constexpr float length() const;
+	constexpr float lengthSquared() const;
 	constexpr Vec2 interpolate(Vec2 other, float percentage) const;
 	constexpr Vec2 normalize() const;
 
@@ -75,6 +77,11 @@ public:
 	constexpr Vec2 operator*(float value) const;
 	constexpr Vec2 operator/(float value) const;
 
+	constexpr float operator[](int index) const
+	{
+		assert(index == 0 || index == 1);
+		return index == 0 ? x : y;
+	}
 	constexpr bool operator==(Vec2 other) const;
 	friend std::ostream& operator<<(std::ostream& os, const Vec2& vec)
 	{
@@ -85,6 +92,16 @@ public:
 inline std::string Vec2::toString() const
 {
 	return std::format("Vec2(x={}, y={})", x, y);
+}
+
+constexpr float Vec2::length() const
+{
+	return inverseSqrt(x * x + y * y);
+}
+
+constexpr float Vec2::lengthSquared() const
+{
+	return x * x + y * y;
 }
 
 constexpr Vec2 Vec2::interpolate(Vec2 other, float percentage) const

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
+#include <geometry/Ray.hpp>
 #include <stack>
 #include <vector>
 
@@ -9,7 +11,7 @@
 namespace c2d
 {
 
-using NodeId = int32_t;
+using NodeIndex = int32_t;
 using NodeIndex = int32_t;
 
 template<typename IdType>
@@ -35,16 +37,17 @@ class DynamicBVH
 public:
     static constexpr uint32_t initialCapacity = 16;
     static constexpr float defaultAABBMargin = 3.0f; // Expansion for AABBs
+    using RaycastInfo = RaycastHit<IdType>;
 
     DynamicBVH(float fatAABBMargin = defaultAABBMargin);
 
-    NodeId createNode();
-    void destroyNode(NodeId nodeId);
+    NodeIndex createNode();
+    void destroyNode(NodeIndex nodeId);
     // Moves the proxy to a new AABB, returns true if the tree structure has changed
     bool moveProxy(NodeIndex nodeIndex, AABB aabb, Vec2 /*displacement*/);
     
     // Inserts a new object {aabb, id} into the BVH and returns the index of the created node
-    NodeId createProxy(AABB aabb, IdType id);
+    NodeIndex createProxy(AABB aabb, IdType id);
     void destroyProxy(NodeIndex leafIndex);
 
     uint32_t size() const { return nodeCount; }
@@ -53,8 +56,11 @@ public:
     NodeIndex getRootIndex() const { return rootIndex; }
     const BVHNode<IdType>& getNode(NodeIndex index) const { return nodes[index]; }
 
-    template<typename Callback>
-    void query(AABB queryAABB, Callback&& callback) const;
+    std::vector<IdType> query(AABB queryAABB) const;
+    std::optional<IdType> firstHitRaycast(Ray ray) const;
+    std::optional<RaycastInfo> firstHitRaycastDetailed(Ray ray) const;
+    std::vector<IdType> piercingRaycast(Ray ray) const;
+    std::vector<RaycastInfo> piercingRaycastDetailed(Ray ray) const;
 
 private:
     std::vector<BVHNode<IdType>> nodes;
@@ -67,12 +73,13 @@ private:
     void doubleCapacity();
     void allocateNodes(uint32_t capacity);
 
-    void insertLeaf(NodeId leaf);
+    void insertLeaf(NodeIndex leaf);
     void removeLeaf(NodeIndex leafIndex);
 
-    NodeId findBestSiblingIndex(AABB leaf) const;
+    NodeIndex findBestSiblingIndex(AABB leaf) const;
     NodeIndex balance(NodeIndex index);
 };
+static_assert(std::is_trivially_copyable_v<BVHNode<uint32_t>>, "BVHNode must be trivially copyable");
 
 template<typename IdType>
 DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin)
@@ -113,12 +120,12 @@ void DynamicBVH<IdType>::doubleCapacity()
 }
 
 template<typename IdType>
-NodeId DynamicBVH<IdType>::createNode()
+NodeIndex DynamicBVH<IdType>::createNode()
 {
     if (nextAvailableIndex == -1)
         doubleCapacity();
 
-    const NodeId nodeId = nextAvailableIndex;
+    const NodeIndex nodeId = nextAvailableIndex;
     BVHNode<IdType>& node = nodes[nodeId];
 
     nextAvailableIndex = node.parentIndex;
@@ -133,9 +140,9 @@ NodeId DynamicBVH<IdType>::createNode()
 }
 
 template<typename IdType>
-void DynamicBVH<IdType>::destroyNode(NodeId nodeId)
+void DynamicBVH<IdType>::destroyNode(NodeIndex nodeId)
 {
-    assert(0 <= nodeId && nodeId < static_cast<NodeId>(nodes.size()));
+    assert(0 <= nodeId && nodeId < static_cast<NodeIndex>(nodes.size()));
     BVHNode<IdType>& node = nodes[nodeId];
 
     node.parentIndex = nextAvailableIndex;
@@ -149,9 +156,9 @@ void DynamicBVH<IdType>::destroyNode(NodeId nodeId)
 }
 
 template<typename IdType>
-NodeId DynamicBVH<IdType>::createProxy(AABB aabb, IdType id)
+NodeIndex DynamicBVH<IdType>::createProxy(AABB aabb, IdType id)
 {
-    const NodeId nodeId = createNode();
+    const NodeIndex nodeId = createNode();
     BVHNode<IdType>& node = nodes[nodeId];
 
     node.aabb = aabb.fattened(fatAABBMargin);
@@ -424,12 +431,12 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 }
 
 template<typename IdType>
-template<typename Callback>
-void DynamicBVH<IdType>::query(AABB queryAABB, Callback&& callback) const
+std::vector<IdType> DynamicBVH<IdType>::query(AABB queryAABB) const
 {
     if (rootIndex == -1)
-        return;
+        return {};
 
+    std::vector<IdType> intersections;
     std::stack<NodeIndex> stack;
     stack.push(rootIndex);
 
@@ -446,8 +453,7 @@ void DynamicBVH<IdType>::query(AABB queryAABB, Callback&& callback) const
 
         if (node.isLeaf())
         {
-            // Report the id
-            callback(node.id);
+            intersections.push_back(node.id);
         }
         else
         {
@@ -455,8 +461,160 @@ void DynamicBVH<IdType>::query(AABB queryAABB, Callback&& callback) const
             stack.push(node.child2Index);
         }
     }
+
+    return intersections;
 }
 
-static_assert(std::is_trivially_copyable_v<BVHNode<uint32_t>>, "BVHNode must be trivially copyable");
+template<typename IdType>
+std::vector<IdType> DynamicBVH<IdType>::piercingRaycast(Ray ray) const
+{
+    if (rootIndex == -1)
+        return {};
+
+    std::vector<IdType> hits;
+    std::stack<NodeIndex> stack;
+    stack.push(rootIndex);
+
+    while (!stack.empty())
+    {
+        NodeIndex nodeIndex = stack.top();
+        stack.pop();
+        const auto& node = nodes[nodeIndex];
+
+        if (!node.aabb.intersects(ray))
+            continue;
+
+        if (node.isLeaf())
+        {
+            hits.push_back(node.id);
+        }
+        else
+        {
+            stack.push(node.child1Index);
+            stack.push(node.child2Index);
+        }
+    }
+
+    return hits;
+}
+
+template<typename IdType>
+std::optional<IdType> DynamicBVH<IdType>::firstHitRaycast(Ray ray) const
+{
+    if (rootIndex == -1)
+        return std::nullopt;
+
+    std::optional<IdType> closestId;
+    float firstHitTime = std::numeric_limits<float>::max();
+
+    std::stack<NodeIndex> stack;
+    stack.push(rootIndex);
+
+    while (!stack.empty())
+    {
+        NodeIndex nodeIndex = stack.top();
+        stack.pop();
+        const auto& node = nodes[nodeIndex];
+
+        const auto intersection = node.aabb.intersects(ray);
+        if (!intersection)
+            continue;
+
+        if (node.isLeaf())
+        {
+            if (intersection->first < firstHitTime)
+            {
+                firstHitTime = intersection->first;
+                closestId = node.id;
+            }
+        }
+        else
+        {
+            stack.push(node.child1Index);
+            stack.push(node.child2Index);
+        }
+    }
+
+    return closestId;
+}
+
+template<typename IdType>
+std::vector<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::piercingRaycastDetailed(Ray ray) const
+{
+    if (rootIndex == -1)
+        return {};
+
+    std::vector<RaycastInfo> hits;
+    std::stack<NodeIndex> stack;
+    stack.push(rootIndex);
+
+    while (!stack.empty())
+    {
+        NodeIndex nodeIndex = stack.top();
+        stack.pop();
+        const auto& node = nodes[nodeIndex];
+
+        const auto intersection = node.aabb.intersects(ray);
+        if (!intersection)
+            continue;
+
+        if (node.isLeaf())
+        {
+            hits.push_back(RaycastInfo::fromRay(node.id, ray, *intersection));
+        }
+        else
+        {
+            stack.push(node.child1Index);
+            stack.push(node.child2Index);
+        }
+    }
+
+    std::sort(hits.begin(), hits.end(), [&](const RaycastInfo& a, const RaycastInfo& b)
+    {
+        return (a.entry - ray.p1).lengthSquared() < (b.entry - ray.p1).lengthSquared();
+    });
+
+    return hits;
+}
+
+template<typename IdType>
+std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firstHitRaycastDetailed(Ray ray) const
+{
+    if (rootIndex == -1)
+        return std::nullopt;
+
+    std::optional<RaycastInfo> firstHit;
+    float firstHitTime = std::numeric_limits<float>::max();
+
+    std::stack<NodeIndex> stack;
+    stack.push(rootIndex);
+
+    while (!stack.empty())
+    {
+        NodeIndex nodeIndex = stack.top();
+        stack.pop();
+        const auto& node = nodes[nodeIndex];
+
+        const auto intersection = node.aabb.intersects(ray);
+        if (!intersection)
+            continue;
+
+        if (node.isLeaf())
+        {
+            if (intersection->first < firstHitTime)
+            {
+                firstHitTime = intersection->first;
+                firstHit = RaycastInfo::fromRay(node.id, ray, *intersection);
+            }
+        }
+        else
+        {
+            stack.push(node.child1Index);
+            stack.push(node.child2Index);
+        }
+    }
+
+    return firstHit;
+}
 
 } // namespace c2d

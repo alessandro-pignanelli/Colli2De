@@ -1,6 +1,9 @@
 #pragma once
 
+#include <optional>
+
 #include "colli2de/Vec2.hpp"
+#include "geometry/Ray.hpp"
 
 namespace c2d
 {
@@ -24,7 +27,8 @@ struct AABB
     bool contains(Vec2 point) const;
     bool contains(AABB other) const;
     bool intersects(AABB other) const;
-    bool overlaps(AABB other) const;
+    // Returns the intersection times of the ray with this AABB
+    std::optional<std::pair<float, float>> intersects(Ray ray) const;
 
     AABB fattened(float margin) const;
     AABB fattened(float margin, Vec2 displacement) const;

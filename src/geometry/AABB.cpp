@@ -1,6 +1,7 @@
 #include "geometry/AABB.hpp"
 
 #include <algorithm>
+#include <utility>
 
 namespace c2d
 {
@@ -40,6 +41,52 @@ bool AABB::intersects(AABB other) const
 {
     return min.x <= other.max.x && max.x >= other.min.x &&
            min.y <= other.max.y && max.y >= other.min.y;
+}
+
+std::optional<std::pair<float, float>> AABB::intersects(Ray ray) const
+{
+    // Slab method (compute the times when the ray enters and leaves the box "slab" along that axis)
+    // Times are fractions of the total ray length
+    // https://en.wikipedia.org/wiki/Slab_method
+    float intersectionTimeMin = 0.0f;
+    float intersectionTimeMax = 1.0f;
+    Vec2 direction = ray.p2 - ray.p1;
+
+    // X intersection
+    {
+        float invD = 1.0f / direction.x;
+        float entryPoint = (min.x - ray.p1.x) * invD;
+        float exitPoint = (max.x - ray.p1.x) * invD;
+
+        if (invD < 0.0f)
+            std::swap(entryPoint, exitPoint);
+
+        intersectionTimeMin = entryPoint > intersectionTimeMin ? entryPoint : intersectionTimeMin;
+        intersectionTimeMax = exitPoint < intersectionTimeMax ? exitPoint : intersectionTimeMax;
+
+        // If the ray does not intersect the slab, return false
+        if (intersectionTimeMax < intersectionTimeMin)
+            return std::nullopt;
+    }
+
+    // Y intersection
+    {
+        float invD = 1.0f / direction.y;
+        float entryPoint = (min.y - ray.p1.y) * invD;
+        float exitPoint = (max.y - ray.p1.y) * invD;
+
+        if (invD < 0.0f)
+            std::swap(entryPoint, exitPoint);
+
+        intersectionTimeMin = entryPoint > intersectionTimeMin ? entryPoint : intersectionTimeMin;
+        intersectionTimeMax = exitPoint < intersectionTimeMax ? exitPoint : intersectionTimeMax;
+
+        // If the ray does not intersect the slab, return false
+        if (intersectionTimeMax < intersectionTimeMin)
+            return std::nullopt;
+    }
+
+    return std::make_pair(intersectionTimeMin, intersectionTimeMax);
 }
 
 AABB AABB::fattened(float margin) const

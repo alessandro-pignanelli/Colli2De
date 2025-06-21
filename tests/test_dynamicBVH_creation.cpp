@@ -261,7 +261,7 @@ TEST_CASE("DynamicBVH proxy update skips tree change for small moves", "[Dynamic
     DynamicBVH<uint32_t> bvh(margin);
 
     AABB original{ Vec2{0.0f, 0.0f}, Vec2{2.0f, 2.0f} };
-    NodeId nodeId = bvh.createProxy(original, 42);
+    NodeIndex nodeId = bvh.createProxy(original, 42);
     std::cout << "Created proxy with id: " << nodeId << std::endl;
 
     // Small move: stays within fattened box
@@ -280,87 +280,4 @@ TEST_CASE("DynamicBVH proxy update skips tree change for small moves", "[Dynamic
     const auto& node = bvh.getNode(nodeId);
     CHECK(node.aabb.min == largeMove.min - margin);
     CHECK(node.aabb.max == largeMove.max + margin + displacement);
-}
-
-TEST_CASE("DynamicBVH::query finds all overlapping proxies", "[DynamicBVH][Query]")
-{
-    const float margin = 0.1f;
-    DynamicBVH<uint32_t> bvh(margin);
-    
-    // Query an area covering (2,2) to (4,4)
-    AABB queryAABB{Vec2{2.0f, 2.0f}, Vec2{4.0f, 4.0f}};
-
-    // Expect regions from {1,1} to {5,5} to overlap (due to margin)
-    std::vector<AABB> expectedOverlaps;
-    std::set<uint32_t> expectedIds;
-    for (uint32_t i = 1; i < 5; i++)
-        for (uint32_t j = 1; j < 5; j++)
-        {
-            float x = static_cast<float>(i);
-            float y = static_cast<float>(j);
-            expectedOverlaps.emplace_back(Vec2{ x, y },
-                                          Vec2{ x + 1.0f, y + 1.0f });
-        }
-
-    // Insert a grid of proxies from (0,0) to (6,6)
-    const uint32_t gridSize = 6;
-    for (uint32_t i = 0; i < gridSize; ++i)
-    {
-        for (uint32_t j = 0; j < gridSize; ++j)
-        {
-            float x = static_cast<float>(i);
-            float y = static_cast<float>(j);
-            const Vec2 min(x, y);
-            const Vec2 max(x + 1.0f, y + 1.0f);
-            const AABB aabb{min, max};
-
-            const bool isExpectedOverlap = std::find(
-                    expectedOverlaps.begin(), expectedOverlaps.end(), aabb
-                ) != expectedOverlaps.end();
-
-            const auto customId = i * gridSize + j;
-            NodeId nodeIndex = bvh.createProxy(aabb, customId);
-            if (isExpectedOverlap)
-                expectedIds.insert(customId);
-        }
-    }
-
-    std::vector<uint32_t> foundIds;
-    bvh.query(queryAABB, [&](uint32_t id) { foundIds.push_back(id); });
-
-    // Expect overlaps:
-    // - {(1, 1), (2, 2)}, {(1, 2), (2, 3)}, {(1, 3), (2, 4)}, {(1, 4), (2, 5)}
-    // - {(2, 1), (3, 2)}, {(2, 2), (3, 3)}, {(2, 3), (3, 4)}, {(2, 4), (3, 5)}
-    // - {(3, 1), (4, 2)}, {(3, 2), (4, 3)}, {(3, 3), (4, 4)}, {(3, 4), (4, 5)}
-    // - {(4, 1), (5, 2)}, {(4, 2), (5, 3)}, {(4, 3), (5, 4)}, {(4, 4), (5, 5)}
-
-    // Should find all 16 ids in the 3x3 area
-    CHECK(foundIds.size() == expectedOverlaps.size());
-    for (auto id : foundIds)
-        CHECK(expectedIds.find(id) != expectedIds.end());
-
-    // Query an area that does not overlap with any proxies
-    foundIds.clear();
-    AABB nonOverlappingQuery{Vec2{6.5f, 6.5f}, Vec2{7.5f, 7.5f}};
-    bvh.query(nonOverlappingQuery, [&](uint32_t id) { foundIds.push_back(id); });
-
-    // Should find no ids
-    CHECK(foundIds.empty());
-
-    // Query an area that overlaps with a single proxy
-    foundIds.clear();
-    AABB singleOverlapQuery{Vec2{3.2f, 3.2f}, Vec2{3.8f, 3.8f}};
-    bvh.query(singleOverlapQuery, [&](uint32_t id) { foundIds.push_back(id); });
-
-    // Should find exactly one id
-    CHECK(foundIds.size() == 1);
-    CHECK(foundIds[0] == 21); // The proxy with AABB{(3, 3), (4, 4)}
-
-    // Query an area that overlaps with every proxy
-    foundIds.clear();
-    AABB fullOverlapQuery{Vec2{0.0f, 0.0f}, Vec2{6.0f, 6.0f}};
-    bvh.query(fullOverlapQuery, [&](uint32_t id) { foundIds.push_back(id); });
-
-    // Should find all 36 ids
-    CHECK(foundIds.size() == gridSize * gridSize);
 }

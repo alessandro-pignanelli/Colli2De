@@ -85,7 +85,12 @@ IF %build%==1 (
 
     echo Building project with arguments: !args! ^(build type: %build_type%^)
     pushd "%~dp0" >nul
+
     call build.bat !args!
+    IF !ERRORLEVEL! NEQ 0 (
+        exit /b %ERRORLEVEL%
+    )
+
     popd >nul
     echo Build completed successfully.
 )
