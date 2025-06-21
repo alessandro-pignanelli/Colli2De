@@ -1,9 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <stack>
 #include <vector>
 
-#include <AABB.hpp>
+#include "geometry/AABB.hpp"
 
 namespace c2d
 {
@@ -33,39 +34,49 @@ class DynamicBVH
 
 public:
     static constexpr uint32_t initialCapacity = 16;
+    static constexpr float defaultAABBMargin = 3.0f; // Expansion for AABBs
 
-    DynamicBVH();
+    DynamicBVH(float fatAABBMargin = defaultAABBMargin);
 
     NodeId createNode();
     void destroyNode(NodeId nodeId);
+    // Moves the proxy to a new AABB, returns true if the tree structure has changed
+    bool moveProxy(NodeIndex nodeIndex, AABB aabb, Vec2 /*displacement*/);
     
-    // Inserts a new object {aabb, id} into the BVH and returns the index of the created node.
+    // Inserts a new object {aabb, id} into the BVH and returns the index of the created node
     NodeId createProxy(AABB aabb, IdType id);
+    void destroyProxy(NodeIndex leafIndex);
 
     uint32_t size() const { return nodeCount; }
-    uint32_t capacity() const { return nodeCapacity; }
+    uint32_t capacity() const { return nodes.size(); }
     
     NodeIndex getRootIndex() const { return rootIndex; }
     const BVHNode<IdType>& getNode(NodeIndex index) const { return nodes[index]; }
 
+    template<typename Callback>
+    void query(AABB queryAABB, Callback&& callback) const;
+
 private:
     std::vector<BVHNode<IdType>> nodes;
+    uint32_t nodeCount = 0;
+    const float fatAABBMargin = 3.0f;
 
     NodeIndex rootIndex = -1;
     NodeIndex nextAvailableIndex = -1;
 
-    uint32_t nodeCount = 0;
-    uint32_t nodeCapacity = 0;
-
     void doubleCapacity();
     void allocateNodes(uint32_t capacity);
+
     void insertLeaf(NodeId leaf);
+    void removeLeaf(NodeIndex leafIndex);
+
     NodeId findBestSiblingIndex(AABB leaf) const;
     NodeIndex balance(NodeIndex index);
 };
 
 template<typename IdType>
-DynamicBVH<IdType>::DynamicBVH()
+DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin)
+    : fatAABBMargin(fatAABBMargin)
 {
     allocateNodes(initialCapacity);
 }
@@ -82,24 +93,23 @@ void DynamicBVH<IdType>::allocateNodes(uint32_t capacity)
     nodes[capacity - 1].parentIndex = -1;
 
     nextAvailableIndex = 0;
-    nodeCapacity = capacity;
     nodeCount = 0;
 }
 
 template<typename IdType>
 void DynamicBVH<IdType>::doubleCapacity()
 {
-    assert(nodeCount == nodeCapacity);
+    const uint32_t currentCapacity = capacity();
+    assert(nodeCount == currentCapacity);
 
-    const uint32_t newCapacity = nodeCapacity << 1;
+    const uint32_t newCapacity = currentCapacity << 1;
 
     nodes.resize(newCapacity);
-    for (NodeIndex i = nodeCapacity - 1; i < newCapacity - 1; ++i)
+    for (NodeIndex i = currentCapacity - 1; i < newCapacity - 1; ++i)
         nodes[i].parentIndex = i + 1;
     nodes[newCapacity - 1].parentIndex = -1;
     
-    nextAvailableIndex = nodeCapacity;
-    nodeCapacity = newCapacity;
+    nextAvailableIndex = currentCapacity;
 }
 
 template<typename IdType>
@@ -144,12 +154,33 @@ NodeId DynamicBVH<IdType>::createProxy(AABB aabb, IdType id)
     const NodeId nodeId = createNode();
     BVHNode<IdType>& node = nodes[nodeId];
 
-    node.aabb = aabb; // Later we'll expand this to create a "fat AABB"
+    node.aabb = aabb.fattened(fatAABBMargin);
     node.id = id;
     node.height = 0;
 
     insertLeaf(nodeId);
     return nodeId;
+}
+
+template<typename IdType>
+void DynamicBVH<IdType>::destroyProxy(NodeIndex leafIndex)
+{
+    removeLeaf(leafIndex);
+    destroyNode(leafIndex);
+}
+
+template<typename IdType>
+bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB, Vec2 displacement)
+{
+    // If the current fattened AABB contains the new AABB, no need to update the tree
+    if (nodes[nodeIndex].aabb.contains(newAABB))
+        return false;
+
+    // Otherwise, remove and re-insert with a newly fattened AABB
+    removeLeaf(nodeIndex);
+    nodes[nodeIndex].aabb = newAABB.fattened(fatAABBMargin, displacement);
+    insertLeaf(nodeIndex);
+    return true;
 }
 
 template<typename IdType>
@@ -204,6 +235,55 @@ void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
 
         nodes[currentNodeIndex].aabb = AABB::combine(nodes[child1Index].aabb, nodes[child2Index].aabb);
         nodes[currentNodeIndex].height = 1 + std::max(nodes[child1Index].height, nodes[child2Index].height);
+
+        currentNodeIndex = nodes[currentNodeIndex].parentIndex;
+    }
+}
+
+template<typename IdType>
+void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
+{
+    if (leafIndex == rootIndex)
+    {
+        rootIndex = -1;
+        return;
+    }
+
+    NodeIndex parentIndex = nodes[leafIndex].parentIndex;
+    NodeIndex grandParentIndex = nodes[parentIndex].parentIndex;
+    NodeIndex siblingIndex = (nodes[parentIndex].child1Index == leafIndex)
+                                 ? nodes[parentIndex].child2Index
+                                 : nodes[parentIndex].child1Index;
+
+    // Connect sibling to grandparent
+    if (grandParentIndex != -1)
+    {
+        if (nodes[grandParentIndex].child1Index == parentIndex)
+            nodes[grandParentIndex].child1Index = siblingIndex;
+        else
+            nodes[grandParentIndex].child2Index = siblingIndex;
+        nodes[siblingIndex].parentIndex = grandParentIndex;
+    }
+    else
+    {
+        rootIndex = siblingIndex;
+        nodes[siblingIndex].parentIndex = -1;
+    }
+
+    // Recycle parent node
+    destroyNode(parentIndex);
+
+    // Walk up and fix heights and AABBs (including rebalancing)
+    NodeIndex currentNodeIndex = grandParentIndex;
+    while (currentNodeIndex != -1)
+    {
+        currentNodeIndex = balance(currentNodeIndex);
+
+        NodeIndex child1 = nodes[currentNodeIndex].child1Index;
+        NodeIndex child2 = nodes[currentNodeIndex].child2Index;
+
+        nodes[currentNodeIndex].aabb = AABB::combine(nodes[child1].aabb, nodes[child2].aabb);
+        nodes[currentNodeIndex].height = 1 + std::max(nodes[child1].height, nodes[child2].height);
 
         currentNodeIndex = nodes[currentNodeIndex].parentIndex;
     }
@@ -342,5 +422,41 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 
     return upIndex;
 }
+
+template<typename IdType>
+template<typename Callback>
+void DynamicBVH<IdType>::query(AABB queryAABB, Callback&& callback) const
+{
+    if (rootIndex == -1)
+        return;
+
+    std::stack<NodeIndex> stack;
+    stack.push(rootIndex);
+
+    while (!stack.empty())
+    {
+        NodeIndex nodeIndex = stack.top();
+        stack.pop();
+        const auto& node = nodes[nodeIndex];
+
+        // If the node's AABB does not intersect with the query AABB
+        // Skip the whole subtree (since it is contained in the node's AABB)
+        if (!node.aabb.intersects(queryAABB))
+            continue;
+
+        if (node.isLeaf())
+        {
+            // Report the id
+            callback(node.id);
+        }
+        else
+        {
+            stack.push(node.child1Index);
+            stack.push(node.child2Index);
+        }
+    }
+}
+
+static_assert(std::is_trivially_copyable_v<BVHNode<uint32_t>>, "BVHNode must be trivially copyable");
 
 } // namespace c2d

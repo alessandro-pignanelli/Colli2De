@@ -1,13 +1,16 @@
+#include <algorithm>
 #include <cstdint>
+#include <iostream>
 #include <set>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include "Random.hpp"
-#include "AABB.hpp"
+#include "geometry/AABB.hpp"
 #include "bvh/dynamicBVH.hpp"
 
 using namespace c2d;
+using namespace Catch;
 
 TEST_CASE("Node allocation", "[DynamicBVH]")
 {
@@ -107,11 +110,11 @@ TEST_CASE("Create proxy inserts node into tree", "[DynamicBVH]")
     REQUIRE((child2.id == id1 || child2.id == id2));
 
     // Verify AABB of root is the union
-    AABB expected = AABB::combine(aabb1, aabb2);
-    REQUIRE(root.aabb.min.x == Catch::Approx(expected.min.x));
-    REQUIRE(root.aabb.min.y == Catch::Approx(expected.min.y));
-    REQUIRE(root.aabb.max.x == Catch::Approx(expected.max.x));
-    REQUIRE(root.aabb.max.y == Catch::Approx(expected.max.y));
+    AABB expected = AABB::combine(aabb1, aabb2).fattened(DynamicBVH<std::string>::defaultAABBMargin);
+    REQUIRE(root.aabb.min.x == Approx(expected.min.x));
+    REQUIRE(root.aabb.min.y == Approx(expected.min.y));
+    REQUIRE(root.aabb.max.x == Approx(expected.max.x));
+    REQUIRE(root.aabb.max.y == Approx(expected.max.y));
 }
 
 TEST_CASE("DynamicBVH balancing: height after sequential insertions", "[DynamicBVH][Balance]") 
@@ -193,4 +196,171 @@ TEST_CASE("DynamicBVH balancing: tree remains valid after zigzag insertions", "[
         }
     }
     REQUIRE(leaves == 50);
+}
+
+TEST_CASE("DynamicBVH removes proxies and maintains balance", "[DynamicBVH][Remove]") 
+{
+    DynamicBVH<uint32_t> bvh;
+    std::vector<NodeIndex> proxies;
+    for (uint32_t i = 0; i < 20; ++i)
+    {
+        float f = static_cast<float>(i);
+        proxies.push_back(bvh.createProxy({{f, f}, {f+1, f+1}}, i));
+    }
+
+    // Remove every other proxy
+    for (size_t i = 0; i < proxies.size(); i += 2)
+    {
+        bvh.destroyProxy(proxies[i]);
+    }
+
+    // Check remaining leaves == 10
+    int leaves = 0;
+    std::vector<NodeIndex> stack{bvh.getRootIndex()};
+    while (!stack.empty())
+    {
+        NodeIndex idx = stack.back();
+        stack.pop_back();
+
+        if (idx == -1)
+            continue;
+
+        const auto& node = bvh.getNode(idx);
+        if (node.isLeaf())
+            ++leaves;
+        else
+        {
+            stack.push_back(node.child1Index);
+            stack.push_back(node.child2Index);
+        }
+    }
+    REQUIRE(leaves == 10);
+
+    // Tree remains balanced
+    int height = bvh.getNode(bvh.getRootIndex()).height;
+    REQUIRE(height <= 5);
+}
+
+TEST_CASE("DynamicBVH uses fattened AABB for proxies", "[DynamicBVH][Fattened]") 
+{
+    const float margin = 3.0f;
+    DynamicBVH<uint32_t> bvh(margin);
+
+    AABB aabb{ Vec2{2.0f, 3.0f}, Vec2{5.0f, 7.0f} };
+    NodeIndex idx = bvh.createProxy(aabb, 123);
+
+    const auto& node = bvh.getNode(idx);
+    REQUIRE(node.aabb.min.x == Approx(aabb.min.x - margin));
+    REQUIRE(node.aabb.max.y == Approx(aabb.max.y + margin));
+}
+
+TEST_CASE("DynamicBVH proxy update skips tree change for small moves", "[DynamicBVH][Fattened][MoveProxy]") 
+{
+    const float margin = 3.0f;
+    const Vec2 displacement{ 2.0f, 2.0f };
+    DynamicBVH<uint32_t> bvh(margin);
+
+    AABB original{ Vec2{0.0f, 0.0f}, Vec2{2.0f, 2.0f} };
+    NodeId nodeId = bvh.createProxy(original, 42);
+    std::cout << "Created proxy with id: " << nodeId << std::endl;
+
+    // Small move: stays within fattened box
+    AABB smallMove = original.move(Vec2{ margin, margin });
+    bool treeChanged = bvh.moveProxy(nodeId, smallMove, Vec2{10.0f, 10.0f});
+    CHECK_FALSE(treeChanged);
+    std::cout << "Moved proxy with id: " << nodeId << std::endl;
+
+    // Large move: outside fattened box triggers reinsertion
+    AABB largeMove = smallMove.move(Vec2{0.01f, 0.0f });
+    treeChanged = bvh.moveProxy(nodeId, largeMove, displacement);
+    CHECK(treeChanged);
+    std::cout << "Moved proxy with index: " << nodeId << std::endl;
+
+    // Confirm that the node's AABB is now fattened in the +X direction
+    const auto& node = bvh.getNode(nodeId);
+    CHECK(node.aabb.min == largeMove.min - margin);
+    CHECK(node.aabb.max == largeMove.max + margin + displacement);
+}
+
+TEST_CASE("DynamicBVH::query finds all overlapping proxies", "[DynamicBVH][Query]")
+{
+    const float margin = 0.1f;
+    DynamicBVH<uint32_t> bvh(margin);
+    
+    // Query an area covering (2,2) to (4,4)
+    AABB queryAABB{Vec2{2.0f, 2.0f}, Vec2{4.0f, 4.0f}};
+
+    // Expect regions from {1,1} to {5,5} to overlap (due to margin)
+    std::vector<AABB> expectedOverlaps;
+    std::set<uint32_t> expectedIds;
+    for (uint32_t i = 1; i < 5; i++)
+        for (uint32_t j = 1; j < 5; j++)
+        {
+            float x = static_cast<float>(i);
+            float y = static_cast<float>(j);
+            expectedOverlaps.emplace_back(Vec2{ x, y },
+                                          Vec2{ x + 1.0f, y + 1.0f });
+        }
+
+    // Insert a grid of proxies from (0,0) to (6,6)
+    const uint32_t gridSize = 6;
+    for (uint32_t i = 0; i < gridSize; ++i)
+    {
+        for (uint32_t j = 0; j < gridSize; ++j)
+        {
+            float x = static_cast<float>(i);
+            float y = static_cast<float>(j);
+            const Vec2 min(x, y);
+            const Vec2 max(x + 1.0f, y + 1.0f);
+            const AABB aabb{min, max};
+
+            const bool isExpectedOverlap = std::find(
+                    expectedOverlaps.begin(), expectedOverlaps.end(), aabb
+                ) != expectedOverlaps.end();
+
+            const auto customId = i * gridSize + j;
+            NodeId nodeIndex = bvh.createProxy(aabb, customId);
+            if (isExpectedOverlap)
+                expectedIds.insert(customId);
+        }
+    }
+
+    std::vector<uint32_t> foundIds;
+    bvh.query(queryAABB, [&](uint32_t id) { foundIds.push_back(id); });
+
+    // Expect overlaps:
+    // - {(1, 1), (2, 2)}, {(1, 2), (2, 3)}, {(1, 3), (2, 4)}, {(1, 4), (2, 5)}
+    // - {(2, 1), (3, 2)}, {(2, 2), (3, 3)}, {(2, 3), (3, 4)}, {(2, 4), (3, 5)}
+    // - {(3, 1), (4, 2)}, {(3, 2), (4, 3)}, {(3, 3), (4, 4)}, {(3, 4), (4, 5)}
+    // - {(4, 1), (5, 2)}, {(4, 2), (5, 3)}, {(4, 3), (5, 4)}, {(4, 4), (5, 5)}
+
+    // Should find all 16 ids in the 3x3 area
+    CHECK(foundIds.size() == expectedOverlaps.size());
+    for (auto id : foundIds)
+        CHECK(expectedIds.find(id) != expectedIds.end());
+
+    // Query an area that does not overlap with any proxies
+    foundIds.clear();
+    AABB nonOverlappingQuery{Vec2{6.5f, 6.5f}, Vec2{7.5f, 7.5f}};
+    bvh.query(nonOverlappingQuery, [&](uint32_t id) { foundIds.push_back(id); });
+
+    // Should find no ids
+    CHECK(foundIds.empty());
+
+    // Query an area that overlaps with a single proxy
+    foundIds.clear();
+    AABB singleOverlapQuery{Vec2{3.2f, 3.2f}, Vec2{3.8f, 3.8f}};
+    bvh.query(singleOverlapQuery, [&](uint32_t id) { foundIds.push_back(id); });
+
+    // Should find exactly one id
+    CHECK(foundIds.size() == 1);
+    CHECK(foundIds[0] == 21); // The proxy with AABB{(3, 3), (4, 4)}
+
+    // Query an area that overlaps with every proxy
+    foundIds.clear();
+    AABB fullOverlapQuery{Vec2{0.0f, 0.0f}, Vec2{6.0f, 6.0f}};
+    bvh.query(fullOverlapQuery, [&](uint32_t id) { foundIds.push_back(id); });
+
+    // Should find all 36 ids
+    CHECK(foundIds.size() == gridSize * gridSize);
 }

@@ -22,10 +22,22 @@ struct AABB
     Vec2 size() const;
 
     bool contains(Vec2 point) const;
+    bool contains(AABB other) const;
     bool intersects(AABB other) const;
+    bool overlaps(AABB other) const;
 
-    void expandToInclude(Vec2 point);
+    AABB fattened(float margin) const;
+    AABB fattened(float margin, Vec2 displacement) const;
+    AABB move(Vec2 direction) const;
+    AABB expandToInclude(Vec2 point);
     float perimeter() const;
+
+    bool operator==(const AABB& other) const
+    {
+        return min == other.min && max == other.max;
+    }
 };
+
+static_assert(std::is_trivially_copyable_v<AABB>, "AABB must be trivially copyable");
 
 }

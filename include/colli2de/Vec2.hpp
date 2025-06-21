@@ -2,7 +2,10 @@
 
 #include <cassert>
 #include <format>
+#include <iostream>
 #include <string>
+
+#include "utils/methods.hpp"
 
 namespace
 {
@@ -73,6 +76,10 @@ public:
 	constexpr Vec2 operator/(float value) const;
 
 	constexpr bool operator==(Vec2 other) const;
+	friend std::ostream& operator<<(std::ostream& os, const Vec2& vec)
+	{
+		return os << vec.toString();
+	}
 };
 
 inline std::string Vec2::toString() const
@@ -213,7 +220,7 @@ constexpr Vec2 Vec2::operator/(float value) const
 
 constexpr bool Vec2::operator==(Vec2 other) const
 {
-	return (x == other.x) && (y == other.y);
+	return float_equals(x, other.x) && float_equals(y, other.y);
 }
 
 static_assert(std::is_trivially_copyable_v<Vec2>, "Vec2 must be trivially copyable");
