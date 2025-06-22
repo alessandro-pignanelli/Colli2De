@@ -54,36 +54,117 @@ std::optional<std::pair<float, float>> AABB::intersects(Ray ray) const
 
     // X intersection
     {
-        float invD = 1.0f / direction.x;
-        float entryPoint = (min.x - ray.p1.x) * invD;
-        float exitPoint = (max.x - ray.p1.x) * invD;
+        const float dir = direction.x;
+        const float origin = ray.p1.x;
+        if (std::abs(dir) < 1e-8f)
+        {
+            // Ray is parallel to X axis: only "inside" if origin is within [min.x, max.x]
+            if (origin < min.x || origin > max.x)
+                return std::nullopt;
+        }
+        else
+        {
+            const float invD = 1.0f / dir;
+            float entryPoint = (min.x - origin) * invD;
+            float exitPoint  = (max.x - origin) * invD;
 
-        if (invD < 0.0f)
-            std::swap(entryPoint, exitPoint);
+            if (invD < 0.0f)
+                std::swap(entryPoint, exitPoint);
 
-        intersectionTimeMin = entryPoint > intersectionTimeMin ? entryPoint : intersectionTimeMin;
-        intersectionTimeMax = exitPoint < intersectionTimeMax ? exitPoint : intersectionTimeMax;
+            intersectionTimeMin = std::max(intersectionTimeMin, entryPoint);
+            intersectionTimeMax = std::min(intersectionTimeMax, exitPoint);
 
-        // If the ray does not intersect the slab, return false
-        if (intersectionTimeMax < intersectionTimeMin)
-            return std::nullopt;
+            if (intersectionTimeMax < intersectionTimeMin)
+                return std::nullopt;
+        }
+    }
+
+    // Y intersection (same as X)
+    {
+        const float dir = direction.y;
+        const float origin = ray.p1.y;
+        if (std::abs(dir) < 1e-8f)
+        {
+            if (origin < min.y || origin > max.y)
+                return std::nullopt;
+        }
+        else
+        {
+            const float invD = 1.0f / dir;
+            float entryPoint = (min.y - origin) * invD;
+            float exitPoint  = (max.y - origin) * invD;
+
+            if (invD < 0.0f)
+                std::swap(entryPoint, exitPoint);
+
+            intersectionTimeMin = std::max(intersectionTimeMin, entryPoint);
+            intersectionTimeMax = std::min(intersectionTimeMax, exitPoint);
+
+            if (intersectionTimeMax < intersectionTimeMin)
+                return std::nullopt;
+        }
+    }
+
+    return std::make_pair(intersectionTimeMin, intersectionTimeMax);
+}
+
+std::optional<std::pair<float, float>> AABB::intersects(InfiniteRay ray) const
+{
+    float intersectionTimeMin = 0.0f;
+    float intersectionTimeMax = std::numeric_limits<float>::infinity();
+
+    // X intersection
+    {
+        const float dir = ray.direction.x;
+        const float origin = ray.start.x;
+
+        if (std::abs(dir) < 1e-8f) // Ray is (almost) parallel to X slabs
+        {
+            if (origin < min.x || origin > max.x)
+                return std::nullopt; // Parallel and outside the box
+        }
+        else
+        {
+            float invD = 1.0f / dir;
+            float entryPoint = (min.x - origin) * invD;
+            float exitPoint  = (max.x - origin) * invD;
+
+            if (invD < 0.0f)
+                std::swap(entryPoint, exitPoint);
+
+            intersectionTimeMin = std::max(intersectionTimeMin, entryPoint);
+            intersectionTimeMax = std::min(intersectionTimeMax, exitPoint);
+
+            if (intersectionTimeMax < intersectionTimeMin)
+                return std::nullopt;
+        }
     }
 
     // Y intersection
     {
-        float invD = 1.0f / direction.y;
-        float entryPoint = (min.y - ray.p1.y) * invD;
-        float exitPoint = (max.y - ray.p1.y) * invD;
+        const float dir = ray.direction.y;
+        const float origin = ray.start.y;
 
-        if (invD < 0.0f)
-            std::swap(entryPoint, exitPoint);
+        if (std::abs(dir) < 1e-8f) // Ray is (almost) parallel to Y slabs
+        {
+            if (origin < min.y || origin > max.y)
+                return std::nullopt; // Parallel and outside the box
+        }
+        else
+        {
+            const float invD = 1.0f / dir;
+            float entryPoint = (min.y - origin) * invD;
+            float exitPoint  = (max.y - origin) * invD;
 
-        intersectionTimeMin = entryPoint > intersectionTimeMin ? entryPoint : intersectionTimeMin;
-        intersectionTimeMax = exitPoint < intersectionTimeMax ? exitPoint : intersectionTimeMax;
+            if (invD < 0.0f)
+                std::swap(entryPoint, exitPoint);
 
-        // If the ray does not intersect the slab, return false
-        if (intersectionTimeMax < intersectionTimeMin)
-            return std::nullopt;
+            intersectionTimeMin = std::max(intersectionTimeMin, entryPoint);
+            intersectionTimeMax = std::min(intersectionTimeMax, exitPoint);
+
+            if (intersectionTimeMax < intersectionTimeMin)
+                return std::nullopt;
+        }
     }
 
     return std::make_pair(intersectionTimeMin, intersectionTimeMax);

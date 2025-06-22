@@ -1,0 +1,5 @@
+- Raycast hit filtering and early-exit
+- Update/fatten margin per-proxy (Allow dynamic adjustment of fatAABBMargin if some objects need more/less)
+- Fast rebuild: construct BVH from a full set in one pass (useful for static scenes or resets).
+- Static BVH mode (can be built with sweep SAH for optimality)
+- Parallel or batched queries/moves

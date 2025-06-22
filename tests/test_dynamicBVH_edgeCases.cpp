@@ -1,11 +1,10 @@
 #include <algorithm>
 #include <cstdint>
-#include <set>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "geometry/AABB.hpp"
 #include "bvh/dynamicBVH.hpp"
+#include "geometry/AABB.hpp"
 
 using namespace c2d;
 using namespace Catch;

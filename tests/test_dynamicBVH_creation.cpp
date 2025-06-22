@@ -4,9 +4,9 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "Random.hpp"
-#include "geometry/AABB.hpp"
 #include "bvh/dynamicBVH.hpp"
+#include "geometry/AABB.hpp"
+#include "utils/Random.hpp"
 
 using namespace c2d;
 using namespace Catch;
@@ -303,4 +303,47 @@ TEST_CASE("DynamicBVH handles moving proxies with remove and reinsert", "[Dynami
     AABB newArea{Vec2{9,9}, Vec2{12,12}};
     hits = bvh.query(newArea);
     REQUIRE(std::find(hits.begin(), hits.end(), 5) != hits.end());
+}
+
+TEST_CASE("DynamicBVH can serialize and deserialize correctly", "[DynamicBVH][Serialize][Deserialize]")
+{
+    // 1. Build and populate a BVH
+    DynamicBVH<uint32_t> bvh(0.2f);
+    std::vector<AABB> boxes;
+    for (uint32_t i = 0; i < 100; ++i)
+    {
+        boxes.push_back(AABB{Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}});
+        bvh.createProxy(boxes.back(), i);
+    }
+
+    // 2. Serialize to memory
+    std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+    bvh.serialize(ss);
+
+    // 3. Deserialize into a new BVH
+    auto bvh2 = DynamicBVH<uint32_t>::deserialize(ss);
+
+    // 4. Check core fields
+    CHECK(bvh2.fatAABBMargin == Approx(bvh.fatAABBMargin));
+    CHECK(bvh2.capacity() == bvh.capacity());
+
+    // 5. Query both and compare results
+    AABB query{Vec2{20, 20}, Vec2{40, 40}};
+    
+    // std::set<uint32_t> hits1, hits2;
+    const auto hits1 = bvh.query(query);
+    const auto hits2 = bvh2.query(query);
+
+    CHECK(hits1 == hits2);
+
+    // 6. Also test a raycast
+    Ray ray{Vec2{19.5f, 19.5f}, Vec2{41.0f, 41.0f}};
+    auto ids1 = bvh.piercingRaycast(ray);
+    auto ids2 = bvh2.piercingRaycast(ray);
+    REQUIRE(ids1.size() == ids2.size());
+    for (size_t i = 0; i < ids1.size(); ++i)
+        CHECK(ids1[i] == ids2[i]);
+
+    // 7. Check that the tree structure is preserved
+    CHECK(bvh == bvh2);
 }

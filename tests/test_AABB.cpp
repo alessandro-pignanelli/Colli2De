@@ -132,3 +132,121 @@ TEST_CASE("AABB::fatten with displacement", "[AABB][Fattened][Displacement]")
     CHECK(fat6.min.y == aabb.min.y - margin + d6.y);
     CHECK(fat6.max.y == aabb.max.y + margin);
 }
+
+TEST_CASE("AABB::intersects (finite ray): Simple intersection", "[AABB][Ray][Finite]")
+{
+    AABB box{Vec2{1, 1}, Vec2{3, 3}};
+
+    // Ray enters at (0,2), exits at (4,2) (horizontal through box)
+    Ray ray{Vec2{0,2}, Vec2{4,2}};
+    auto result = box.intersects(ray);
+
+    REQUIRE(result);
+    auto [tEntry, tExit] = *result;
+    REQUIRE(tEntry == Approx(0.25f));
+    REQUIRE(tExit  == Approx(0.75f));
+}
+
+TEST_CASE("AABB::intersects (finite ray): Ray misses box", "[AABB][Ray][Finite]")
+{
+    AABB box{Vec2{1, 1}, Vec2{3, 3}};
+    Ray ray{Vec2{0,0}, Vec2{0,4}}; // Parallel to Y, never crosses box
+    auto result = box.intersects(ray);
+
+    REQUIRE_FALSE(result);
+}
+
+TEST_CASE("AABB::intersects (finite ray): Ray is tangent to box", "[AABB][Ray][Finite]")
+{
+    AABB box{Vec2{1, 1}, Vec2{3, 3}};
+    Ray ray{Vec2{0,1}, Vec2{4,1}}; // Along bottom edge
+    auto result = box.intersects(ray);
+
+    REQUIRE(result);
+    auto [tEntry, tExit] = *result;
+    REQUIRE(tEntry == Approx(0.25f));
+    REQUIRE(tExit  == Approx(0.75f));
+}
+
+TEST_CASE("AABB::intersects (finite ray): Ray parallel and inside slab", "[AABB][Ray][Finite]")
+{
+    AABB box{Vec2{1, 1}, Vec2{3, 3}};
+    Ray ray{Vec2{2,0}, Vec2{2,4}}; // Parallel to Y, passes through box
+    auto result = box.intersects(ray);
+
+    REQUIRE(result);
+    auto [tEntry, tExit] = *result;
+    // Should enter at y=1 (t=0.25), exit at y=3 (t=0.75)
+    REQUIRE(tEntry == Approx(0.25f));
+    REQUIRE(tExit  == Approx(0.75f));
+}
+
+TEST_CASE("AABB::intersects (finite ray): Ray starts inside box", "[AABB][Ray][Finite]")
+{
+    AABB box{Vec2{1, 1}, Vec2{3, 3}};
+    Ray ray{Vec2{2,2}, Vec2{4,2}}; // Starts inside, exits at x=3
+    auto result = box.intersects(ray);
+
+    REQUIRE(result);
+    auto [tEntry, tExit] = *result;
+    REQUIRE(tEntry == Approx(0.0f));   // From (2,2) to (4,2), exit at x=3 (t=0.5)
+    REQUIRE(tExit  == Approx(0.5f));
+}
+
+TEST_CASE("AABB::intersects (finite ray): Degenerate zero-length ray", "[AABB][Ray][Finite]")
+{
+    AABB box{Vec2{1, 1}, Vec2{3, 3}};
+    Ray ray{Vec2{2,2}, Vec2{2,2}};
+    auto result = box.intersects(ray);
+
+    REQUIRE(result);
+    auto [tEntry, tExit] = *result;
+    REQUIRE(tEntry == Approx(0.0f));
+    REQUIRE(tExit  == Approx(1.0f));
+}
+
+TEST_CASE("AABB::intersects (infinite ray): Basic hit", "[AABB][Ray][Infinite]")
+{
+    AABB box{Vec2{1, 1}, Vec2{3, 3}};
+    InfiniteRay ray{Vec2{0,2}, Vec2{1,0}}; // Shoots right along y=2
+
+    auto result = box.intersects(ray);
+
+    REQUIRE(result);
+    auto [tEntry, tExit] = *result;
+    REQUIRE(tEntry == Approx(1.0f)); // At x=1
+    REQUIRE(tExit  == Approx(3.0f)); // At x=3
+}
+
+TEST_CASE("AABB::intersects (infinite ray): Ray away from box", "[AABB][Ray][Infinite]")
+{
+    AABB box{Vec2{1, 1}, Vec2{3, 3}};
+    InfiniteRay ray{Vec2{0,2}, Vec2{-1,0}}; // Shoots left, never reaches box
+
+    auto result = box.intersects(ray);
+
+    REQUIRE_FALSE(result);
+}
+
+TEST_CASE("AABB::intersects (infinite ray): Parallel and inside slab", "[AABB][Ray][Infinite]")
+{
+    AABB box{Vec2{1, 1}, Vec2{3, 3}};
+    InfiniteRay ray{Vec2{2,0}, Vec2{0,1}}; // Parallel to y axis, inside box on x
+
+    auto result = box.intersects(ray);
+
+    REQUIRE(result);
+    auto [tEntry, tExit] = *result;
+    REQUIRE(tEntry == Approx(1.0f)); // At y=1
+    REQUIRE(tExit  == Approx(3.0f)); // At y=3
+}
+
+TEST_CASE("AABB::intersects (infinite ray): Parallel and outside slab", "[AABB][Ray][Infinite]")
+{
+    AABB box{Vec2{1, 1}, Vec2{3, 3}};
+    InfiniteRay ray{Vec2{4,0}, Vec2{0,1}}; // Parallel to x, but x=4 (outside)
+
+    auto result = box.intersects(ray);
+
+    REQUIRE_FALSE(result);
+}

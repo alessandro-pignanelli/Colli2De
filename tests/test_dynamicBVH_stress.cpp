@@ -5,9 +5,9 @@
 #include <catch2/interfaces/catch_interfaces_config.hpp>
 #include <catch2/internal/catch_context.hpp>
 
-#include "Random.hpp"
-#include "geometry/AABB.hpp"
 #include "bvh/dynamicBVH.hpp"
+#include "geometry/AABB.hpp"
+#include "utils/Random.hpp"
 
 using namespace c2d;
 using namespace Catch;

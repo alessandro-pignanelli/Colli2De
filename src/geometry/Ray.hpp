@@ -11,6 +11,12 @@ struct Ray
     Vec2 p2;
 };
 
+struct InfiniteRay
+{
+    Vec2 start;
+    Vec2 direction;
+};
+
 template <typename IdType>
 struct RaycastHit
 {

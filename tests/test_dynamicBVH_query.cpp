@@ -4,8 +4,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "geometry/AABB.hpp"
 #include "bvh/dynamicBVH.hpp"
+#include "geometry/AABB.hpp"
 
 using namespace c2d;
 using namespace Catch;
@@ -247,3 +247,44 @@ TEST_CASE("DynamicBVH::firstHitRaycastDetailed returns id, entry, and exit for c
     CHECK(hit->entry.y == Approx(1.5f));
     CHECK(hit->exit.y  == Approx(1.5f));
 }
+
+TEST_CASE("DynamicBVH: findBroadPhaseCollisions finds correct pairs", "[DynamicBVH][BroadPhaseCollisions]")
+{
+    DynamicBVH<uint32_t> bvh;
+
+    // Four AABBs:
+    // 0: (0,0)-(2,2)
+    // 1: (1,1)-(3,3)   (overlaps with 0)
+    // 2: (4,4)-(5,5)   (no overlap)
+    // 3: (1.5,1.5)-(2.5,2.5) (overlaps with 0 and 1)
+    bvh.createProxy({Vec2{0,0}, Vec2{2,2}}, 0);
+    bvh.createProxy({Vec2{1,1}, Vec2{3,3}}, 1);
+    bvh.createProxy({Vec2{4,4}, Vec2{5,5}}, 2);
+    bvh.createProxy({Vec2{1.5f,1.5f}, Vec2{2.5f,2.5f}}, 3);
+
+    const auto pairs = bvh.findBroadPhaseCollisions();
+
+    // Build a set for easy checking
+    std::set<std::pair<uint32_t, uint32_t>> found;
+    for (auto p : pairs)
+    {
+        // Order doesn't matter (but avoid duplicate pairs)
+        if (p.first > p.second)
+            std::swap(p.first, p.second);
+        found.insert(p);
+
+        std::cout << "Found pair: (" << p.first << ", " << p.second << ")\n";
+    }
+
+    // Should find (0,1), (0,3), (1,3)
+    std::set<std::pair<uint32_t, uint32_t>> expected {
+        {0,1}, {0,3}, {1,3}
+    };
+
+    REQUIRE(found.size() == expected.size());
+    for (const auto& e : expected)
+    {
+        CHECK(found.find(e) != found.end());
+    }
+}
+
