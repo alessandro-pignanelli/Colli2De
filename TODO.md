@@ -3,3 +3,8 @@
 - Fast rebuild: construct BVH from a full set in one pass (useful for static scenes or resets).
 - Static BVH mode (can be built with sweep SAH for optimality)
 - Parallel or batched queries/moves
+- Batch/BVH-vs-BVH Traversal (to check collision between two BVH trees, optimal only if there are many objects in both trees)
+- Narrow phase collision detection (e.g. GJK, EPA, SAT)
+- Static BVH class
+    - Use SAH to construct a shallower, higher-quality tree
+    - Store data in a flat array instead of pointers for fast access

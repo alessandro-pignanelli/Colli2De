@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <iostream>
+#include <ranges>
 #include <set>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -346,4 +347,105 @@ TEST_CASE("DynamicBVH can serialize and deserialize correctly", "[DynamicBVH][Se
 
     // 7. Check that the tree structure is preserved
     CHECK(bvh == bvh2);
+}
+
+TEST_CASE("DynamicBVH iterator", "[DynamicBVH][Iterator]")
+{
+    DynamicBVH<uint32_t> bvh;
+    std::set<uint32_t> ids;
+    for (uint32_t i = 0; i < 10; ++i)
+    {
+        bvh.createProxy({Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}}, i);
+        ids.insert(i);
+    }
+
+    for (const auto [id, aabb] : bvh)
+    {
+        std::cout << "Node ID: " << id << ", AABB: [" 
+                  << aabb.min.x << ", " << aabb.min.y << "] to [" 
+                  << aabb.max.x << ", " << aabb.max.y << "]\n";
+        CHECK(ids.find(id) != ids.end());
+        ids.erase(id);
+
+        CHECK(aabb.min.x == Approx(float(id)));
+        CHECK(aabb.min.y == Approx(float(id)));
+        CHECK(aabb.max.x == Approx(float(id + 1)));
+        CHECK(aabb.max.y == Approx(float(id + 1)));
+    }
+    CHECK(ids.empty());
+}
+
+TEST_CASE("DynamicBVH data()", "[DynamicBVH][Data]")
+{
+    DynamicBVH<uint32_t> bvh;
+    std::set<uint32_t> ids;
+    for (uint32_t i = 0; i < 10; ++i)
+    {
+        bvh.createProxy({Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}}, i);
+        ids.insert(i);
+    }
+
+    const auto data = bvh.data();
+    CHECK(data.size() == 10);
+    for (const auto& [id, aabb] : data)
+    {
+        CHECK(ids.find(id) != ids.end());
+        ids.erase(id);
+
+        CHECK(aabb.min.x == Approx(float(id)));
+        CHECK(aabb.min.y == Approx(float(id)));
+        CHECK(aabb.max.x == Approx(float(id + 1)));
+        CHECK(aabb.max.y == Approx(float(id + 1)));
+    }
+}
+
+TEST_CASE("DynamicBVH range view", "[DynamicBVH][RangeView]")
+{
+    DynamicBVH<uint32_t> bvh;
+    std::set<uint32_t> ids;
+    for (uint32_t i = 0; i < 10; ++i)
+    {
+        bvh.createProxy({Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}}, i);
+        ids.insert(i);
+    }
+
+    for (auto&& [id, aabb] : bvh.leavesView())
+    {
+        CHECK(ids.find(id) != ids.end());
+        ids.erase(id);
+
+        CHECK(aabb.min.x == Approx(float(id)));
+        CHECK(aabb.min.y == Approx(float(id)));
+        CHECK(aabb.max.x == Approx(float(id + 1)));
+        CHECK(aabb.max.y == Approx(float(id + 1)));
+    }
+    CHECK(ids.empty());
+}
+
+TEST_CASE("DynamicBVH batchQuery with multiple threads", "[DynamicBVH][BatchQuery]")
+{
+    DynamicBVH<uint32_t> bvh;
+    for (uint32_t i = 0; i < 1000; ++i)
+        bvh.createProxy({Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}}, i);
+
+    std::vector<AABB> queries;
+    std::vector<std::vector<uint32_t>> expectedResults;
+    for (uint32_t i = 0; i < 20000; ++i)
+    {
+        queries.push_back({Vec2{float(i * 10), float(i * 10)}, Vec2{float((i + 1) * 10), float((i + 1) * 10)}});
+        const auto& result = bvh.query(queries.back());
+        expectedResults.push_back(result);
+    }
+
+    auto results = bvh.batchQuery(queries, 8);
+    CHECK(results.size() == expectedResults.size());
+
+    for (size_t i = 0; i < results.size(); ++i)
+    {
+        const auto& query = queries[i];
+        const auto& hits = results[i];
+        const auto& expected = expectedResults[i];
+
+        REQUIRE(hits == expected);
+    }
 }

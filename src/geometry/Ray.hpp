@@ -42,6 +42,24 @@ struct RaycastHit
             ray.p1 + (ray.p2 - ray.p1) * intersectionTimes.second
         };
     }
+    static RaycastHit<IdType> fromRay(IdType id, InfiniteRay ray, float entryTime, float exitTime)
+    {
+        return RaycastHit<IdType>
+        {
+            id,
+            ray.start + ray.direction * entryTime,
+            ray.start + ray.direction * exitTime
+        };
+    }
+    static RaycastHit<IdType> fromRay(IdType id, InfiniteRay ray, std::pair<float, float> intersectionTimes)
+    {
+        return RaycastHit<IdType>
+        {
+            id,
+            ray.start + ray.direction * intersectionTimes.first,
+            ray.start + ray.direction * intersectionTimes.second
+        };
+    }
 };
 
 }
