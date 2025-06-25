@@ -25,12 +25,14 @@ target_link_libraries(Colli2DeTests
     PRIVATE
     Catch2::Catch2WithMain
     colli2de
+    stdc++exp # std::print
 )
 
 target_include_directories(Colli2DeTests
     PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/tests
 )
 
 add_test(NAME Colli2DeTests COMMAND Colli2DeTests)

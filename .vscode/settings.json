@@ -6,6 +6,7 @@
     "clangd.fallbackFlags": [
         "-isystem${workspaceFolder}/src",
         "-isystem${workspaceFolder}/include",
+        "-isystem${workspaceFolder}/tests",
         "-isystem${workspaceFolder}/build/Debug/_deps/catch2-src/src",
         "-isystem${workspaceFolder}/build/Debug/_deps/catch2-build/generated-includes"
     ],

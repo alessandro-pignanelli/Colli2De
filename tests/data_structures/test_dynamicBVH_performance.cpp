@@ -5,7 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
 
-#include "bvh/dynamicBVH.hpp"
+#include "data_structures/DynamicBVH.hpp"
 #include "geometry/AABB.hpp"
 #include "utils/Random.hpp"
 
@@ -16,7 +16,7 @@ using namespace std::chrono;
 TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
 {
 #ifndef NDEBUG
-    SKIP("Performance check skipped in Debug mode.");
+    SKIP("Performance test skipped in Debug mode.");
 #endif
 
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
@@ -51,7 +51,7 @@ TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Ins
 TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Move]")
 {
 #ifndef NDEBUG
-    SKIP("Performance check skipped in Debug mode.");
+    SKIP("Performance test skipped in Debug mode.");
 #endif
 
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
@@ -98,7 +98,7 @@ TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Mov
 TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]")
 {
 #ifndef NDEBUG
-    SKIP("Performance check skipped in Debug mode.");
+    SKIP("Performance test skipped in Debug mode.");
 #endif
 
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
@@ -142,7 +142,7 @@ TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchm
 TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
 {
 #ifndef NDEBUG
-    SKIP("Performance check skipped in Debug mode.");
+    SKIP("Performance test skipped in Debug mode.");
 #endif
 
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
@@ -183,6 +183,10 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
 
 TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[DynamicBVH][BroadPhaseCollisions][Benchmark]")
 {
+#ifndef NDEBUG
+    SKIP("Performance test skipped in Debug mode.");
+#endif
+
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 1000.0f, 3.0f, seed);

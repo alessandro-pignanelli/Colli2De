@@ -5,7 +5,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "bvh/dynamicBVH.hpp"
+#include "data_structures/DynamicBVH.hpp"
 #include "geometry/AABB.hpp"
 
 using namespace c2d;
@@ -502,8 +502,6 @@ TEST_CASE("DynamicBVH: findBroadPhaseCollisions finds correct pairs", "[DynamicB
         if (p.first > p.second)
             std::swap(p.first, p.second);
         found.insert(p);
-
-        std::cout << "Found pair: (" << p.first << ", " << p.second << ")\n";
     }
 
     // Should find (0,1), (0,3), (1,3)

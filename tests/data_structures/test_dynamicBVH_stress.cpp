@@ -5,7 +5,7 @@
 #include <catch2/interfaces/catch_interfaces_config.hpp>
 #include <catch2/internal/catch_context.hpp>
 
-#include "bvh/dynamicBVH.hpp"
+#include "data_structures/DynamicBVH.hpp"
 #include "geometry/AABB.hpp"
 #include "utils/Random.hpp"
 
@@ -55,6 +55,7 @@ TEST_CASE("DynamicBVH stays balanced with 100k proxies", "[DynamicBVH][Stress][B
     uint32_t height = bvh.getNode(rootIndex).height;
     int logN = static_cast<int>(std::ceil(std::log2(aabbs.size())));
     // Allow a little extra for imperfect balancing and fattening
+    std::cout << "Tree height: " << height << ", optimal = " << logN << " expected <= " << logN + 3 << std::endl;
     CHECK(height <= logN + 3);
 
     // Traverse tree: count leaves and check parent links

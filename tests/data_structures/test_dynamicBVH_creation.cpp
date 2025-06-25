@@ -5,7 +5,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "bvh/dynamicBVH.hpp"
+#include "data_structures/DynamicBVH.hpp"
 #include "geometry/AABB.hpp"
 #include "utils/Random.hpp"
 
@@ -263,19 +263,16 @@ TEST_CASE("DynamicBVH proxy update skips tree change for small moves", "[Dynamic
 
     AABB original{ Vec2{0.0f, 0.0f}, Vec2{2.0f, 2.0f} };
     NodeIndex nodeId = bvh.createProxy(original, 42);
-    std::cout << "Created proxy with id: " << nodeId << std::endl;
 
     // Small move: stays within fattened box
     AABB smallMove = original.move(Vec2{ margin, margin });
     bool treeChanged = bvh.moveProxy(nodeId, smallMove, Vec2{10.0f, 10.0f});
     CHECK_FALSE(treeChanged);
-    std::cout << "Moved proxy with id: " << nodeId << std::endl;
 
     // Large move: outside fattened box triggers reinsertion
     AABB largeMove = smallMove.move(Vec2{0.01f, 0.0f });
     treeChanged = bvh.moveProxy(nodeId, largeMove, displacement);
     CHECK(treeChanged);
-    std::cout << "Moved proxy with index: " << nodeId << std::endl;
 
     // Confirm that the node's AABB is now fattened in the +X direction
     const auto& node = bvh.getNode(nodeId);
@@ -361,9 +358,6 @@ TEST_CASE("DynamicBVH iterator", "[DynamicBVH][Iterator]")
 
     for (const auto [id, aabb] : bvh)
     {
-        std::cout << "Node ID: " << id << ", AABB: [" 
-                  << aabb.min.x << ", " << aabb.min.y << "] to [" 
-                  << aabb.max.x << ", " << aabb.max.y << "]\n";
         CHECK(ids.find(id) != ids.end());
         ids.erase(id);
 

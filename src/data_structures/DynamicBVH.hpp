@@ -251,7 +251,7 @@ void DynamicBVH<IdType>::destroyNode(NodeIndex nodeId)
     BVHNode<IdType>& node = nodes[nodeId];
 
     node.parentIndex = nextAvailableIndex;
-    node.height = INVALID_NODE_INDEX;
+    node.height = -1;
     node.child1Index = INVALID_NODE_INDEX;
     node.child2Index = INVALID_NODE_INDEX;
     node.id = IdType{};
@@ -446,18 +446,18 @@ NodeIndex DynamicBVH<IdType>::findBestSiblingIndex(AABB leaf) const
 template<typename IdType>
 NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 {
-    BVHNode<IdType>& A = nodes[index];
+    BVHNode<IdType>& node = nodes[index];
 
     // Can't balance a leaf
-    if (A.isLeaf() || A.height < 2)
+    if (node.isLeaf() || node.height < 2)
         return index;
 
-    const NodeIndex child1Index = A.child1Index;
-    const NodeIndex child2Index = A.child2Index;
-    BVHNode<IdType>& B = nodes[child1Index];
-    BVHNode<IdType>& C = nodes[child2Index];
+    const NodeIndex child1Index = node.child1Index;
+    const NodeIndex child2Index = node.child2Index;
+    BVHNode<IdType>& child1 = nodes[child1Index];
+    BVHNode<IdType>& child2 = nodes[child2Index];
 
-    const NodeIndex balance = C.height - B.height;
+    const NodeIndex balance = child2.height - child1.height;
 
     NodeIndex upIndex;
     NodeIndex sideIndex1 = INVALID_NODE_INDEX;
@@ -466,16 +466,16 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
     if (balance > 1)
     {
         // Rotate C up
-        sideIndex1 = C.child1Index;
-        sideIndex2 = C.child2Index;
+        sideIndex1 = child2.child1Index;
+        sideIndex2 = child2.child2Index;
         upIndex = child2Index;
         isRightRotation = true;
     }
-    else if (balance < INVALID_NODE_INDEX)
+    else if (balance < -1)
     {
         // Rotate B up
-        sideIndex1 = B.child1Index;
-        sideIndex2 = B.child2Index;
+        sideIndex1 = child1.child1Index;
+        sideIndex2 = child1.child2Index;
         upIndex = child1Index;
         isRightRotation = false;
     }
@@ -485,18 +485,18 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
         return index;
     }
 
-    BVHNode<IdType>& Up = nodes[upIndex];
-    BVHNode<IdType>& Side1 = nodes[sideIndex1];
-    BVHNode<IdType>& Side2 = nodes[sideIndex2];
+    BVHNode<IdType>& up = nodes[upIndex];
+    BVHNode<IdType>& side1 = nodes[sideIndex1];
+    BVHNode<IdType>& side2 = nodes[sideIndex2];
 
-    // Swap A and Up
-    Up.child1Index = index;
-    Up.parentIndex = A.parentIndex;
-    A.parentIndex = upIndex;
+    // Swap node and up
+    up.child1Index = index;
+    up.parentIndex = node.parentIndex;
+    node.parentIndex = upIndex;
 
-    if (Up.parentIndex != INVALID_NODE_INDEX)
+    if (up.parentIndex != INVALID_NODE_INDEX)
     {
-        BVHNode<IdType>& parent = nodes[Up.parentIndex];
+        BVHNode<IdType>& parent = nodes[up.parentIndex];
         if (parent.child1Index == index)
             parent.child1Index = upIndex;
         else
@@ -508,18 +508,18 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
     }
 
     // Pick the taller child for attachment
-    NodeIndex attachIndex = (Side1.height > Side2.height) ? sideIndex1 : sideIndex2;
-    NodeIndex remainIndex = (Side1.height > Side2.height) ? sideIndex2 : sideIndex1;
+    NodeIndex attachIndex = (side1.height > side2.height) ? sideIndex1 : sideIndex2;
+    NodeIndex remainIndex = (side1.height > side2.height) ? sideIndex2 : sideIndex1;
 
     if (isRightRotation)
     {
-        Up.child2Index = attachIndex;
-        A.child2Index = remainIndex;
+        up.child2Index = attachIndex;
+        node.child2Index = remainIndex;
     }
     else
     {
-        Up.child2Index = attachIndex;
-        A.child1Index = remainIndex;
+        up.child2Index = attachIndex;
+        node.child1Index = remainIndex;
     }
 
     nodes[attachIndex].parentIndex = upIndex;
@@ -528,19 +528,19 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
     // Recompute AABBs and heights
     if (isRightRotation)
     {
-        A.aabb = AABB::combine(B.aabb, nodes[remainIndex].aabb);
-        Up.aabb = AABB::combine(A.aabb, nodes[attachIndex].aabb);
+        node.aabb = AABB::combine(child1.aabb, nodes[remainIndex].aabb);
+        up.aabb = AABB::combine(node.aabb, nodes[attachIndex].aabb);
 
-        A.height = 1 + std::max(B.height, nodes[remainIndex].height);
-        Up.height = 1 + std::max(A.height, nodes[attachIndex].height);
+        node.height = 1 + std::max(child1.height, nodes[remainIndex].height);
+        up.height = 1 + std::max(node.height, nodes[attachIndex].height);
     }
     else
     {
-        A.aabb = AABB::combine(C.aabb, nodes[remainIndex].aabb);
-        Up.aabb = AABB::combine(A.aabb, nodes[attachIndex].aabb);
+        node.aabb = AABB::combine(child2.aabb, nodes[remainIndex].aabb);
+        up.aabb = AABB::combine(node.aabb, nodes[attachIndex].aabb);
 
-        A.height = 1 + std::max(C.height, nodes[remainIndex].height);
-        Up.height = 1 + std::max(A.height, nodes[attachIndex].height);
+        node.height = 1 + std::max(child2.height, nodes[remainIndex].height);
+        up.height = 1 + std::max(node.height, nodes[attachIndex].height);
     }
 
     return upIndex;
@@ -739,7 +739,7 @@ std::vector<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::pierci
 
     std::sort(hits.begin(), hits.end(), [&](const RaycastInfo& a, const RaycastInfo& b)
     {
-        return (a.entry - ray.p1).lengthSquared() < (b.entry - ray.p1).lengthSquared();
+        return (a.entry - ray.p1).lengthSqr() < (b.entry - ray.p1).lengthSqr();
     });
 
     return hits;
@@ -891,7 +891,7 @@ std::vector<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::pierci
 
     std::sort(hits.begin(), hits.end(), [&](const RaycastInfo& a, const RaycastInfo& b)
     {
-        return (a.entry - ray.start).lengthSquared() < (b.entry - ray.start).lengthSquared();
+        return (a.entry - ray.start).lengthSqr() < (b.entry - ray.start).lengthSqr();
     });
 
     return hits;
