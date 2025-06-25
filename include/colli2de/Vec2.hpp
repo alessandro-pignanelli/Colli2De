@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cmath>
 #include <format>
 #include <iostream>
 #include <string>
@@ -53,6 +54,7 @@ public:
 	std::string toString() const;
 
 	constexpr float length() const;
+	constexpr float inverseLength() const;
 	constexpr float lengthSquared() const;
 	constexpr Vec2 interpolate(Vec2 other, float percentage) const;
 	constexpr Vec2 normalize() const;
@@ -96,6 +98,11 @@ inline std::string Vec2::toString() const
 
 constexpr float Vec2::length() const
 {
+	return std::sqrtf(x * x + y * y);
+}
+
+constexpr float Vec2::inverseLength() const
+{
 	return inverseSqrt(x * x + y * y);
 }
 
@@ -111,8 +118,7 @@ constexpr Vec2 Vec2::interpolate(Vec2 other, float percentage) const
 
 constexpr Vec2 Vec2::normalize() const
 {
-	const float length = x * x + y * y;
-	const float multiplier = inverseSqrt(length);
+	const float multiplier = inverseLength();
 	return Vec2(x * multiplier, y * multiplier);
 }
 
