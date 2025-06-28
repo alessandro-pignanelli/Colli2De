@@ -6,7 +6,8 @@
             "${workspaceFolder}/tests"
         ],
         "testsIncludePath": [
-            "${workspaceFolder}/build/Debug/_deps/catch2-src/src"
+            "${workspaceFolder}/build/Debug/_deps/catch2-src/src",
+            "${workspaceFolder}/libs/catch2/install/Debug/include"
         ]
     },
     "configurations": [

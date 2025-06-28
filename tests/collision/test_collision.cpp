@@ -1,6 +1,13 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <print>
+#if __has_include(<print>)
+    #include <print>
+    #define print(...) std::print(__VA_ARGS__)
+    #define println(...) std::println(__VA_ARGS__)
+#else
+    #define print(...) ((void)0) // Does nothing
+    #define println(...) ((void)0) // Does nothing
+#endif
 
 #include "collision/Collision.hpp"
 #include "colli2de/Shapes.hpp"
@@ -94,9 +101,6 @@ TEST_CASE("Capsule vs Circle collision", "[collision][capsule][circle]")
         Manifold m = collide(capsule, tcap, circle, tc);
         REQUIRE(m.pointCount == 1);
 
-        std::println("Point: {}", m.points[0]);
-        std::println("Normal: {}", m.normal);
-        
         CHECK(m.points[0].separation < -1.0f);
     }
 }
