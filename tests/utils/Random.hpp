@@ -7,6 +7,7 @@
 #include "colli2de/Vec2.hpp"
 #include "colli2de/Shapes.hpp"
 #include "geometry/AABB.hpp"
+#include "geometry/Ray.hpp"
 
 using namespace c2d;
 
@@ -118,4 +119,37 @@ inline std::vector<Polygon> generateRandomRectangles(size_t count, float regionM
     }
 
     return polygons;
+}
+
+inline std::vector<Ray> generateRandomRays(size_t count, float regionMin, float regionMax, uint32_t seed = 42)
+{
+    DeterministicRNG rng(seed);
+    std::vector<Ray> rays;
+    rays.reserve(count);
+
+    for (size_t i = 0; i < count; ++i)
+    {
+        Vec2 start{rng.nextFloat(regionMin, regionMax), rng.nextFloat(regionMin, regionMax)};
+        Vec2 end{rng.nextFloat(regionMin, regionMax), rng.nextFloat(regionMin, regionMax)};
+        rays.push_back(Ray{start, end});
+    }
+
+    return rays;
+}
+
+inline std::vector<InfiniteRay> generateRandomInfiniteRays(size_t count, float regionMin, float regionMax, uint32_t seed = 42)
+{
+    DeterministicRNG rng(seed);
+    std::vector<InfiniteRay> rays;
+    rays.reserve(count);
+
+    for (size_t i = 0; i < count; ++i)
+    {
+        Vec2 start{rng.nextFloat(regionMin, regionMax), rng.nextFloat(regionMin, regionMax)};
+        float angle = rng.nextFloat(0.0f, 2.0f * PI);
+        Vec2 direction{std::cos(angle), std::sin(angle)};
+        rays.push_back(InfiniteRay{start, direction});
+    }
+
+    return rays;
 }
