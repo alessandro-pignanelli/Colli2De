@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <cmath> // For std::sqrt
+#include <cmath>
 
 #include "collision/Collision.hpp"
 
@@ -24,7 +24,7 @@ Manifold collide(const Circle& circleA,
 
     // Vector from A to B
     const Vec2 delta = centerB - centerA;
-    const float distSq = delta.x * delta.x + delta.y * delta.y;
+    const float distSq = delta.lengthSqr();
     const float radiusA = circleA.radius;
     const float radiusB = circleB.radius;
     const float radius = radiusA + radiusB;
