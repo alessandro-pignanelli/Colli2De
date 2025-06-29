@@ -1,5 +1,6 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <cmath>
 #if __has_include(<print>)
     #include <print>
     #define print(...) std::print(__VA_ARGS__)
@@ -80,6 +81,21 @@ TEST_CASE("Circle vs Circle collision", "[collision][circle]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.points[0].separation < 0.0f);
     }
+
+    SECTION("Rotated centers")
+    {
+        const Circle rotatedCircle{ Vec2{ 1.0f, 0.0f }, 1.0f };
+        const Transform transformA{ Vec2{ 0.0f, 0.0f }, 0.5f };
+        const Transform transformB{ Vec2{ 2.0f, 0.0f }, 0.5f };
+        const Manifold manifold = collideSymmetric(rotatedCircle, transformA, rotatedCircle, transformB);
+
+        REQUIRE(manifold.pointCount == 1);
+        CHECK(manifold.normal.x == Approx(1.0f).margin(0.001f));
+        CHECK(std::abs(manifold.normal.y) == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].point.x == Approx(std::cos(0.5f) + 1.0f).margin(0.001f));
+        CHECK(manifold.points[0].point.y == Approx(std::sin(0.5f)).margin(0.001f));
+        CHECK(manifold.points[0].separation == Approx(0.0f).margin(0.001f));
+    }
 }
 
 TEST_CASE("Capsule vs Circle collision", "[collision][capsule][circle]")
@@ -118,6 +134,22 @@ TEST_CASE("Capsule vs Circle collision", "[collision][capsule][circle]")
         Manifold m = collideSymmetric(capsule, t, circle, t);
         REQUIRE(m.pointCount == 1);
         CHECK(m.points[0].separation < -0.5f);
+    }
+
+    SECTION("Rotated centers")
+    {
+        const Capsule rotatedCapsule{ Vec2{ -1.0f, 0.0f }, Vec2{ 1.0f, 0.0f }, 0.5f };
+        const Circle rotatedCircle{ Vec2{ 0.0f, 1.0f }, 0.5f };
+        const Transform transformA{ Vec2{ 0.0f, 0.0f }, 0.5f };
+        const Transform transformB{ Vec2{ 0.0f, 0.0f }, -0.5f };
+        const Manifold manifold = collideSymmetric(rotatedCapsule, transformA, rotatedCircle, transformB);
+
+        REQUIRE(manifold.pointCount == 1);
+        CHECK(manifold.normal.x == Approx(-0.479425f).margin(0.001f));
+        CHECK(manifold.normal.y == Approx(0.877583f).margin(0.001f));
+        CHECK(manifold.points[0].point.x == Approx(0.608943f).margin(0.001f));
+        CHECK(manifold.points[0].point.y == Approx(0.640503f).margin(0.001f));
+        CHECK(manifold.points[0].separation == Approx(-0.459698f).margin(0.001f));
     }
 }
 
@@ -158,6 +190,20 @@ TEST_CASE("Capsule vs Capsule collision", "[collision][capsule]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.points[0].separation < 0.0f);
     }
+
+    SECTION("Rotated")
+    {
+        const Transform transformA{ Vec2{ 0.0f, 0.0f }, 0.25f };
+        const Transform transformB{ Vec2{ 0.0f, 0.0f }, -0.25f };
+        const Manifold manifold = collideSymmetric(capA, transformA, capA, transformB);
+
+        REQUIRE(manifold.pointCount == 1);
+        CHECK(manifold.normal.x == Approx(1.0f).margin(0.001f));
+        CHECK(std::abs(manifold.normal.y) == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].point.x == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].point.y == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].separation == Approx(-1.0f).margin(0.001f));
+    }
 }
 
 TEST_CASE("Segment vs Segment collision", "[collision][segment]")
@@ -194,6 +240,21 @@ TEST_CASE("Segment vs Segment collision", "[collision][segment]")
         Manifold m = collideSymmetric(segA, t, segB, t);
         REQUIRE(m.pointCount == 1);
         CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
+    }
+
+    SECTION("Rotated")
+    {
+        const Transform transformA{ Vec2{ 0.0f, 0.0f }, 0.25f };
+        const Transform transformB{ Vec2{ 0.0f, 0.0f }, -0.25f };
+        const Segment rotatedSegment{ Vec2{ -1.0f, 0.0f }, Vec2{ 1.0f, 0.0f } };
+        const Manifold manifold = collideSymmetric(segA, transformA, rotatedSegment, transformB);
+
+        REQUIRE(manifold.pointCount == 1);
+        CHECK(manifold.normal.x == Approx(1.0f).margin(0.001f));
+        CHECK(std::abs(manifold.normal.y) == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].point.x == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].point.y == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 }
 
@@ -234,6 +295,21 @@ TEST_CASE("Circle vs Polygon collision", "[collision][circle][polygon]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.points[0].separation < 0.0f);
     }
+
+    SECTION("Rotated")
+    {
+        const Polygon rotatedPolygon = makeRectangle(Vec2{ 0.0f, 0.0f }, 1.0f, 1.0f, 0.3f);
+        const Circle rotatedCircle{ Vec2{ 1.0f, 0.0f }, 0.5f };
+        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.5f };
+        const Manifold manifold = collideSymmetric(rotatedPolygon, transform, rotatedCircle, transform);
+
+        REQUIRE(manifold.pointCount == 1);
+        CHECK(manifold.normal.x == Approx(-0.696704f).margin(0.001f));
+        CHECK(manifold.normal.y == Approx(-0.717353f).margin(0.001f));
+        CHECK(manifold.points[0].point.x == Approx(1.067317f).margin(0.001f));
+        CHECK(manifold.points[0].point.y == Approx(0.674784f).margin(0.001f));
+        CHECK(manifold.points[0].separation == Approx(-0.544664f).margin(0.001f));
+    }
 }
 
 TEST_CASE("Circle vs Segment collision", "[collision][circle][segment]")
@@ -272,6 +348,21 @@ TEST_CASE("Circle vs Segment collision", "[collision][circle][segment]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.points[0].separation < 0.0f);
     }
+
+    SECTION("Rotated")
+    {
+        const Circle rotatedCircle{ Vec2{ 0.0f, 0.5f }, 0.5f };
+        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.25f };
+        const Segment rotatedSegment{ Vec2{ -1.0f, 0.0f }, Vec2{ 1.0f, 0.0f } };
+        const Manifold manifold = collideSymmetric(rotatedCircle, transform, rotatedSegment, transform);
+
+        REQUIRE(manifold.pointCount == 1);
+        CHECK(manifold.normal.x == Approx(0.247404f).margin(0.001f));
+        CHECK(manifold.normal.y == Approx(-0.968912f).margin(0.001f));
+        CHECK(manifold.points[0].point.x == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].point.y == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].separation == Approx(0.0f).margin(0.001f));
+    }
 }
 
 TEST_CASE("Capsule vs Polygon collision", "[collision][capsule][polygon]")
@@ -289,27 +380,36 @@ TEST_CASE("Capsule vs Polygon collision", "[collision][capsule][polygon]")
     SECTION("Tangent on top")
     {
         Capsule cap{Vec2{0.0f, 1.5f}, Vec2{0.0f, 2.5f}, 0.5f};
-        Manifold m = collideSymmetric(poly, t, cap, t);
-        REQUIRE(m.pointCount == 1);
-        CHECK(m.normal.x == Approx(0.0f).margin(0.001f));
-        CHECK(m.normal.y == Approx(1.0f).margin(0.001f));
+        Manifold manifold = collideSymmetric(poly, t, cap, t);
+        CHECK(manifold.pointCount == 0);
     }
 
     SECTION("Tangent on right")
     {
         Capsule cap{Vec2{1.5f, 0.0f}, Vec2{2.5f, 0.0f}, 0.5f};
-        Manifold m = collideSymmetric(poly, t, cap, t);
-        REQUIRE(m.pointCount == 1);
-        CHECK(std::abs(m.normal.x) == Approx(1.0f).margin(0.001f));
-        CHECK(m.normal.y == Approx(0.0f).margin(0.001f));
+        Manifold manifold = collideSymmetric(poly, t, cap, t);
+        CHECK(manifold.pointCount == 0);
     }
 
     SECTION("Intersecting")
     {
         Capsule cap{Vec2{0.0f, -1.0f}, Vec2{0.0f, 1.0f}, 0.5f};
-        Manifold m = collideSymmetric(poly, t, cap, t);
-        REQUIRE(m.pointCount == 1);
-        CHECK(m.points[0].separation < 0.0f);
+        Manifold manifold = collideSymmetric(poly, t, cap, t);
+        REQUIRE(manifold.pointCount == 2);
+        CHECK(manifold.points[0].separation <= Approx(0.0f).margin(0.01f));
+        CHECK(manifold.points[1].separation <= Approx(0.0f).margin(0.01f));
+    }
+
+    SECTION("Rotated")
+    {
+        const Polygon rotatedPolygon = makeRectangle(Vec2{ 0.0f, 0.0f }, 1.0f, 1.0f, 0.1f);
+        const Capsule rotatedCapsule{ Vec2{ 0.0f, -1.0f }, Vec2{ 0.0f, 1.0f }, 0.5f };
+        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.3f };
+        const Manifold manifold = collideSymmetric(rotatedPolygon, transform, rotatedCapsule, transform);
+
+        REQUIRE(manifold.pointCount == 2);
+        CHECK(manifold.points[0].separation <= Approx(0.0f).margin(0.01f));
+        CHECK(manifold.points[1].separation <= Approx(0.0f).margin(0.01f));
     }
 }
 
@@ -346,6 +446,20 @@ TEST_CASE("Capsule vs Segment collision", "[collision][capsule][segment]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.points[0].separation < 0.0f);
     }
+
+    SECTION("Rotated")
+    {
+        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.25f };
+        const Segment rotatedSegment{ Vec2{ -1.0f, 0.0f }, Vec2{ 1.0f, 0.0f } };
+        const Manifold manifold = collideSymmetric(cap, transform, rotatedSegment, transform);
+
+        REQUIRE(manifold.pointCount == 1);
+        CHECK(manifold.normal.x == Approx(1.0f).margin(0.001f));
+        CHECK(std::abs(manifold.normal.y) == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].point.x == Approx(-0.718912f).margin(0.001f));
+        CHECK(manifold.points[0].point.y == Approx(-0.247404f).margin(0.001f));
+        CHECK(manifold.points[0].separation == Approx(-0.5f).margin(0.001f));
+    }
 }
 
 TEST_CASE("Polygon vs Segment collision", "[collision][polygon][segment]")
@@ -363,25 +477,38 @@ TEST_CASE("Polygon vs Segment collision", "[collision][polygon][segment]")
     SECTION("Tangent on top")
     {
         Segment seg{Vec2{-2.0f, 1.0f}, Vec2{2.0f, 1.0f}};
-        Manifold m = collideSymmetric(poly, t, seg, t);
-        REQUIRE(m.pointCount == 1);
+        Manifold manifold = collideSymmetric(poly, t, seg, t);
+        REQUIRE(manifold.pointCount == 2);
     }
 
     SECTION("Tangent on right")
     {
         Segment seg{Vec2{1.0f, -2.0f}, Vec2{1.0f, 2.0f}};
-        Manifold m = collideSymmetric(poly, t, seg, t);
-        REQUIRE(m.pointCount == 1);
-        CHECK(std::abs(m.normal.x) == Approx(1.0f).margin(0.001f));
-        CHECK(m.normal.y == Approx(0.0f).margin(0.001f));
+        Manifold manifold = collideSymmetric(poly, t, seg, t);
+        REQUIRE(manifold.pointCount == 2);
+        CHECK(std::abs(manifold.normal.x) == Approx(1.0f).margin(0.001f));
+        CHECK(manifold.normal.y == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Cross through")
     {
         Segment seg{Vec2{0.0f, -2.0f}, Vec2{0.0f, 2.0f}};
-        Manifold m = collideSymmetric(poly, t, seg, t);
-        REQUIRE(m.pointCount == 1);
-        CHECK(m.points[0].separation <= Approx(0.0f).margin(0.01f));
+        Manifold manifold = collideSymmetric(poly, t, seg, t);
+        REQUIRE(manifold.pointCount == 2);
+        CHECK(manifold.points[0].separation <= Approx(0.0f).margin(0.01f));
+        CHECK(manifold.points[1].separation <= Approx(0.0f).margin(0.01f));
+    }
+
+    SECTION("Rotated")
+    {
+        const Polygon rotatedPolygon = makeRectangle(Vec2{ 0.0f, 0.0f }, 1.0f, 1.0f, 0.2f);
+        const Segment rotatedSegment{ Vec2{ -1.0f, 0.0f }, Vec2{ 1.0f, 0.0f } };
+        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.2f };
+        const Manifold manifold = collideSymmetric(rotatedPolygon, transform, rotatedSegment, transform);
+
+        REQUIRE(manifold.pointCount == 2);
+        CHECK(manifold.points[0].separation <= Approx(0.0f).margin(0.01f));
+        CHECK(manifold.points[1].separation <= Approx(0.0f).margin(0.01f));
     }
 }
 
@@ -400,22 +527,49 @@ TEST_CASE("Polygon vs Polygon collision", "[collision][polygon]")
     SECTION("Tangent on right")
     {
         Polygon polyB = makeRectangle(Vec2{1.999f, 0.0f}, 1.0f, 1.0f);
-        Manifold m = collideSymmetric(polyA, t, polyB, t);
-        REQUIRE(m.pointCount == 1);
+        Manifold manifold = collideSymmetric(polyA, t, polyB, t);
+        REQUIRE(manifold.pointCount == 2);
+        CHECK(manifold.normal.x == Approx(1.0f).margin(0.001f));
+        CHECK(std::abs(manifold.normal.y) == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].separation <= Approx(0.0f).margin(0.01f));
+        CHECK(manifold.points[1].separation <= Approx(0.0f).margin(0.01f));
     }
 
     SECTION("Tangent on top")
     {
         Polygon polyB = makeRectangle(Vec2{0.0f, 1.999f}, 1.0f, 1.0f);
-        Manifold m = collideSymmetric(polyA, t, polyB, t);
-        REQUIRE(m.pointCount == 1);
+        Manifold manifold = collideSymmetric(polyA, t, polyB, t);
+        REQUIRE(manifold.pointCount == 2);
+        CHECK(std::abs(manifold.normal.x) == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.normal.y == Approx(1.0f).margin(0.001f));
+        CHECK(manifold.points[0].separation <= Approx(0.0f).margin(0.01f));
+        CHECK(manifold.points[1].separation <= Approx(0.0f).margin(0.01f));
     }
 
     SECTION("Overlapping")
     {
         Polygon polyB = makeRectangle(Vec2{0.5f, 0.5f}, 1.0f, 1.0f);
-        Manifold m = collideSymmetric(polyA, t, polyB, t);
-        REQUIRE(m.pointCount == 1);
-        CHECK(m.points[0].separation < 0.0f);
+        Manifold manifold = collideSymmetric(polyA, t, polyB, t);
+        REQUIRE(manifold.pointCount == 2);
+        CHECK(manifold.points[0].separation < 0.0f);
+        CHECK(manifold.points[1].separation < 0.0f);
+    }
+
+    SECTION("Rotated overlap")
+    {
+        const Polygon rotatedA = makeRectangle(Vec2{ 0.0f, 0.0f }, 1.0f, 1.0f, 0.5f);
+        const Polygon rotatedB = makeRectangle(Vec2{ 0.5f, 0.5f }, 1.0f, 1.0f, 0.25f);
+        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.0f };
+        const Manifold manifold = collideSymmetric(rotatedA, transform, rotatedB, transform);
+
+        REQUIRE(manifold.pointCount == 2);
+        CHECK(manifold.normal.x == Approx(0.877579f).margin(0.001f));
+        CHECK(manifold.normal.y == Approx(0.479423f).margin(0.001f));
+        CHECK(manifold.points[0].point.x == Approx(-0.610249f).margin(0.001f));
+        CHECK(manifold.points[0].point.y == Approx(0.806114f).margin(0.001f));
+        CHECK(manifold.points[1].point.x == Approx(-0.221508f).margin(0.001f));
+        CHECK(manifold.points[1].point.y == Approx(-0.716316f).margin(0.001f));
+        CHECK(manifold.points[0].separation == Approx(-1.537806f).margin(0.001f));
+        CHECK(manifold.points[1].separation == Approx(-1.537806f).margin(0.001f));
     }
 }
