@@ -153,3 +153,17 @@ inline std::vector<InfiniteRay> generateRandomInfiniteRays(size_t count, float r
 
     return rays;
 }
+
+inline std::vector<Vec2> generateRandomTranslations(size_t count, float minValue, float maxValue, uint32_t seed = 42)
+{
+    DeterministicRNG rng(seed);
+    std::vector<Vec2> translations;
+    translations.reserve(count);
+
+    for (size_t i = 0; i < count; ++i)
+    {
+        translations.push_back(Vec2{ rng.nextFloat(minValue, maxValue), rng.nextFloat(minValue, maxValue) });
+    }
+
+    return translations;
+}
