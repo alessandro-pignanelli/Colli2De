@@ -12,86 +12,86 @@ namespace c2d
 
 // Circle vs Circle
 Manifold collide(const Circle& circleA,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Circle& circleB,
-                 const Transform& transformB);
+                 Transform transformB);
 
 // Capsule vs Capsule
 Manifold collide(const Capsule& capsuleA,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Capsule& capsuleB,
-                 const Transform& transformB);
+                 Transform transformB);
 
 // Polygon vs Polygon
 Manifold collide(const Polygon& polygonA,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Polygon& polygonB,
-                 const Transform& transformB);
+                 Transform transformB);
 
 // Segment vs Segment
 Manifold collide(const Segment& segmentA,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Segment& segmentB,
-                 const Transform& transformB);
+                 Transform transformB);
 
 // Circle vs Capsule
 Manifold collide(const Capsule& capsule,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Circle& circle,
-                 const Transform& transformB);
+                 Transform transformB);
 Manifold collide(const Circle& circle,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Capsule& capsule,
-                 const Transform& transformB);
+                 Transform transformB);
 
 // Circle vs Polygon
 Manifold collide(const Polygon& polygon,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Circle& circle,
-                 const Transform& transformB);
+                 Transform transformB);
 Manifold collide(const Circle& circle,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Polygon& polygon,
-                 const Transform& transformB);
+                 Transform transformB);
 
 // Circle vs Segment
 Manifold collide(const Circle& circle,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Segment& segment,
-                 const Transform& transformB);
+                 Transform transformB);
 Manifold collide(const Segment& segment,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Circle& circle,
-                 const Transform& transformB);
+                 Transform transformB);
 
 // Capsule vs Polygon
 Manifold collide(const Capsule& capsule,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Polygon& polygon,
-                 const Transform& transformB);
+                 Transform transformB);
 Manifold collide(const Polygon& polygon,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Capsule& capsule,
-                 const Transform& transformB);
+                 Transform transformB);
 
 // Capsule vs Segment
 Manifold collide(const Capsule& capsule,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Segment& segment,
-                 const Transform& transformB);
+                 Transform transformB);
 Manifold collide(const Segment& segment,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Capsule& capsule,
-                 const Transform& transformB);
+                 Transform transformB);
 
 // Polygon vs Segment
 Manifold collide(const Polygon& polygon,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Segment& segment,
-                 const Transform& transformB);
+                 Transform transformB);
 Manifold collide(const Segment& segment,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Polygon& polygon,
-                 const Transform& transformB);
+                 Transform transformB);
 
 } // namespace c2d

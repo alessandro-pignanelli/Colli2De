@@ -17,9 +17,14 @@ struct Rotation
         : sin(std::sin(angleRadians)), cos(std::cos(angleRadians)) {}
 
     // Rotate a vector
-    constexpr Vec2 operator()(Vec2 vec) const
+    constexpr Vec2 apply(Vec2 vec) const
     {
         return Vec2{ cos * vec.x - sin * vec.y, sin * vec.x + cos * vec.y };
+    }
+
+    constexpr Vec2 inverse(Vec2 vec) const
+    {
+        return Vec2{ cos * vec.x + sin * vec.y, -sin * vec.x + cos * vec.y };
     }
 };
 
@@ -35,7 +40,12 @@ struct Transform
     // Transform a vector (rotate then translate)
     constexpr Vec2 apply(Vec2 vec) const
     {
-        return rotation(vec) + translation;
+        return rotation.apply(vec) + translation;
+    }
+
+    constexpr Vec2 toLocal(Vec2 vec) const
+    {
+        return rotation.inverse(vec - translation);
     }
 };
 

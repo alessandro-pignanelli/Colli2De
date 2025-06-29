@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include "collision/Collision.hpp"
 
@@ -12,9 +13,9 @@ namespace
 }
 
 Manifold collide(const Circle& circleA,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Circle& circleB,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Manifold manifold{};
 
@@ -42,8 +43,8 @@ Manifold collide(const Circle& circleA,
 
     manifold.normal = normal;
     manifold.points[0].point = worldContact;
-    manifold.points[0].anchorA = worldContact - transformA.translation;
-    manifold.points[0].anchorB = worldContact - transformB.translation;
+    manifold.points[0].anchorA = transformA.toLocal(worldContact);
+    manifold.points[0].anchorB = transformB.toLocal(worldContact);
     manifold.points[0].separation = distance - radius; // Negative = penetration
     manifold.points[0].id = 0;
     manifold.pointCount = 1;
@@ -52,9 +53,9 @@ Manifold collide(const Circle& circleA,
 }
 
 Manifold collide(const Capsule& capsule,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Circle& circle,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Manifold manifold{};
 
@@ -97,8 +98,8 @@ Manifold collide(const Capsule& capsule,
 
     manifold.normal = normal;
     manifold.points[0].point = worldContact;
-    manifold.points[0].anchorA = worldContact - transformA.translation;
-    manifold.points[0].anchorB = worldContact - transformB.translation;
+    manifold.points[0].anchorA = transformA.toLocal(worldContact);
+    manifold.points[0].anchorB = transformB.toLocal(worldContact);
     manifold.points[0].separation = distance - sumRadius; // Negative = penetration
     manifold.points[0].id = 0;
     manifold.pointCount = 1;
@@ -107,9 +108,9 @@ Manifold collide(const Capsule& capsule,
 }
 
 Manifold collide(const Circle& circle,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Capsule& capsule,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     auto manifold = collide(capsule, transformB, circle, transformA);
     manifold.reverse();
@@ -118,9 +119,9 @@ Manifold collide(const Circle& circle,
 
 // --- Capsule vs Capsule ---
 Manifold collide(const Capsule& capsuleA,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Capsule& capsuleB,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Manifold manifold{};
 
@@ -214,8 +215,8 @@ Manifold collide(const Capsule& capsuleA,
 
     manifold.normal = normal;
     manifold.points[0].point = worldContact;
-    manifold.points[0].anchorA = worldContact - transformA.translation;
-    manifold.points[0].anchorB = worldContact - transformB.translation;
+    manifold.points[0].anchorA = transformA.toLocal(worldContact);
+    manifold.points[0].anchorB = transformB.toLocal(worldContact);
     manifold.points[0].separation = distance - radius;
     manifold.points[0].id = 0;
     manifold.pointCount = 1;
@@ -225,9 +226,9 @@ Manifold collide(const Capsule& capsuleA,
 
 // --- Segment vs Segment ---
 Manifold collide(const Segment& segmentA,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Segment& segmentB,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Capsule capA{ segmentA.start, segmentA.end, 0.0f };
     Capsule capB{ segmentB.start, segmentB.end, 0.0f };
@@ -236,9 +237,9 @@ Manifold collide(const Segment& segmentA,
 
 // --- Circle vs Segment ---
 Manifold collide(const Circle& circle,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Segment& segment,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Capsule cap{ segment.start, segment.end, 0.0f };
     auto manifold = collide(cap, transformB, circle, transformA);
@@ -247,9 +248,9 @@ Manifold collide(const Circle& circle,
 }
 
 Manifold collide(const Segment& segment,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Circle& circle,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Capsule cap{ segment.start, segment.end, 0.0f };
     return collide(cap, transformA, circle, transformB);
@@ -257,18 +258,18 @@ Manifold collide(const Segment& segment,
 
 // --- Capsule vs Segment ---
 Manifold collide(const Capsule& capsule,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Segment& segment,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Capsule segCap{ segment.start, segment.end, 0.0f };
     return collide(capsule, transformA, segCap, transformB);
 }
 
 Manifold collide(const Segment& segment,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Capsule& capsule,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Capsule segCap{ segment.start, segment.end, 0.0f };
     auto manifold = collide(capsule, transformB, segCap, transformA);
@@ -277,8 +278,8 @@ Manifold collide(const Segment& segment,
 }
 
 // Helper for polygon SAT projection
-static std::pair<float, float> projectPolygon(const Polygon& polygon,
-                                              const Transform& transform,
+static std::pair<float, float> projectPolygon(Polygon polygon,
+                                              Transform transform,
                                               Vec2 axis)
 {
     const Vec2 first = transform.apply(polygon.vertices[0]);
@@ -293,26 +294,87 @@ static std::pair<float, float> projectPolygon(const Polygon& polygon,
     return { outMin, outMax };
 }
 
+static std::vector<Vec2> transformVertices(Polygon polygon, Transform transform)
+{
+    std::vector<Vec2> verts;
+    verts.reserve(polygon.count);
+    for (uint8_t i = 0; i < polygon.count; ++i)
+    {
+        verts.push_back(transform.apply(polygon.vertices[i]));
+    }
+    return verts;
+}
+
+static std::vector<Vec2> clipWithPlane(const std::vector<Vec2>& input, Vec2 point, Vec2 normal)
+{
+    std::vector<Vec2> output;
+    if (input.empty())
+        return output;
+
+    Vec2 prev = input.back();
+    const float prevDist = normal.dot(prev - point);
+    float previousDistance = prevDist;
+    for (const Vec2& curr : input)
+    {
+        const float currentDistance = normal.dot(curr - point);
+        if (currentDistance <= 0.0f)
+        {
+            if (previousDistance > 0.0f)
+            {
+                const float interpolationFactor = previousDistance / (previousDistance - currentDistance);
+                const Vec2 intersect = prev + (curr - prev) * interpolationFactor;
+                output.push_back(intersect);
+            }
+            output.push_back(curr);
+        }
+        else if (previousDistance <= 0.0f)
+        {
+            const float interpolationFactor = previousDistance / (previousDistance - currentDistance);
+            const Vec2 intersect = prev + (curr - prev) * interpolationFactor;
+            output.push_back(intersect);
+        }
+        prev = curr;
+        previousDistance = currentDistance;
+    }
+    return output;
+}
+
+static std::vector<Vec2> polygonIntersection(Polygon polygonA,
+                                             Transform transformA,
+                                             Polygon polygonB,
+                                             Transform transformB)
+{
+    std::vector<Vec2> result = transformVertices(polygonA, transformA);
+    std::vector<Vec2> clipVerts = transformVertices(polygonB, transformB);
+    for (uint8_t i = 0; i < polygonB.count && !result.empty(); ++i)
+    {
+        const Vec2 planePoint = clipVerts[i];
+        const Vec2 planeNormal = transformB.rotation.apply(polygonB.normals[i]);
+        result = clipWithPlane(result, planePoint, planeNormal);
+    }
+    return result;
+}
+
 // --- Polygon vs Polygon ---
 Manifold collide(const Polygon& polygonA,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Polygon& polygonB,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Manifold manifold{};
 
     float overlap = std::numeric_limits<float>::max();
     Vec2 smallestAxis{ 1.0f, 0.0f };
 
-    const auto testAxes = [&](const Polygon& poly, const Transform& xf)
+    const auto areAxesOverlapping = [&](Polygon polygon, Transform transform)
     {
-        for (uint8_t i = 0; i < poly.count; ++i)
+        for (uint8_t i = 0; i < polygon.count; ++i)
         {
-            const Vec2 axis = xf.rotation(poly.normals[i]);
+            const Vec2 axis = transform.rotation.apply(polygon.normals[i]);
             auto [minA, maxA] = projectPolygon(polygonA, transformA, axis);
             auto [minB, maxB] = projectPolygon(polygonB, transformB, axis);
             const float axisOverlap = std::min(maxA, maxB) - std::max(minA, minB);
-            if (axisOverlap <= 0.0f)
+            if (axisOverlap < 0.0f)
                 return false;
             if (axisOverlap < overlap)
             {
@@ -323,9 +385,9 @@ Manifold collide(const Polygon& polygonA,
         return true;
     };
 
-    if (!testAxes(polygonA, transformA))
+    if (!areAxesOverlapping(polygonA, transformA))
         return manifold;
-    if (!testAxes(polygonB, transformB))
+    if (!areAxesOverlapping(polygonB, transformB))
         return manifold;
 
     const Vec2 centerA = transformA.apply(polygonA.vertices[0]);
@@ -343,29 +405,49 @@ Manifold collide(const Polygon& polygonA,
     if ((avgB - avgA).dot(smallestAxis) < 0.0f)
         smallestAxis = -smallestAxis;
 
+    std::vector<Vec2> contactVertices = polygonIntersection(polygonA, transformA, polygonB, transformB);
     manifold.normal = smallestAxis;
-    const Vec2 worldContact = (avgA + avgB) * 0.5f;
-    manifold.points[0].point = worldContact;
-    manifold.points[0].anchorA = worldContact - transformA.translation;
-    manifold.points[0].anchorB = worldContact - transformB.translation;
-    manifold.points[0].separation = -overlap;
-    manifold.points[0].id = 0;
-    manifold.pointCount = 1;
+
+    if (contactVertices.empty())
+    {
+        const Vec2 worldContact = (avgA + avgB) * 0.5f;
+        manifold.points[0].point = worldContact;
+        manifold.points[0].anchorA = transformA.toLocal(worldContact);
+        manifold.points[0].anchorB = transformB.toLocal(worldContact);
+        manifold.points[0].separation = -overlap;
+        manifold.points[0].id = 0;
+        manifold.pointCount = 1;
+        return manifold;
+    }
+
+    std::sort(contactVertices.begin(), contactVertices.end());
+
+    const std::size_t count = std::min<std::size_t>(contactVertices.size(), MaxManifoldPoints);
+    for (std::size_t i = 0; i < count; ++i)
+    {
+        const Vec2 contactPoint = contactVertices[i];
+        manifold.points[i].point = contactPoint;
+        manifold.points[i].anchorA = transformA.toLocal(contactPoint);
+        manifold.points[i].anchorB = transformB.toLocal(contactPoint);
+        manifold.points[i].separation = -overlap;
+        manifold.points[i].id = static_cast<uint16_t>(i);
+    }
+    manifold.pointCount = static_cast<uint8_t>(count);
 
     return manifold;
 }
 
 // --- Circle vs Polygon ---
 static bool isPointInsidePolygon(Vec2 point,
-                                 const Polygon& polygon,
-                                 const Transform& transform)
+                                 Polygon polygon,
+                                 Transform transform)
 {
     for (uint8_t i = 0; i < polygon.count; ++i)
     {
         const Vec2 v1 = transform.apply(polygon.vertices[i]);
         const Vec2 v2 = transform.apply(polygon.vertices[(i + 1) % polygon.count]);
         const Vec2 edge = v2 - v1;
-        const Vec2 normal = transform.rotation(polygon.normals[i]);
+        const Vec2 normal = transform.rotation.apply(polygon.normals[i]);
         if (normal.dot(point - v1) > 0.0f)
             return false;
     }
@@ -373,9 +455,9 @@ static bool isPointInsidePolygon(Vec2 point,
 }
 
 Manifold collide(const Polygon& polygon,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Circle& circle,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Manifold manifold{};
 
@@ -403,9 +485,9 @@ Manifold collide(const Polygon& polygon,
             minDistSq = distSq;
             closest = pointOnEdge;
             if (edgeParam > 0.0f && edgeParam < 1.0f)
-                normal = transformA.rotation(polygon.normals[i]);
+                normal = transformA.rotation.apply(polygon.normals[i]);
             else
-                normal = delta.lengthSqr() > kEpsilon * kEpsilon ? delta.normalize() : transformA.rotation(polygon.normals[i]);
+                normal = delta.lengthSqr() > kEpsilon * kEpsilon ? delta.normalize() : transformA.rotation.apply(polygon.normals[i]);
         }
     }
 
@@ -427,8 +509,8 @@ Manifold collide(const Polygon& polygon,
 
     manifold.normal = normal;
     manifold.points[0].point = worldContact;
-    manifold.points[0].anchorA = worldContact - transformA.translation;
-    manifold.points[0].anchorB = worldContact - transformB.translation;
+    manifold.points[0].anchorA = transformA.toLocal(worldContact);
+    manifold.points[0].anchorB = transformB.toLocal(worldContact);
     if (isInside)
         manifold.points[0].separation = -(circle.radius + distance);
     else
@@ -440,9 +522,9 @@ Manifold collide(const Polygon& polygon,
 }
 
 Manifold collide(const Circle& circle,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Polygon& polygon,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     auto manifold = collide(polygon, transformB, circle, transformA);
     manifold.reverse();
@@ -451,119 +533,28 @@ Manifold collide(const Circle& circle,
 
 // --- Capsule vs Polygon ---
 Manifold collide(const Capsule& capsule,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Polygon& polygon,
-                 const Transform& transformB)
+                 Transform transformB)
 {
-    Manifold manifold{};
+    const Vec2 axis = (capsule.center2 - capsule.center1).normalize();
+    const Vec2 normal = Vec2{ -axis.y, axis.x };
 
-    const Vec2 segmentStart = transformA.apply(capsule.center1);
-    const Vec2 segmentEnd = transformA.apply(capsule.center2);
+    Polygon capsulePoly{};
+    capsulePoly.vertices[0] = capsule.center1;
+    capsulePoly.vertices[1] = capsule.center2;
+    capsulePoly.normals[0] = normal;
+    capsulePoly.normals[1] = -normal;
+    capsulePoly.count = 2;
+    capsulePoly.radius = capsule.radius;
 
-    float minDistSq = std::numeric_limits<float>::max();
-    Vec2 pointPoly{ 0.0f, 0.0f };
-    Vec2 pointSeg{ 0.0f, 0.0f };
-
-    for (uint8_t i = 0; i < polygon.count; ++i)
-    {
-        const Vec2 vertex1 = transformB.apply(polygon.vertices[i]);
-        const Vec2 vertex2 = transformB.apply(polygon.vertices[(i + 1) % polygon.count]);
-        const Vec2 edgeVector = vertex2 - vertex1;
-        const Vec2 segmentVector = segmentEnd - segmentStart;
-        const Vec2 startOffset = vertex1 - segmentStart;
-
-        const float edgeLengthSq = edgeVector.dot(edgeVector);
-        const float segmentLengthSq = segmentVector.dot(segmentVector);
-        const float offsetDotSegment = segmentVector.dot(startOffset);
-
-        float edgeParam = 0.0f;
-        float segmentParam = 0.0f;
-
-        if (edgeLengthSq <= kEpsilon && segmentLengthSq <= kEpsilon)
-        {
-            edgeParam = segmentParam = 0.0f;
-        }
-        else if (edgeLengthSq <= kEpsilon)
-        {
-            edgeParam = 0.0f;
-            segmentParam = std::clamp(offsetDotSegment / segmentLengthSq, 0.0f, 1.0f);
-        }
-        else
-        {
-            const float offsetDotEdge = edgeVector.dot(startOffset);
-            if (segmentLengthSq <= kEpsilon)
-            {
-                segmentParam = 0.0f;
-                edgeParam = std::clamp(-offsetDotEdge / edgeLengthSq, 0.0f, 1.0f);
-            }
-            else
-            {
-                const float edgeDotSegment = edgeVector.dot(segmentVector);
-                const float denominator = edgeLengthSq * segmentLengthSq - edgeDotSegment * edgeDotSegment;
-                if (denominator != 0.0f)
-                    edgeParam = std::clamp((edgeDotSegment * offsetDotSegment - offsetDotEdge * segmentLengthSq) /
-                                           denominator,
-                                           0.0f,
-                                           1.0f);
-                else
-                    edgeParam = 0.0f;
-                float tNumerator = edgeDotSegment * edgeParam + offsetDotSegment;
-                if (tNumerator < 0.0f)
-                {
-                    segmentParam = 0.0f;
-                    edgeParam = std::clamp(-offsetDotEdge / edgeLengthSq, 0.0f, 1.0f);
-                }
-                else if (tNumerator > segmentLengthSq)
-                {
-                    segmentParam = 1.0f;
-                    edgeParam = std::clamp((edgeDotSegment - offsetDotEdge) / edgeLengthSq, 0.0f, 1.0f);
-                }
-                else
-                {
-                    segmentParam = tNumerator / segmentLengthSq;
-                }
-            }
-        }
-
-        const Vec2 pointOnPolygon = vertex1 + edgeVector * edgeParam;
-        const Vec2 pointOnSegment = segmentStart + segmentVector * segmentParam;
-        const float distSq = (pointOnPolygon - pointOnSegment).lengthSqr();
-        if (distSq < minDistSq)
-        {
-            minDistSq = distSq;
-            pointPoly = pointOnPolygon;
-            pointSeg = pointOnSegment;
-        }
-    }
-
-    const float radius = capsule.radius + polygon.radius;
-    if (minDistSq > radius * radius)
-        return manifold;
-
-    const float distance = std::sqrt(minDistSq);
-    Vec2 normal{ 1.0f, 0.0f };
-    if (distance > kEpsilon)
-        normal = (pointPoly - pointSeg).normalize();
-
-    const Vec2 contactA = pointSeg + normal * capsule.radius;
-    const Vec2 contactB = pointPoly - normal * polygon.radius;
-    const Vec2 worldContact = (contactA + contactB) * 0.5f;
-
-    manifold.normal = normal;
-    manifold.points[0].point = worldContact;
-    manifold.points[0].anchorA = worldContact - transformA.translation;
-    manifold.points[0].anchorB = worldContact - transformB.translation;
-    manifold.points[0].separation = distance - radius;
-    manifold.points[0].id = 0;
-    manifold.pointCount = 1;
-
-    return manifold;
+    return collide(capsulePoly, transformA, polygon, transformB);
 }
 
 Manifold collide(const Polygon& polygon,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Capsule& capsule,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     auto manifold = collide(capsule, transformB, polygon, transformA);
     manifold.reverse();
@@ -572,18 +563,18 @@ Manifold collide(const Polygon& polygon,
 
 // --- Polygon vs Segment ---
 Manifold collide(const Polygon& polygon,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Segment& segment,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     Capsule segCap{ segment.start, segment.end, 0.0f };
     return collide(polygon, transformA, segCap, transformB);
 }
 
 Manifold collide(const Segment& segment,
-                 const Transform& transformA,
+                 Transform transformA,
                  const Polygon& polygon,
-                 const Transform& transformB)
+                 Transform transformB)
 {
     auto manifold = collide(polygon, transformB, segment, transformA);
     manifold.reverse();
