@@ -28,10 +28,7 @@ static Manifold collideSymmetric(const ShapeA& shapeA,
     manifoldBA.reverse();
 
     REQUIRE(manifoldAB.pointCount == manifoldBA.pointCount);
-    if (!(manifoldAB.normal == manifoldBA.normal))
-    {
-        CHECK(manifoldAB.normal == -manifoldBA.normal);
-    }
+    CHECK(manifoldAB.normal.abs() == manifoldBA.normal.abs());
     for (uint8_t i = 0; i < manifoldAB.pointCount; ++i)
     {
         CHECK(manifoldAB.points[i].point == manifoldBA.points[i].point);

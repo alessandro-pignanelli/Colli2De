@@ -57,6 +57,8 @@ To run tests, run the following command:
 ./test.sh --cmake -b -r "collision" "~[Benchmark]"
 ```
 
+Make sure to always run the script with the `-r` option, or the build will fail.
+
 The tag "[Benchmark]" is used to mark performance tests. They might take a long time to run, so if you didn't edit them, it's better to exclude them from the majority of the test runs. Make sure to run them at least once before committing your changes.
 
 Tests are created using the `Catch2` framework. When creating new tests, make sure to follow the conventions of the existing tests.

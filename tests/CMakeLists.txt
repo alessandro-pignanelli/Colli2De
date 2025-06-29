@@ -35,8 +35,14 @@ target_link_libraries(Colli2DeTests
     PRIVATE
     Catch2::Catch2WithMain
     colli2de
-    stdc++exp # std::print
 )
+
+if (WIN32)
+    target_link_libraries(Colli2DeTests
+        PRIVATE
+        stdc++exp # std::print
+    )
+endif()
 
 target_include_directories(Colli2DeTests
     PRIVATE

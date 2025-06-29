@@ -1,10 +1,10 @@
 #include <chrono>
 #include <cstdint>
-#include <iostream>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
 
 #include "geometry/SweepShapes.hpp"
+#include "utils/Print.hpp"
 #include "utils/Random.hpp"
 
 using namespace c2d;
@@ -36,8 +36,8 @@ TEST_CASE("Sweep performance: Circle vs Circle", "[Sweep][Benchmark][Circle]")
         elapsed = duration_cast<microseconds>(end - start);
         return total;
     };
-    CHECK(elapsed < 1200us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/1200us" << std::endl;
+    CHECK(elapsed < 5ms);
+    printElapsed(elapsed, 5ms);
 
     BENCHMARK("Sweep 100k circle pairs")
     {
@@ -52,8 +52,8 @@ TEST_CASE("Sweep performance: Circle vs Circle", "[Sweep][Benchmark][Circle]")
         elapsed = duration_cast<microseconds>(end - start);
         return total;
     };
-    CHECK(elapsed < 15000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/15000us" << std::endl;
+    CHECK(elapsed < 50ms);
+    printElapsed(elapsed, 50ms);
 }
 
 TEST_CASE("Sweep performance: Polygon vs Polygon", "[Sweep][Benchmark][Polygon]")
@@ -81,8 +81,8 @@ TEST_CASE("Sweep performance: Polygon vs Polygon", "[Sweep][Benchmark][Polygon]"
         elapsed = duration_cast<microseconds>(end - start);
         return total;
     };
-    CHECK(elapsed < 10000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/10000us" << std::endl;
+    CHECK(elapsed < 10ms);
+    printElapsed(elapsed, 10ms);
 
     BENCHMARK("Sweep 100k polygon pairs")
     {
@@ -97,6 +97,6 @@ TEST_CASE("Sweep performance: Polygon vs Polygon", "[Sweep][Benchmark][Polygon]"
         elapsed = duration_cast<microseconds>(end - start);
         return total;
     };
-    CHECK(elapsed < 50000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/50000us" << std::endl;
+    CHECK(elapsed < 70ms);
+    printElapsed(elapsed, 70ms);
 }

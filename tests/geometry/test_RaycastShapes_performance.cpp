@@ -1,10 +1,10 @@
 #include <chrono>
 #include <cstdint>
-#include <iostream>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
 
 #include "geometry/RaycastShapes.hpp"
+#include "utils/Print.hpp"
 #include "utils/Random.hpp"
 
 using namespace c2d;
@@ -36,7 +36,7 @@ TEST_CASE("Raycast performance: Circle", "[Raycast][Benchmark][Circle]")
         return total;
     };
     CHECK(elapsed < 500us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/500us" << std::endl;
+    printElapsed(elapsed, 500us);
 
     BENCHMARK("Raycast 100k circles")
     {
@@ -52,7 +52,7 @@ TEST_CASE("Raycast performance: Circle", "[Raycast][Benchmark][Circle]")
         return total;
     };
     CHECK(elapsed < 5000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/5000us" << std::endl;
+    printElapsed(elapsed, 5000us);
 }
 
 TEST_CASE("Raycast performance: Segment", "[Raycast][Benchmark][Segment]")
@@ -80,7 +80,7 @@ TEST_CASE("Raycast performance: Segment", "[Raycast][Benchmark][Segment]")
         return total;
     };
     CHECK(elapsed < 500us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/500us" << std::endl;
+    printElapsed(elapsed, 500us);
 
     BENCHMARK("Raycast 100k segments")
     {
@@ -96,7 +96,7 @@ TEST_CASE("Raycast performance: Segment", "[Raycast][Benchmark][Segment]")
         return total;
     };
     CHECK(elapsed < 5000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/5000us" << std::endl;
+    printElapsed(elapsed, 5000us);
 }
 
 TEST_CASE("Raycast performance: Capsule", "[Raycast][Benchmark][Capsule]")
@@ -124,7 +124,7 @@ TEST_CASE("Raycast performance: Capsule", "[Raycast][Benchmark][Capsule]")
         return total;
     };
     CHECK(elapsed < 1000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/1000us" << std::endl;
+    printElapsed(elapsed, 1000us);
 
     BENCHMARK("Raycast 100k capsules")
     {
@@ -140,7 +140,7 @@ TEST_CASE("Raycast performance: Capsule", "[Raycast][Benchmark][Capsule]")
         return total;
     };
     CHECK(elapsed < 10000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/10000us" << std::endl;
+    printElapsed(elapsed, 10000us);
 }
 
 TEST_CASE("Raycast performance: Polygon", "[Raycast][Benchmark][Polygon]")
@@ -168,7 +168,7 @@ TEST_CASE("Raycast performance: Polygon", "[Raycast][Benchmark][Polygon]")
         return total;
     };
     CHECK(elapsed < 500us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/500us" << std::endl;
+    printElapsed(elapsed, 500us);
 
     BENCHMARK("Raycast 100k polygons")
     {
@@ -184,5 +184,5 @@ TEST_CASE("Raycast performance: Polygon", "[Raycast][Benchmark][Polygon]")
         return total;
     };
     CHECK(elapsed < 5000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/5000us" << std::endl;
+    printElapsed(elapsed, 5000us);
 }

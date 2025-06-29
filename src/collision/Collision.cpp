@@ -444,11 +444,9 @@ static bool isPointInsidePolygon(Vec2 point,
 {
     for (uint8_t i = 0; i < polygon.count; ++i)
     {
-        const Vec2 v1 = transform.apply(polygon.vertices[i]);
-        const Vec2 v2 = transform.apply(polygon.vertices[(i + 1) % polygon.count]);
-        const Vec2 edge = v2 - v1;
+        const Vec2 vertex = transform.apply(polygon.vertices[i]);
         const Vec2 normal = transform.rotation.apply(polygon.normals[i]);
-        if (normal.dot(point - v1) > 0.0f)
+        if (normal.dot(point - vertex) > 0.0f)
             return false;
     }
     return true;
@@ -474,12 +472,15 @@ Manifold collide(const Polygon& polygon,
         const Vec2 v2 = transformA.apply(polygon.vertices[(i + 1) % polygon.count]);
         const Vec2 edge = v2 - v1;
         const float edgeLenSq = edge.lengthSqr();
+
         float edgeParam = 0.0f;
         if (edgeLenSq > 0.0f)
             edgeParam = std::clamp((center - v1).dot(edge) / edgeLenSq, 0.0f, 1.0f);
+
         const Vec2 pointOnEdge = v1 + edge * edgeParam;
         const Vec2 delta = center - pointOnEdge;
         const float distSq = delta.lengthSqr();
+
         if (distSq < minDistSq)
         {
             minDistSq = distSq;
@@ -487,7 +488,9 @@ Manifold collide(const Polygon& polygon,
             if (edgeParam > 0.0f && edgeParam < 1.0f)
                 normal = transformA.rotation.apply(polygon.normals[i]);
             else
-                normal = delta.lengthSqr() > kEpsilon * kEpsilon ? delta.normalize() : transformA.rotation.apply(polygon.normals[i]);
+                normal = delta.lengthSqr() > kEpsilon * kEpsilon
+                         ? delta.normalize()
+                         : transformA.rotation.apply(polygon.normals[i]);
         }
     }
 
@@ -511,10 +514,7 @@ Manifold collide(const Polygon& polygon,
     manifold.points[0].point = worldContact;
     manifold.points[0].anchorA = transformA.toLocal(worldContact);
     manifold.points[0].anchorB = transformB.toLocal(worldContact);
-    if (isInside)
-        manifold.points[0].separation = -(circle.radius + distance);
-    else
-        manifold.points[0].separation = distance - radius;
+    manifold.points[0].separation = isInside ? -(circle.radius + distance) : (distance - radius);
     manifold.points[0].id = 0;
     manifold.pointCount = 1;
 

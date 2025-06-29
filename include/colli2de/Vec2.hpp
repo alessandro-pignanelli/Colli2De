@@ -69,6 +69,7 @@ public:
     }
 
     constexpr float getBigger() const;
+    constexpr Vec2 abs() const;
 
     constexpr Vec2& operator+=(Vec2 other);
     constexpr Vec2& operator-=(Vec2 other);
@@ -146,6 +147,11 @@ constexpr Vec2 Vec2::normalize() const
 constexpr float Vec2::getBigger() const
 {
     return x > y ? x : y;
+}
+
+constexpr Vec2 Vec2::abs() const
+{
+    return Vec2(std::abs(x), std::abs(y));
 }
 
 // Arithmetic compound assignment

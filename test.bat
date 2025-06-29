@@ -8,6 +8,7 @@ SET build=0
 SET cmake_arg=0
 SET build_type=Debug
 SET lower_build_type=debug
+SET run_until_failure=0
 SET cmd_args=
 
 FOR %%A IN (%*) DO (
@@ -59,6 +60,14 @@ FOR %%A IN (%*) DO (
         SET lower_build_type=relwithdebinfo
         SET allowed=1
     )
+    IF "%%A"=="--run-until-failure" (
+        SET run_until_failure=1
+        SET allowed=1
+    )
+    IF "%%A"=="-ruf" (
+        SET run_until_failure=1
+        SET allowed=1
+    )
     IF "%%A"=="--help" GOTO PRINT_HELP
     IF "%%A"=="-h" GOTO PRINT_HELP
 
@@ -96,12 +105,23 @@ IF %build%==1 (
 )
 
 REM ---------- Run Tests ----------
-
 cd build\%build_type%\tests
+
+:RUN_TESTS
+
 call Colli2DeTests.exe %cmd_args%
 IF %ERRORLEVEL% NEQ 0 (
     echo [31m[Colli2De] Tests failed![0m
     exit /b %ERRORLEVEL%
+)
+
+IF %run_until_failure%==1 (
+    echo [32m[Colli2De] All tests passed successfully.[0m
+    echo.
+    echo [33m[Colli2De] Running again...[0m
+    echo.
+    cls
+    GOTO RUN_TESTS
 )
 
 echo [32m[Colli2De] All tests passed successfully.[0m

@@ -18,59 +18,11 @@ if not exist "build" (
 cd build
 
 
-REM ---------- Parse command line arguments ----------
-
+REM ---------- Loop through [Debug|Release]
 SET build_type=Debug
-SET lower_build_type=debug
-
-FOR %%A IN (%*) DO (
-    SET allowed=0
-    IF "%%A"=="--release" (
-        SET build_type=Release
-        SET lower_build_type=release
-        SET allowed=1
-    )
-    IF "%%A"=="-r" (
-        SET build_type=Release
-        SET lower_build_type=release
-        SET allowed=1
-    )
-    IF "%%A"=="--debug" (
-        SET build_type=Debug
-        SET lower_build_type=debug
-        SET allowed=1
-    )
-    IF "%%A"=="-d" (
-        SET build_type=Debug
-        SET lower_build_type=debug
-        SET allowed=1
-    )
-    IF "%%A"=="--profile" (
-        SET build_type=RelWithDebInfo
-        SET lower_build_type=relwithdebinfo
-        SET allowed=1
-    )
-    IF "%%A"=="--relwithdebinfo" (
-        SET build_type=RelWithDebInfo
-        SET lower_build_type=relwithdebinfo
-        SET allowed=1
-    )
-    IF "%%A"=="-p" (
-        SET build_type=RelWithDebInfo
-        SET lower_build_type=relwithdebinfo
-        SET allowed=1
-    )
-    IF "%%A"=="--help" GOTO PRINT_HELP
-    IF "%%A"=="-h" GOTO PRINT_HELP
-
-    IF !allowed! EQU 0 (
-        echo [31m[Catch2] Unknown option: %%A[0m
-        GOTO PRINT_HELP
-    )
-)
-
 
 REM ---------- Run CMake ----------
+:START
 
 IF NOT EXIST "%build_type%" (
     mkdir "%build_type%"
@@ -115,6 +67,12 @@ IF %ERRORLEVEL% NEQ 0 (
 
 echo [32m[Catch2] CMake completed successfully.[0m
 echo.
+
+IF "%build_type%"=="Debug" (
+    SET build_type=Release
+    cd ..
+    goto START
+)
 
 popd >nul
 exit /b 0

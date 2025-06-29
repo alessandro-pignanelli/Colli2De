@@ -95,7 +95,7 @@ struct Polygon
 
 Polygon makeRectangle(Vec2 center, float halfWidth, float halfHeight, float angle = 0.0f, float radius = 0.0f);
 Polygon makeTriangle(Vec2 v0, Vec2 v1, Vec2 v2, float radius = 0.0f);
-Polygon makePolygon(Vec2 center, float radius, uint8_t n, float angle = 0.0f, float rounding = 0.0f);
+Polygon makeRegularPolygon(Vec2 center, float radius, uint8_t n, float angle = 0.0f, float rounding = 0.0f);
 Polygon makePolygon(const std::initializer_list<Vec2>& points, float radius = 0.0f);
 
 } // namespace c2d

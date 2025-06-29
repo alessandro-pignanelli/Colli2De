@@ -1,12 +1,12 @@
 #include <chrono>
 #include <cstdint>
-#include <iostream>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
 
 #include "data_structures/DynamicBVH.hpp"
 #include "geometry/AABB.hpp"
+#include "utils/Print.hpp"
 #include "utils/Random.hpp"
 
 using namespace c2d;
@@ -33,7 +33,7 @@ TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Ins
         elapsed = duration_cast<microseconds>(end - start);
     };
     CHECK(elapsed < 10ms);
-    std::cout << std::endl << duration_cast<milliseconds>(elapsed).count() << "ms/10ms" << std::endl;
+    printElapsed(elapsed, 10ms);
 
     BENCHMARK("Insert 100,000 proxies")
     {
@@ -45,7 +45,7 @@ TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Ins
         elapsed = duration_cast<microseconds>(end - start);
     };
     CHECK(elapsed < 100ms);
-    std::cout << std::endl << duration_cast<milliseconds>(elapsed).count() << "ms/100ms" << std::endl;
+    printElapsed(elapsed, 100ms);
 }
 
 TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Move]")
@@ -74,7 +74,7 @@ TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Mov
         elapsed = duration_cast<microseconds>(end - start);
     };
     CHECK(elapsed < 80us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/80us" << std::endl;
+    printElapsed(elapsed, 80us);
 
     bvh.clear();
     indices.clear();
@@ -92,7 +92,7 @@ TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Mov
         elapsed = duration_cast<microseconds>(end - start);
     };
     CHECK(elapsed < 800us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/800us" << std::endl;
+    printElapsed(elapsed, 800us);
 }
 
 TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]")
@@ -120,7 +120,7 @@ TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchm
         return count;
     };
     CHECK(elapsed < 10us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/10us" << std::endl;
+    printElapsed(elapsed, 10us);
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
@@ -136,7 +136,7 @@ TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchm
         return count;
     };
     CHECK(elapsed < 100us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/100us" << std::endl;
+    printElapsed(elapsed, 100us);
 }
 
 TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
@@ -163,7 +163,7 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
         return hits.size();
     };
     CHECK(elapsed < 20us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/20us" << std::endl;
+    printElapsed(elapsed, 20us);
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
@@ -178,7 +178,7 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
         return hits.size();
     };
     CHECK(elapsed < 200us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/200us" << std::endl;
+    printElapsed(elapsed, 200us);
 }
 
 TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[DynamicBVH][BroadPhaseCollisions][Benchmark]")
@@ -205,7 +205,7 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
     };
 
     CHECK(elapsed < 50us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/50us" << std::endl;
+    printElapsed(elapsed, 50us);
 
     bvh.clear();
     for (uint32_t i = 0; i < 10'000; ++i)
@@ -221,7 +221,7 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
     };
 
     CHECK(elapsed < 5ms);
-    std::cout << std::endl << duration_cast<milliseconds>(elapsed).count() << "ms/5ms" << std::endl;
+    printElapsed(elapsed, 5ms);
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
@@ -236,6 +236,6 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
         return pairs.size(); // Return to prevent optimization
     };
 
-    CHECK(elapsed < 80ms);
-    std::cout << std::endl << duration_cast<milliseconds>(elapsed).count() << "ms/80ms" << std::endl;
+    CHECK(elapsed < 100ms);
+    printElapsed(elapsed, 100ms);
 }

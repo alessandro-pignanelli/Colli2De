@@ -1,12 +1,12 @@
 #include <chrono>
 #include <cstdint>
-#include <iostream>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
 
 #include "collision/Collision.hpp"
 #include "geometry/Transformations.hpp"
+#include "utils/Print.hpp"
 #include "utils/Random.hpp"
 
 using namespace c2d;
@@ -38,7 +38,7 @@ TEST_CASE("Collision performance: Circle vs Circle", "[collision][Benchmark][Cir
         return total;
     };
     CHECK(elapsed < 500us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/500us" << std::endl;
+    printElapsed(elapsed, 500us);
 
     BENCHMARK("Collide 100k circle pairs")
     {
@@ -52,8 +52,8 @@ TEST_CASE("Collision performance: Circle vs Circle", "[collision][Benchmark][Cir
         elapsed = duration_cast<microseconds>(end - start);
         return total;
     };
-    CHECK(elapsed < 5000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/5000us" << std::endl;
+    CHECK(elapsed < 5ms);
+    printElapsed(elapsed, 5ms);
 }
 
 TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][Segment]")
@@ -81,7 +81,7 @@ TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][S
         return total;
     };
     CHECK(elapsed < 500us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/500us" << std::endl;
+    printElapsed(elapsed, 500us);
 
     BENCHMARK("Collide 100k segment pairs")
     {
@@ -95,8 +95,8 @@ TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][S
         elapsed = duration_cast<microseconds>(end - start);
         return total;
     };
-    CHECK(elapsed < 5000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/5000us" << std::endl;
+    CHECK(elapsed < 5ms);
+    printElapsed(elapsed, 5ms);
 }
 
 TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][Capsule]")
@@ -124,7 +124,7 @@ TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][C
         return total;
     };
     CHECK(elapsed < 500us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/500us" << std::endl;
+    printElapsed(elapsed, 500us);
 
     BENCHMARK("Collide 100k capsule pairs")
     {
@@ -138,8 +138,8 @@ TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][C
         elapsed = duration_cast<microseconds>(end - start);
         return total;
     };
-    CHECK(elapsed < 5000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/5000us" << std::endl;
+    CHECK(elapsed < 5ms);
+    printElapsed(elapsed, 5ms);
 }
 
 TEST_CASE("Collision performance: Polygon vs Polygon", "[collision][Benchmark][Polygon]")
@@ -167,7 +167,7 @@ TEST_CASE("Collision performance: Polygon vs Polygon", "[collision][Benchmark][P
         return total;
     };
     CHECK(elapsed < 500us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/500us" << std::endl;
+    printElapsed(elapsed, 500us);
 
     BENCHMARK("Collide 100k polygon pairs")
     {
@@ -181,6 +181,6 @@ TEST_CASE("Collision performance: Polygon vs Polygon", "[collision][Benchmark][P
         elapsed = duration_cast<microseconds>(end - start);
         return total;
     };
-    CHECK(elapsed < 5000us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/5000us" << std::endl;
+    CHECK(elapsed < 5ms);
+    printElapsed(elapsed, 5ms);
 }
