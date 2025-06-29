@@ -9,8 +9,6 @@ file(GLOB_RECURSE SOURCES
     ${CMAKE_SOURCE_DIR}/src/*.hpp
 )
 
-message(STATUS "Sources: ${SOURCES}")
-
 file(GLOB_RECURSE API_FILES
     ${CMAKE_SOURCE_DIR}/include/colli2de/*.hpp
 )
