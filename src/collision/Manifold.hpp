@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <algorithm>
 #include "colli2de/Vec2.hpp"
 
 namespace c2d
@@ -35,6 +36,15 @@ struct Manifold
     uint8_t pointCount{0};                    // Actual number of contact points (0, 1, or 2)
 
     constexpr Manifold() = default;
+
+    constexpr void reverse()
+    {
+        normal = -normal;
+        for (uint8_t i = 0; i < pointCount; ++i)
+        {
+            std::swap(points[i].anchorA, points[i].anchorB);
+        }
+    }
 
     std::string toString() const
     {

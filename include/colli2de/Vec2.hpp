@@ -12,21 +12,21 @@ namespace
 {
     float inverseSqrt(float number)
     {
-        const float threehalfs = 1.5F; 
+        const float threehalfs = 1.5F;
 
         float x2 = number * 0.5F;
         float y = number;
-        
+
         // evil floating point bit level hacking
         long i = * ( long * ) &y;
-        
+
         // value is pre-assumed
         i = 0x5f3759df - ( i >> 1 );
         y = * ( float * ) &i;
-        
+
         // 1st iteration
         y = y * ( threehalfs - ( x2 * y * y ) );
-        
+
         // 2nd iteration, this can be removed
         y = y * ( threehalfs - ( x2 * y * y ) );
 
@@ -40,89 +40,90 @@ namespace c2d
 class Vec2
 {
 public:
-	float x;
-	float y;
+    float x;
+    float y;
 
-	constexpr Vec2() : Vec2(0, 0) {}
-	constexpr Vec2(float x, float y) : x(x), y(y) {}
-	
-	constexpr Vec2(const Vec2& other) = default;
-	constexpr Vec2& operator=(const Vec2& other) = default;
-	constexpr Vec2(Vec2&& other) noexcept = default;
-	constexpr Vec2& operator=(Vec2&& other) noexcept = default;
+    constexpr Vec2() : Vec2(0, 0) {}
+    constexpr Vec2(float x, float y) : x(x), y(y) {}
+    
+    constexpr Vec2(const Vec2& other) = default;
+    constexpr Vec2& operator=(const Vec2& other) = default;
+    constexpr Vec2(Vec2&& other) noexcept = default;
+    constexpr Vec2& operator=(Vec2&& other) noexcept = default;
 
-	std::string toString() const;
+    std::string toString() const;
 
-	constexpr float length() const;
-	constexpr float inverseLength() const;
-	constexpr float lengthSqr() const;
+    constexpr float length() const;
+    constexpr float inverseLength() const;
+    constexpr float lengthSqr() const;
 
-	constexpr Vec2 interpolate(Vec2 other, float percentage) const;
-	constexpr float dot(Vec2 other) const;
+    constexpr Vec2 interpolate(Vec2 other, float percentage) const;
+    constexpr float dot(Vec2 other) const;
+    constexpr float cross(Vec2 other) const;
 
-	constexpr Vec2 normalize() const;
-	static constexpr Vec2 normalized(float x, float y)
-	{
-		const float inverseLen = inverseSqrt(x * x + y * y);
-		return Vec2(x * inverseLen, y * inverseLen);
-	}
+    constexpr Vec2 normalize() const;
+    static constexpr Vec2 normalized(float x, float y)
+    {
+        const float inverseLen = inverseSqrt(x * x + y * y);
+        return Vec2(x * inverseLen, y * inverseLen);
+    }
 
-	constexpr float getBigger() const;
+    constexpr float getBigger() const;
 
-	constexpr Vec2& operator+=(Vec2 other);
-	constexpr Vec2& operator-=(Vec2 other);
-	constexpr Vec2& operator*=(Vec2 other);
-	constexpr Vec2& operator/=(Vec2 other);
-	constexpr Vec2& operator+=(float value);
-	constexpr Vec2& operator-=(float value);
-	constexpr Vec2& operator*=(float value);
-	constexpr Vec2& operator/=(float value);
+    constexpr Vec2& operator+=(Vec2 other);
+    constexpr Vec2& operator-=(Vec2 other);
+    constexpr Vec2& operator*=(Vec2 other);
+    constexpr Vec2& operator/=(Vec2 other);
+    constexpr Vec2& operator+=(float value);
+    constexpr Vec2& operator-=(float value);
+    constexpr Vec2& operator*=(float value);
+    constexpr Vec2& operator/=(float value);
 
-	constexpr Vec2 operator+(Vec2 other) const;
-	constexpr Vec2 operator-(Vec2 other) const;
-	constexpr Vec2 operator*(Vec2 other) const;
-	constexpr Vec2 operator/(Vec2 other) const;
-	constexpr Vec2 operator+(float value) const;
-	constexpr Vec2 operator-(float value) const;
-	constexpr Vec2 operator*(float value) const;
-	constexpr Vec2 operator/(float value) const;
-	constexpr friend Vec2 operator+(float value, Vec2 vec);
-	constexpr friend Vec2 operator-(float value, Vec2 vec);
-	constexpr friend Vec2 operator*(float value, Vec2 vec);
-	constexpr friend Vec2 operator/(float value, Vec2 vec);
+    constexpr Vec2 operator+(Vec2 other) const;
+    constexpr Vec2 operator-(Vec2 other) const;
+    constexpr Vec2 operator*(Vec2 other) const;
+    constexpr Vec2 operator/(Vec2 other) const;
+    constexpr Vec2 operator+(float value) const;
+    constexpr Vec2 operator-(float value) const;
+    constexpr Vec2 operator*(float value) const;
+    constexpr Vec2 operator/(float value) const;
+    constexpr friend Vec2 operator+(float value, Vec2 vec);
+    constexpr friend Vec2 operator-(float value, Vec2 vec);
+    constexpr friend Vec2 operator*(float value, Vec2 vec);
+    constexpr friend Vec2 operator/(float value, Vec2 vec);
 
-	constexpr Vec2 operator-() const;
+    constexpr Vec2 operator-() const;
 
-	constexpr float operator[](int index) const
-	{
-		assert(index == 0 || index == 1);
-		return index == 0 ? x : y;
-	}
-	constexpr bool operator==(Vec2 other) const;
-	friend std::ostream& operator<<(std::ostream& os, const Vec2& vec)
-	{
-		return os << vec.toString();
-	}
+    constexpr float operator[](int index) const
+    {
+        assert(index == 0 || index == 1);
+        return index == 0 ? x : y;
+    }
+    constexpr bool operator==(Vec2 other) const;
+    friend std::ostream& operator<<(std::ostream& os, const Vec2& vec)
+    {
+        return os << vec.toString();
+    }
 };
 
 inline std::string Vec2::toString() const
 {
-	return std::format("Vec2({}, {})", x, y);
+    return std::format("Vec2({}, {})", x, y);
 }
 
 constexpr float Vec2::length() const
 {
-	return std::sqrt(x * x + y * y);
+    return std::sqrt(x * x + y * y);
 }
 
 constexpr float Vec2::inverseLength() const
 {
-	return inverseSqrt(x * x + y * y);
+    return inverseSqrt(x * x + y * y);
 }
 
 constexpr float Vec2::lengthSqr() const
 {
-	return x * x + y * y;
+    return x * x + y * y;
 }
 
 constexpr Vec2 Vec2::interpolate(Vec2 other, float percentage) const
@@ -132,162 +133,168 @@ constexpr Vec2 Vec2::interpolate(Vec2 other, float percentage) const
 
 constexpr float Vec2::dot(Vec2 other) const
 {
-	return x * other.x + y * other.y;
+    return x * other.x + y * other.y;
 }
 
 constexpr Vec2 Vec2::normalize() const
 {
-	const float multiplier = inverseLength();
-	return Vec2(x * multiplier, y * multiplier);
+    const float multiplier = inverseLength();
+    return Vec2(x * multiplier, y * multiplier);
 }
 
 constexpr float Vec2::getBigger() const
 {
-	return x > y ? x : y;
+    return x > y ? x : y;
 }
 
 // Arithmetic compound assignment
 constexpr Vec2& Vec2::operator+=(Vec2 other)
 {
-	x += other.x;
-	y += other.y;
-	return *this;
+    x += other.x;
+    y += other.y;
+    return *this;
 }
 
 constexpr Vec2& Vec2::operator-=(Vec2 other)
 {
-	x -= other.x;
-	y -= other.y;
-	return *this;
+    x -= other.x;
+    y -= other.y;
+    return *this;
 }
 
 constexpr Vec2& Vec2::operator*=(Vec2 other)
 {
-	x *= other.x;
-	y *= other.y;
-	return *this;
+    x *= other.x;
+    y *= other.y;
+    return *this;
 }
 
 constexpr Vec2& Vec2::operator/=(Vec2 other)
 {
-	x /= other.x;
-	y /= other.y;
-	return *this;
+    x /= other.x;
+    y /= other.y;
+    return *this;
 }
 
 // Scalar compound assignment
 constexpr Vec2& Vec2::operator+=(float value)
 {
-	x += value;
-	y += value;
-	return *this;
+    x += value;
+    y += value;
+    return *this;
 }
 
 constexpr Vec2& Vec2::operator-=(float value)
 {
-	x -= value;
-	y -= value;
-	return *this;
+    x -= value;
+    y -= value;
+    return *this;
 }
 
 constexpr Vec2& Vec2::operator*=(float value)
 {
-	x *= value;
-	y *= value;
-	return *this;
+    x *= value;
+    y *= value;
+    return *this;
 }
 
 constexpr Vec2& Vec2::operator/=(float value)
 {
-	x /= value;
-	y /= value;
-	return *this;
+    x /= value;
+    y /= value;
+    return *this;
 }
 
 constexpr Vec2 Vec2::operator+(Vec2 other) const
 {
-	Vec2 result = *this;
-	result += other;
-	return result;
+    Vec2 result = *this;
+    result += other;
+    return result;
 }
 
 constexpr Vec2 Vec2::operator-(Vec2 other) const
 {
-	Vec2 result = *this;
-	result -= other;
-	return result;
+    Vec2 result = *this;
+    result -= other;
+    return result;
 }
 
 constexpr Vec2 Vec2::operator*(Vec2 other) const
 {
-	Vec2 result = *this;
-	result *= other;
-	return result;
+    Vec2 result = *this;
+    result *= other;
+    return result;
 }
 
 constexpr Vec2 Vec2::operator/(Vec2 other) const
 {
-	Vec2 result = *this;
-	result /= other;
-	return result;
+    Vec2 result = *this;
+    result /= other;
+    return result;
 }
 
 constexpr Vec2 Vec2::operator+(float value) const
 {
-	Vec2 result = *this;
-	result += value;
-	return result;
+    Vec2 result = *this;
+    result += value;
+    return result;
 }
 
 constexpr Vec2 Vec2::operator-(float value) const
 {
-	Vec2 result = *this;
-	result -= value;
-	return result;
+    Vec2 result = *this;
+    result -= value;
+    return result;
 }
 
 constexpr Vec2 Vec2::operator*(float value) const
 {
-	Vec2 result = *this;
-	result *= value;
-	return result;
+    Vec2 result = *this;
+    result *= value;
+    return result;
 }
 
 constexpr Vec2 Vec2::operator/(float value) const
 {
-	Vec2 result = *this;
-	result /= value;
-	return result;
+    Vec2 result = *this;
+    result /= value;
+    return result;
 }
 
 constexpr Vec2 operator+(float value, Vec2 vec)
 {
-	return Vec2(vec.x + value, vec.y + value);
+    return Vec2(vec.x + value, vec.y + value);
 }
 
 constexpr Vec2 operator-(float value, Vec2 vec)
 {
-	return Vec2(value - vec.x, value - vec.y);
+    return Vec2(value - vec.x, value - vec.y);
 }
 
 constexpr Vec2 operator*(float value, Vec2 vec)
 {
-	return Vec2(vec.x * value, vec.y * value);
+    return Vec2(vec.x * value, vec.y * value);
 }
 
 constexpr Vec2 operator/(float value, Vec2 vec)
 {
-	return Vec2(value / vec.x, value / vec.y);
+    return Vec2(value / vec.x, value / vec.y);
 }
 
 constexpr Vec2 Vec2::operator-() const
 {
-	return Vec2(-x, -y);
+    return Vec2(-x, -y);
 }
 
 constexpr bool Vec2::operator==(Vec2 other) const
 {
-	return float_equals(x, other.x) && float_equals(y, other.y);
+    return float_equals(x, other.x) && float_equals(y, other.y);
+}
+
+
+constexpr float Vec2::cross(Vec2 other) const
+{
+    return x * other.y - y * other.x;
 }
 
 static_assert(std::is_trivially_copyable_v<Vec2>, "Vec2 must be trivially copyable");
@@ -298,9 +305,9 @@ static_assert(std::is_trivially_copyable_v<Vec2>, "Vec2 must be trivially copyab
 template<>
 struct std::formatter<c2d::Vec2> : std::formatter<std::string>
 {
-	template<typename FormatContext>
-	auto format(c2d::Vec2 vec, FormatContext& ctx) const
-	{
-		return std::formatter<std::string>::format(vec.toString(), ctx);
-	}
+    template<typename FormatContext>
+    auto format(c2d::Vec2 vec, FormatContext& ctx) const
+    {
+        return std::formatter<std::string>::format(vec.toString(), ctx);
+    }
 };

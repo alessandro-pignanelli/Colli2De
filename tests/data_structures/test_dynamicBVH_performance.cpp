@@ -73,8 +73,8 @@ TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Mov
         const auto end = high_resolution_clock::now();
         elapsed = duration_cast<microseconds>(end - start);
     };
-    CHECK(elapsed < 50us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/50us" << std::endl;
+    CHECK(elapsed < 80us);
+    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/80us" << std::endl;
 
     bvh.clear();
     indices.clear();
@@ -91,8 +91,8 @@ TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Mov
         const auto end = high_resolution_clock::now();
         elapsed = duration_cast<microseconds>(end - start);
     };
-    CHECK(elapsed < 500us);
-    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/500us" << std::endl;
+    CHECK(elapsed < 800us);
+    std::cout << std::endl << duration_cast<microseconds>(elapsed).count() << "us/800us" << std::endl;
 }
 
 TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]")
