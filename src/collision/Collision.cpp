@@ -581,4 +581,292 @@ Manifold collide(const Segment& segment,
     return manifold;
 }
 
+bool isColliding(const Circle& circleA,
+                 Transform transformA,
+                 const Circle& circleB,
+                 Transform transformB)
+{
+    const Vec2 centerA = transformA.apply(circleA.center);
+    const Vec2 centerB = transformB.apply(circleB.center);
+    const float distSq = (centerB - centerA).lengthSqr();
+    const float radius = circleA.radius + circleB.radius;
+    return distSq <= (radius + kEpsilon) * (radius + kEpsilon);
+}
+
+bool isColliding(const Capsule& capsule,
+                 Transform transformA,
+                 const Circle& circle,
+                 Transform transformB)
+{
+    const Vec2 center1 = transformA.apply(capsule.center1);
+    const Vec2 center2 = transformA.apply(capsule.center2);
+    const Vec2 centerCircle = transformB.apply(circle.center);
+
+    const Vec2 segment = center2 - center1;
+    const float segmentLengthSqr = segment.lengthSqr();
+    float projection = 0.0f;
+    if (segmentLengthSqr > 0.0f)
+    {
+        projection = (centerCircle - center1).dot(segment) / segmentLengthSqr;
+        projection = std::clamp(projection, 0.0f, 1.0f);
+    }
+    const Vec2 closest = center1 + segment * projection;
+
+    const Vec2 delta = centerCircle - closest;
+    const float distanceSqr = delta.lengthSqr();
+    const float sumRadius = capsule.radius + circle.radius;
+
+    return distanceSqr <= (sumRadius + kEpsilon) * (sumRadius + kEpsilon);
+}
+
+bool isColliding(const Circle& circle,
+                 Transform transformA,
+                 const Capsule& capsule,
+                 Transform transformB)
+{
+    return isColliding(capsule, transformB, circle, transformA);
+}
+
+bool isColliding(const Capsule& capsuleA,
+                 Transform transformA,
+                 const Capsule& capsuleB,
+                 Transform transformB)
+{
+    const Vec2 center1A = transformA.apply(capsuleA.center1);
+    const Vec2 center2A = transformA.apply(capsuleA.center2);
+    const Vec2 center1B = transformB.apply(capsuleB.center1);
+    const Vec2 center2B = transformB.apply(capsuleB.center2);
+
+    const Vec2 segmentVectorA = center2A - center1A;
+    const Vec2 segmentVectorB = center2B - center1B;
+    const Vec2 startDelta = center1A - center1B;
+
+    const float lengthSquaredA = segmentVectorA.dot(segmentVectorA);
+    const float lengthSquaredB = segmentVectorB.dot(segmentVectorB);
+    const float deltaDotB = segmentVectorB.dot(startDelta);
+
+    float paramA = 0.0f;
+    float paramB = 0.0f;
+
+    if (lengthSquaredA <= kEpsilon && lengthSquaredB <= kEpsilon)
+    {
+        paramA = paramB = 0.0f;
+    }
+    else if (lengthSquaredA <= kEpsilon)
+    {
+        paramA = 0.0f;
+        paramB = std::clamp(deltaDotB / lengthSquaredB, 0.0f, 1.0f);
+    }
+    else
+    {
+        const float deltaDotA = segmentVectorA.dot(startDelta);
+        if (lengthSquaredB <= kEpsilon)
+        {
+            paramB = 0.0f;
+            paramA = std::clamp(-deltaDotA / lengthSquaredA, 0.0f, 1.0f);
+        }
+        else
+        {
+            const float segmentDotAB = segmentVectorA.dot(segmentVectorB);
+            const float denominator = lengthSquaredA * lengthSquaredB - segmentDotAB * segmentDotAB;
+            if (denominator != 0.0f)
+            {
+                paramA = std::clamp((segmentDotAB * deltaDotB - deltaDotA * lengthSquaredB) / denominator,
+                                    0.0f,
+                                    1.0f);
+            }
+            else
+            {
+                paramA = 0.0f;
+            }
+            float tNumerator = segmentDotAB * paramA + deltaDotB;
+            if (tNumerator < 0.0f)
+            {
+                paramB = 0.0f;
+                paramA = std::clamp(-deltaDotA / lengthSquaredA, 0.0f, 1.0f);
+            }
+            else if (tNumerator > lengthSquaredB)
+            {
+                paramB = 1.0f;
+                paramA = std::clamp((segmentDotAB - deltaDotA) / lengthSquaredA, 0.0f, 1.0f);
+            }
+            else
+            {
+                paramB = tNumerator / lengthSquaredB;
+            }
+        }
+    }
+
+    const Vec2 pointA = center1A + segmentVectorA * paramA;
+    const Vec2 pointB = center1B + segmentVectorB * paramB;
+
+    const Vec2 delta = pointB - pointA;
+    const float distSq = delta.lengthSqr();
+    const float radius = capsuleA.radius + capsuleB.radius;
+
+    return distSq <= (radius + kEpsilon) * (radius + kEpsilon);
+}
+
+bool isColliding(const Segment& segmentA,
+                 Transform transformA,
+                 const Segment& segmentB,
+                 Transform transformB)
+{
+    Capsule capA{ segmentA.start, segmentA.end, 0.0f };
+    Capsule capB{ segmentB.start, segmentB.end, 0.0f };
+    return isColliding(capA, transformA, capB, transformB);
+}
+
+bool isColliding(const Circle& circle,
+                 Transform transformA,
+                 const Segment& segment,
+                 Transform transformB)
+{
+    Capsule cap{ segment.start, segment.end, 0.0f };
+    return isColliding(cap, transformB, circle, transformA);
+}
+
+bool isColliding(const Segment& segment,
+                 Transform transformA,
+                 const Circle& circle,
+                 Transform transformB)
+{
+    Capsule cap{ segment.start, segment.end, 0.0f };
+    return isColliding(cap, transformA, circle, transformB);
+}
+
+bool isColliding(const Capsule& capsule,
+                 Transform transformA,
+                 const Segment& segment,
+                 Transform transformB)
+{
+    Capsule segCap{ segment.start, segment.end, 0.0f };
+    return isColliding(capsule, transformA, segCap, transformB);
+}
+
+bool isColliding(const Segment& segment,
+                 Transform transformA,
+                 const Capsule& capsule,
+                 Transform transformB)
+{
+    Capsule segCap{ segment.start, segment.end, 0.0f };
+    return isColliding(capsule, transformB, segCap, transformA);
+}
+
+bool isColliding(const Polygon& polygonA,
+                 Transform transformA,
+                 const Polygon& polygonB,
+                 Transform transformB)
+{
+    const auto axesOverlap = [&](Polygon polygon, Transform transform)
+    {
+        for (uint8_t i = 0; i < polygon.count; ++i)
+        {
+            const Vec2 axis = transform.rotation.apply(polygon.normals[i]);
+            auto [minA, maxA] = projectPolygon(polygonA, transformA, axis);
+            auto [minB, maxB] = projectPolygon(polygonB, transformB, axis);
+            if (std::min(maxA, maxB) - std::max(minA, minB) < 0.0f)
+                return false;
+        }
+        return true;
+    };
+
+    if (!axesOverlap(polygonA, transformA))
+        return false;
+    if (!axesOverlap(polygonB, transformB))
+        return false;
+    return true;
+}
+
+bool isColliding(const Polygon& polygon,
+                 Transform transformA,
+                 const Circle& circle,
+                 Transform transformB)
+{
+    const Vec2 center = transformB.apply(circle.center);
+    const float combinedRadius = circle.radius + polygon.radius;
+
+    float minDistSq = std::numeric_limits<float>::max();
+
+    for (uint8_t i = 0; i < polygon.count; ++i)
+    {
+        const Vec2 v1 = transformA.apply(polygon.vertices[i]);
+        const Vec2 v2 = transformA.apply(polygon.vertices[(i + 1) % polygon.count]);
+        const Vec2 edge = v2 - v1;
+        const float edgeLenSq = edge.lengthSqr();
+
+        float edgeParam = 0.0f;
+        if (edgeLenSq > 0.0f)
+            edgeParam = std::clamp((center - v1).dot(edge) / edgeLenSq, 0.0f, 1.0f);
+
+        const Vec2 pointOnEdge = v1 + edge * edgeParam;
+        const Vec2 delta = center - pointOnEdge;
+        const float distSq = delta.lengthSqr();
+
+        if (distSq < minDistSq)
+            minDistSq = distSq;
+    }
+
+    const bool inside = isPointInsidePolygon(center, polygon, transformA);
+    const float radius = combinedRadius;
+
+    if (!inside && minDistSq > radius * radius)
+        return false;
+
+    return true;
+}
+
+bool isColliding(const Circle& circle,
+                 Transform transformA,
+                 const Polygon& polygon,
+                 Transform transformB)
+{
+    return isColliding(polygon, transformB, circle, transformA);
+}
+
+bool isColliding(const Capsule& capsule,
+                 Transform transformA,
+                 const Polygon& polygon,
+                 Transform transformB)
+{
+    const Vec2 axis = (capsule.center2 - capsule.center1).normalize();
+    const Vec2 normal = Vec2{ -axis.y, axis.x };
+
+    Polygon capsulePoly{};
+    capsulePoly.vertices[0] = capsule.center1;
+    capsulePoly.vertices[1] = capsule.center2;
+    capsulePoly.normals[0] = normal;
+    capsulePoly.normals[1] = -normal;
+    capsulePoly.count = 2;
+    capsulePoly.radius = capsule.radius;
+
+    return isColliding(capsulePoly, transformA, polygon, transformB);
+}
+
+bool isColliding(const Polygon& polygon,
+                 Transform transformA,
+                 const Capsule& capsule,
+                 Transform transformB)
+{
+    return isColliding(capsule, transformB, polygon, transformA);
+}
+
+bool isColliding(const Polygon& polygon,
+                 Transform transformA,
+                 const Segment& segment,
+                 Transform transformB)
+{
+    Capsule segCap{ segment.start, segment.end, 0.0f };
+    return isColliding(polygon, transformA, segCap, transformB);
+}
+
+bool isColliding(const Segment& segment,
+                 Transform transformA,
+                 const Polygon& polygon,
+                 Transform transformB)
+{
+    Capsule segCap{ segment.start, segment.end, 0.0f };
+    return isColliding(polygon, transformB, segCap, transformA);
+}
+
 } // namespace c2d

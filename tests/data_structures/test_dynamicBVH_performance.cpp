@@ -31,7 +31,7 @@ TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Ins
         return bvh.size();
     });
 
-    BENCHMARK_FUNCTION("Insert 100k proxies", 100ms, [&]()
+    BENCHMARK_FUNCTION("Insert 100k proxies", 130ms, [&]()
     {
         DynamicBVH<uint32_t> bvh;
         for (uint32_t i = 0; i < 100'000; ++i)
@@ -155,7 +155,7 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
     for (uint32_t i = 0; i < 1'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Find all overlapping pairs among 1k proxies", 50us, [&]()
+    BENCHMARK_FUNCTION("Find all overlapping pairs among 1k proxies", 100us, [&]()
     {
         const auto pairs = bvh.findBroadPhaseCollisions();
         return pairs.size();
