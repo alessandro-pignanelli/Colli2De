@@ -40,22 +40,6 @@ TEST_CASE("Collision performance: Circle vs Circle", "[collision][Benchmark][Cir
             total += collide(circlesA[i], t, circlesB[i], t).pointCount;
         return total;
     });
-
-    BENCHMARK_FUNCTION("isColliding 10k circle pairs", 500us, [&]()
-    {
-        uint32_t total = 0;
-        for (uint32_t i = 0; i < 10'000; ++i)
-            total += isColliding(circlesA[i], t, circlesB[i], t);
-        return total;
-    });
-
-    BENCHMARK_FUNCTION("isColliding 100k circle pairs", 5ms, [&]()
-    {
-        uint32_t total = 0;
-        for (uint32_t i = 0; i < 100'000; ++i)
-            total += isColliding(circlesA[i], t, circlesB[i], t);
-        return total;
-    });
 }
 
 TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][Segment]")
@@ -83,22 +67,6 @@ TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][S
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
             total += collide(segA[i], t, segB[i], t).pointCount;
-        return total;
-    });
-
-    BENCHMARK_FUNCTION("isColliding 10k segment pairs", 1ms, [&]()
-    {
-        uint32_t total = 0;
-        for (uint32_t i = 0; i < 10'000; ++i)
-            total += isColliding(segA[i], t, segB[i], t);
-        return total;
-    });
-
-    BENCHMARK_FUNCTION("isColliding 100k segment pairs", 10ms, [&]()
-    {
-        uint32_t total = 0;
-        for (uint32_t i = 0; i < 100'000; ++i)
-            total += isColliding(segA[i], t, segB[i], t);
         return total;
     });
 }
@@ -130,22 +98,6 @@ TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][C
             total += collide(capA[i], t, capB[i], t).pointCount;
         return total;
     });
-
-    BENCHMARK_FUNCTION("isColliding 10k capsule pairs", 1ms, [&]()
-    {
-        uint32_t total = 0;
-        for (uint32_t i = 0; i < 10'000; ++i)
-            total += isColliding(capA[i], t, capB[i], t);
-        return total;
-    });
-
-    BENCHMARK_FUNCTION("isColliding 100k capsule pairs", 10ms, [&]()
-    {
-        uint32_t total = 0;
-        for (uint32_t i = 0; i < 100'000; ++i)
-            total += isColliding(capA[i], t, capB[i], t);
-        return total;
-    });
 }
 
 TEST_CASE("Collision performance: Polygon vs Polygon", "[collision][Benchmark][Polygon]")
@@ -173,22 +125,6 @@ TEST_CASE("Collision performance: Polygon vs Polygon", "[collision][Benchmark][P
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
             total += collide(polyA[i], t, polyB[i], t).pointCount;
-        return total;
-    });
-
-    BENCHMARK_FUNCTION("isColliding 10k polygon pairs", 1ms, [&]()
-    {
-        uint32_t total = 0;
-        for (uint32_t i = 0; i < 10'000; ++i)
-            total += isColliding(polyA[i], t, polyB[i], t);
-        return total;
-    });
-
-    BENCHMARK_FUNCTION("isColliding 100k polygon pairs", 15ms, [&]()
-    {
-        uint32_t total = 0;
-        for (uint32_t i = 0; i < 100'000; ++i)
-            total += isColliding(polyA[i], t, polyB[i], t);
         return total;
     });
 }

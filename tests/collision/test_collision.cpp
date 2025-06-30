@@ -37,6 +37,17 @@ static Manifold collideSymmetric(const ShapeA& shapeA,
         CHECK(manifoldAB.points[i].separation == Approx(manifoldBA.points[i].separation).margin(0.0001f));
     }
 
+    if (manifoldAB.pointCount == 0)
+    {
+        CHECK_FALSE(areColliding(shapeA, transformA, shapeB, transformB));
+        CHECK_FALSE(areColliding(shapeB, transformB, shapeA, transformA));
+    }
+    else
+    {
+        CHECK(areColliding(shapeA, transformA, shapeB, transformB));
+        CHECK(areColliding(shapeB, transformB, shapeA, transformA));
+    }
+
     return manifoldAB;
 }
 

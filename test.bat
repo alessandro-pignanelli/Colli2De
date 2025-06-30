@@ -114,6 +114,7 @@ IF %ERRORLEVEL% NEQ 0 (
     echo [31m[Colli2De] Tests failed![0m
     exit /b %ERRORLEVEL%
 )
+echo.
 
 IF %run_until_failure%==1 (
     echo [32m[Colli2De] All tests passed successfully.[0m

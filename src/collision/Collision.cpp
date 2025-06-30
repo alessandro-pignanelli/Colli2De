@@ -581,10 +581,10 @@ Manifold collide(const Segment& segment,
     return manifold;
 }
 
-bool isColliding(const Circle& circleA,
-                 Transform transformA,
-                 const Circle& circleB,
-                 Transform transformB)
+bool areColliding(const Circle& circleA,
+                  Transform transformA,
+                  const Circle& circleB,
+                  Transform transformB)
 {
     const Vec2 centerA = transformA.apply(circleA.center);
     const Vec2 centerB = transformB.apply(circleB.center);
@@ -593,10 +593,10 @@ bool isColliding(const Circle& circleA,
     return distSq <= (radius + kEpsilon) * (radius + kEpsilon);
 }
 
-bool isColliding(const Capsule& capsule,
-                 Transform transformA,
-                 const Circle& circle,
-                 Transform transformB)
+bool areColliding(const Capsule& capsule,
+                  Transform transformA,
+                  const Circle& circle,
+                  Transform transformB)
 {
     const Vec2 center1 = transformA.apply(capsule.center1);
     const Vec2 center2 = transformA.apply(capsule.center2);
@@ -619,18 +619,18 @@ bool isColliding(const Capsule& capsule,
     return distanceSqr <= (sumRadius + kEpsilon) * (sumRadius + kEpsilon);
 }
 
-bool isColliding(const Circle& circle,
-                 Transform transformA,
-                 const Capsule& capsule,
-                 Transform transformB)
+bool areColliding(const Circle& circle,
+                  Transform transformA,
+                  const Capsule& capsule,
+                  Transform transformB)
 {
-    return isColliding(capsule, transformB, circle, transformA);
+    return areColliding(capsule, transformB, circle, transformA);
 }
 
-bool isColliding(const Capsule& capsuleA,
-                 Transform transformA,
-                 const Capsule& capsuleB,
-                 Transform transformB)
+bool areColliding(const Capsule& capsuleA,
+                  Transform transformA,
+                  const Capsule& capsuleB,
+                  Transform transformB)
 {
     const Vec2 center1A = transformA.apply(capsuleA.center1);
     const Vec2 center2A = transformA.apply(capsuleA.center2);
@@ -707,56 +707,56 @@ bool isColliding(const Capsule& capsuleA,
     return distSq <= (radius + kEpsilon) * (radius + kEpsilon);
 }
 
-bool isColliding(const Segment& segmentA,
-                 Transform transformA,
-                 const Segment& segmentB,
-                 Transform transformB)
+bool areColliding(const Segment& segmentA,
+                  Transform transformA,
+                  const Segment& segmentB,
+                  Transform transformB)
 {
     Capsule capA{ segmentA.start, segmentA.end, 0.0f };
     Capsule capB{ segmentB.start, segmentB.end, 0.0f };
-    return isColliding(capA, transformA, capB, transformB);
+    return areColliding(capA, transformA, capB, transformB);
 }
 
-bool isColliding(const Circle& circle,
-                 Transform transformA,
-                 const Segment& segment,
-                 Transform transformB)
+bool areColliding(const Circle& circle,
+                  Transform transformA,
+                  const Segment& segment,
+                  Transform transformB)
 {
     Capsule cap{ segment.start, segment.end, 0.0f };
-    return isColliding(cap, transformB, circle, transformA);
+    return areColliding(cap, transformB, circle, transformA);
 }
 
-bool isColliding(const Segment& segment,
-                 Transform transformA,
-                 const Circle& circle,
-                 Transform transformB)
+bool areColliding(const Segment& segment,
+                  Transform transformA,
+                  const Circle& circle,
+                  Transform transformB)
 {
     Capsule cap{ segment.start, segment.end, 0.0f };
-    return isColliding(cap, transformA, circle, transformB);
+    return areColliding(cap, transformA, circle, transformB);
 }
 
-bool isColliding(const Capsule& capsule,
-                 Transform transformA,
-                 const Segment& segment,
-                 Transform transformB)
+bool areColliding(const Capsule& capsule,
+                  Transform transformA,
+                  const Segment& segment,
+                  Transform transformB)
 {
     Capsule segCap{ segment.start, segment.end, 0.0f };
-    return isColliding(capsule, transformA, segCap, transformB);
+    return areColliding(capsule, transformA, segCap, transformB);
 }
 
-bool isColliding(const Segment& segment,
-                 Transform transformA,
-                 const Capsule& capsule,
-                 Transform transformB)
+bool areColliding(const Segment& segment,
+                  Transform transformA,
+                  const Capsule& capsule,
+                  Transform transformB)
 {
     Capsule segCap{ segment.start, segment.end, 0.0f };
-    return isColliding(capsule, transformB, segCap, transformA);
+    return areColliding(capsule, transformB, segCap, transformA);
 }
 
-bool isColliding(const Polygon& polygonA,
-                 Transform transformA,
-                 const Polygon& polygonB,
-                 Transform transformB)
+bool areColliding(const Polygon& polygonA,
+                  Transform transformA,
+                  const Polygon& polygonB,
+                  Transform transformB)
 {
     const auto axesOverlap = [&](Polygon polygon, Transform transform)
     {
@@ -778,10 +778,10 @@ bool isColliding(const Polygon& polygonA,
     return true;
 }
 
-bool isColliding(const Polygon& polygon,
-                 Transform transformA,
-                 const Circle& circle,
-                 Transform transformB)
+bool areColliding(const Polygon& polygon,
+                  Transform transformA,
+                  const Circle& circle,
+                  Transform transformB)
 {
     const Vec2 center = transformB.apply(circle.center);
     const float combinedRadius = circle.radius + polygon.radius;
@@ -816,18 +816,18 @@ bool isColliding(const Polygon& polygon,
     return true;
 }
 
-bool isColliding(const Circle& circle,
-                 Transform transformA,
-                 const Polygon& polygon,
-                 Transform transformB)
+bool areColliding(const Circle& circle,
+                  Transform transformA,
+                  const Polygon& polygon,
+                  Transform transformB)
 {
-    return isColliding(polygon, transformB, circle, transformA);
+    return areColliding(polygon, transformB, circle, transformA);
 }
 
-bool isColliding(const Capsule& capsule,
-                 Transform transformA,
-                 const Polygon& polygon,
-                 Transform transformB)
+bool areColliding(const Capsule& capsule,
+                  Transform transformA,
+                  const Polygon& polygon,
+                  Transform transformB)
 {
     const Vec2 axis = (capsule.center2 - capsule.center1).normalize();
     const Vec2 normal = Vec2{ -axis.y, axis.x };
@@ -840,33 +840,33 @@ bool isColliding(const Capsule& capsule,
     capsulePoly.count = 2;
     capsulePoly.radius = capsule.radius;
 
-    return isColliding(capsulePoly, transformA, polygon, transformB);
+    return areColliding(capsulePoly, transformA, polygon, transformB);
 }
 
-bool isColliding(const Polygon& polygon,
-                 Transform transformA,
-                 const Capsule& capsule,
-                 Transform transformB)
+bool areColliding(const Polygon& polygon,
+                  Transform transformA,
+                  const Capsule& capsule,
+                  Transform transformB)
 {
-    return isColliding(capsule, transformB, polygon, transformA);
+    return areColliding(capsule, transformB, polygon, transformA);
 }
 
-bool isColliding(const Polygon& polygon,
-                 Transform transformA,
-                 const Segment& segment,
-                 Transform transformB)
-{
-    Capsule segCap{ segment.start, segment.end, 0.0f };
-    return isColliding(polygon, transformA, segCap, transformB);
-}
-
-bool isColliding(const Segment& segment,
-                 Transform transformA,
-                 const Polygon& polygon,
-                 Transform transformB)
+bool areColliding(const Polygon& polygon,
+                  Transform transformA,
+                  const Segment& segment,
+                  Transform transformB)
 {
     Capsule segCap{ segment.start, segment.end, 0.0f };
-    return isColliding(polygon, transformB, segCap, transformA);
+    return areColliding(polygon, transformA, segCap, transformB);
+}
+
+bool areColliding(const Segment& segment,
+                  Transform transformA,
+                  const Polygon& polygon,
+                  Transform transformB)
+{
+    Capsule segCap{ segment.start, segment.end, 0.0f };
+    return areColliding(polygon, transformB, segCap, transformA);
 }
 
 } // namespace c2d

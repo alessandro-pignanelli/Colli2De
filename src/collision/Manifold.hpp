@@ -46,6 +46,11 @@ struct Manifold
         }
     }
 
+    bool isColliding() const
+    {
+        return pointCount > 0;
+    }
+
     std::string toString() const
     {
         std::string result = "Manifold(normal=" + normal.toString() + ", points=[";

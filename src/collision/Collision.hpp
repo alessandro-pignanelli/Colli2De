@@ -95,70 +95,70 @@ Manifold collide(const Segment& segment,
                  Transform transformB);
 
 // --- Core collision boolean checks ---
-bool isColliding(const Circle& circleA,
-                 Transform transformA,
-                 const Circle& circleB,
-                 Transform transformB);
-bool isColliding(const Capsule& capsule,
-                 Transform transformA,
-                 const Circle& circle,
-                 Transform transformB);
-bool isColliding(const Circle& circle,
-                 Transform transformA,
-                 const Capsule& capsule,
-                 Transform transformB);
-bool isColliding(const Capsule& capsuleA,
-                 Transform transformA,
-                 const Capsule& capsuleB,
-                 Transform transformB);
-bool isColliding(const Segment& segmentA,
-                 Transform transformA,
-                 const Segment& segmentB,
-                 Transform transformB);
-bool isColliding(const Circle& circle,
-                 Transform transformA,
-                 const Segment& segment,
-                 Transform transformB);
-bool isColliding(const Segment& segment,
-                 Transform transformA,
-                 const Circle& circle,
-                 Transform transformB);
-bool isColliding(const Capsule& capsule,
-                 Transform transformA,
-                 const Segment& segment,
-                 Transform transformB);
-bool isColliding(const Segment& segment,
-                 Transform transformA,
-                 const Capsule& capsule,
-                 Transform transformB);
-bool isColliding(const Polygon& polygonA,
-                 Transform transformA,
-                 const Polygon& polygonB,
-                 Transform transformB);
-bool isColliding(const Polygon& polygon,
-                 Transform transformA,
-                 const Circle& circle,
-                 Transform transformB);
-bool isColliding(const Circle& circle,
-                 Transform transformA,
-                 const Polygon& polygon,
-                 Transform transformB);
-bool isColliding(const Capsule& capsule,
-                 Transform transformA,
-                 const Polygon& polygon,
-                 Transform transformB);
-bool isColliding(const Polygon& polygon,
-                 Transform transformA,
-                 const Capsule& capsule,
-                 Transform transformB);
-bool isColliding(const Polygon& polygon,
-                 Transform transformA,
-                 const Segment& segment,
-                 Transform transformB);
-bool isColliding(const Segment& segment,
-                 Transform transformA,
-                 const Polygon& polygon,
-                 Transform transformB);
+bool areColliding(const Circle& circleA,
+                  Transform transformA,
+                  const Circle& circleB,
+                  Transform transformB);
+bool areColliding(const Capsule& capsule,
+                  Transform transformA,
+                  const Circle& circle,
+                  Transform transformB);
+bool areColliding(const Circle& circle,
+                  Transform transformA,
+                  const Capsule& capsule,
+                  Transform transformB);
+bool areColliding(const Capsule& capsuleA,
+                  Transform transformA,
+                  const Capsule& capsuleB,
+                  Transform transformB);
+bool areColliding(const Segment& segmentA,
+                  Transform transformA,
+                  const Segment& segmentB,
+                  Transform transformB);
+bool areColliding(const Circle& circle,
+                  Transform transformA,
+                  const Segment& segment,
+                  Transform transformB);
+bool areColliding(const Segment& segment,
+                  Transform transformA,
+                  const Circle& circle,
+                  Transform transformB);
+bool areColliding(const Capsule& capsule,
+                  Transform transformA,
+                  const Segment& segment,
+                  Transform transformB);
+bool areColliding(const Segment& segment,
+                  Transform transformA,
+                  const Capsule& capsule,
+                  Transform transformB);
+bool areColliding(const Polygon& polygonA,
+                  Transform transformA,
+                  const Polygon& polygonB,
+                  Transform transformB);
+bool areColliding(const Polygon& polygon,
+                  Transform transformA,
+                  const Circle& circle,
+                  Transform transformB);
+bool areColliding(const Circle& circle,
+                  Transform transformA,
+                  const Polygon& polygon,
+                  Transform transformB);
+bool areColliding(const Capsule& capsule,
+                  Transform transformA,
+                  const Polygon& polygon,
+                  Transform transformB);
+bool areColliding(const Polygon& polygon,
+                  Transform transformA,
+                  const Capsule& capsule,
+                  Transform transformB);
+bool areColliding(const Polygon& polygon,
+                  Transform transformA,
+                  const Segment& segment,
+                  Transform transformB);
+bool areColliding(const Segment& segment,
+                  Transform transformA,
+                  const Polygon& polygon,
+                  Transform transformB);
 
 
 // --- Sweep collision detection ---
@@ -173,7 +173,16 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape,
     const float startAngle = std::atan2(startTransform.rotation.sin, startTransform.rotation.cos);
     const float endAngle = std::atan2(endRotation.sin, endRotation.cos);
 
-    auto manifoldAt = [&](float fraction) -> Manifold
+    const auto hasContactAt = [&](float fraction) -> bool
+    {
+        Transform currentTransform;
+        currentTransform.translation = startTransform.translation + translation * fraction;
+        const float currentAngle = startAngle + (endAngle - startAngle) * fraction;
+        currentTransform.rotation = Rotation{currentAngle};
+        return areColliding(movingShape, currentTransform, targetShape, targetTransform);
+    };
+
+    const auto manifoldAt = [&](float fraction) -> Manifold
     {
         Transform currentTransform;
         currentTransform.translation = startTransform.translation + translation * fraction;
@@ -190,44 +199,37 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape,
     constexpr int32_t refinementSteps = 10;
     float fractionLower = 0.0f;
     float fractionUpper = 1.0f;
-    Manifold hitManifold{};
 
     for (int32_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
     {
         const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
-        Manifold testManifold = manifoldAt(testFraction);
-        if (testManifold.pointCount > 0)
+        if (hasContactAt(testFraction))
         {
             fractionLower = static_cast<float>(stepIndex - 1) / static_cast<float>(coarseSteps);
             fractionUpper = testFraction;
-            hitManifold = testManifold;
             break;
         }
-
-        if (stepIndex == coarseSteps)
-            return std::nullopt;
     }
+    
+    // If no collision was found in the coarse steps, return no hit
+    if (fractionLower == 0.0f && fractionUpper == 1.0f)
+        return std::nullopt;
 
     for (int32_t iteration = 0; iteration < refinementSteps; ++iteration)
     {
         const float midFraction = 0.5f * (fractionLower + fractionUpper);
-        Manifold midManifold = manifoldAt(midFraction);
-        if (midManifold.pointCount > 0)
-        {
+
+        if (hasContactAt(midFraction))
             fractionUpper = midFraction;
-            hitManifold = midManifold;
-        }
         else
-        {
             fractionLower = midFraction;
-        }
 
         // Stop if the precision is sufficient
         if (fractionUpper - fractionLower < 1e-6f)
             break;
     }
 
-    return SweepManifold{fractionUpper, hitManifold};
+    return SweepManifold{fractionUpper, manifoldAt(fractionUpper)};
 }
 
 } // namespace c2d
