@@ -94,6 +94,7 @@ NodeIndex DynamicBVH<IdType>::createProxy(AABB aabb, IdType id)
     node.id = id;
     node.height = 0;
 
+    ++proxyCount;
     insertLeaf(nodeId);
     return nodeId;
 }
@@ -101,6 +102,7 @@ NodeIndex DynamicBVH<IdType>::createProxy(AABB aabb, IdType id)
 template<typename IdType>
 void DynamicBVH<IdType>::destroyProxy(NodeIndex leafIndex)
 {
+    --proxyCount;
     removeLeaf(leafIndex);
     destroyNode(leafIndex);
 }
@@ -130,8 +132,8 @@ bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB, Vec2 displ
     NodeIndex currentIndex = nodes[nodeIndex].parentIndex;
     while (currentIndex != INVALID_NODE_INDEX)
     {
-        NodeIndex child1 = nodes[currentIndex].child1Index;
-        NodeIndex child2 = nodes[currentIndex].child2Index;
+        const NodeIndex child1 = nodes[currentIndex].child1Index;
+        const NodeIndex child2 = nodes[currentIndex].child2Index;
 
         const AABB newParentAABB = AABB::combine(nodes[child1].aabb, nodes[child2].aabb);
         if (newParentAABB == nodes[currentIndex].aabb)
@@ -155,10 +157,10 @@ void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
 
     AABB leaf = nodes[leafIndex].aabb;
 
-    NodeIndex siblingIndex = findBestSiblingIndex(leaf);
-    NodeIndex oldParentIndex = nodes[siblingIndex].parentIndex;
+    const NodeIndex siblingIndex = findBestSiblingIndex(leaf);
+    const NodeIndex oldParentIndex = nodes[siblingIndex].parentIndex;
 
-    NodeIndex newParentIndex = createNode();
+    const NodeIndex newParentIndex = createNode();
     nodes[newParentIndex].parentIndex = oldParentIndex;
     nodes[newParentIndex].aabb = AABB::combine(leaf, nodes[siblingIndex].aabb);
     nodes[newParentIndex].height = nodes[siblingIndex].height + 1;
@@ -190,8 +192,8 @@ void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
     {
         currentNodeIndex = balance(currentNodeIndex);
 
-        NodeIndex child1Index = nodes[currentNodeIndex].child1Index;
-        NodeIndex child2Index = nodes[currentNodeIndex].child2Index;
+        const NodeIndex child1Index = nodes[currentNodeIndex].child1Index;
+        const NodeIndex child2Index = nodes[currentNodeIndex].child2Index;
 
         nodes[currentNodeIndex].aabb = AABB::combine(nodes[child1Index].aabb, nodes[child2Index].aabb);
         nodes[currentNodeIndex].height = 1 + std::max(nodes[child1Index].height, nodes[child2Index].height);
@@ -210,9 +212,9 @@ void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
         return;
     }
 
-    NodeIndex parentIndex = nodes[leafIndex].parentIndex;
-    NodeIndex grandParentIndex = nodes[parentIndex].parentIndex;
-    NodeIndex siblingIndex = (nodes[parentIndex].child1Index == leafIndex)
+    const NodeIndex parentIndex = nodes[leafIndex].parentIndex;
+    const NodeIndex grandParentIndex = nodes[parentIndex].parentIndex;
+    const NodeIndex siblingIndex = (nodes[parentIndex].child1Index == leafIndex)
                                  ? nodes[parentIndex].child2Index
                                  : nodes[parentIndex].child1Index;
 
@@ -240,8 +242,8 @@ void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
     {
         currentNodeIndex = balance(currentNodeIndex);
 
-        NodeIndex child1 = nodes[currentNodeIndex].child1Index;
-        NodeIndex child2 = nodes[currentNodeIndex].child2Index;
+        const NodeIndex child1 = nodes[currentNodeIndex].child1Index;
+        const NodeIndex child2 = nodes[currentNodeIndex].child2Index;
 
         nodes[currentNodeIndex].aabb = AABB::combine(nodes[child1].aabb, nodes[child2].aabb);
         nodes[currentNodeIndex].height = 1 + std::max(nodes[child1].height, nodes[child2].height);
@@ -287,34 +289,34 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
     BVHNode<IdType>& node = nodes[index];
 
     // Can't balance a leaf
-    if (node.isLeaf() || node.height < 2)
-        return index;
+    // if (node.isLeaf() || node.height < 2)
+    //     return index;
 
     const NodeIndex child1Index = node.child1Index;
     const NodeIndex child2Index = node.child2Index;
-    BVHNode<IdType>& child1 = nodes[child1Index];
-    BVHNode<IdType>& child2 = nodes[child2Index];
+    const BVHNode<IdType>& child1 = nodes[child1Index];
+    const BVHNode<IdType>& child2 = nodes[child2Index];
 
-    const NodeIndex balance = child2.height - child1.height;
+    const int32_t unbalanceBetweenChildren = child2.height - child1.height;
 
-    NodeIndex upIndex;
-    NodeIndex sideIndex1 = INVALID_NODE_INDEX;
-    NodeIndex sideIndex2 = INVALID_NODE_INDEX;
+    NodeIndex movingUpChildIndex;
+    NodeIndex grandChild1Index;
+    NodeIndex grandChild2Index;
     bool isRightRotation;
-    if (balance > 1)
+    if (unbalanceBetweenChildren > 1)
     {
-        // Rotate C up
-        sideIndex1 = child2.child1Index;
-        sideIndex2 = child2.child2Index;
-        upIndex = child2Index;
+        // Rotate Child2 up
+        grandChild1Index = child2.child1Index;
+        grandChild2Index = child2.child2Index;
+        movingUpChildIndex = child2Index;
         isRightRotation = true;
     }
-    else if (balance < -1)
+    else if (unbalanceBetweenChildren < -1)
     {
-        // Rotate B up
-        sideIndex1 = child1.child1Index;
-        sideIndex2 = child1.child2Index;
-        upIndex = child1Index;
+        // Rotate Child1 up
+        grandChild1Index = child1.child1Index;
+        grandChild2Index = child1.child2Index;
+        movingUpChildIndex = child1Index;
         isRightRotation = false;
     }
     else
@@ -323,65 +325,72 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
         return index;
     }
 
-    BVHNode<IdType>& up = nodes[upIndex];
-    BVHNode<IdType>& side1 = nodes[sideIndex1];
-    BVHNode<IdType>& side2 = nodes[sideIndex2];
+    BVHNode<IdType>& movingUpChild = nodes[movingUpChildIndex];
 
-    // Swap node and up
-    up.child1Index = index;
-    up.parentIndex = node.parentIndex;
-    node.parentIndex = upIndex;
+    // Swap node and movingUpChild
+    movingUpChild.child1Index = index;
+    movingUpChild.parentIndex = node.parentIndex;
+    node.parentIndex = movingUpChildIndex;
 
-    if (up.parentIndex != INVALID_NODE_INDEX)
+    if (movingUpChild.parentIndex != INVALID_NODE_INDEX)
     {
-        BVHNode<IdType>& parent = nodes[up.parentIndex];
+        BVHNode<IdType>& parent = nodes[movingUpChild.parentIndex];
         if (parent.child1Index == index)
-            parent.child1Index = upIndex;
+            parent.child1Index = movingUpChildIndex;
         else
-            parent.child2Index = upIndex;
+            parent.child2Index = movingUpChildIndex;
     }
     else
     {
-        rootIndex = upIndex;
+        rootIndex = movingUpChildIndex;
     }
 
     // Pick the taller child for attachment
-    NodeIndex attachIndex = (side1.height > side2.height) ? sideIndex1 : sideIndex2;
-    NodeIndex remainIndex = (side1.height > side2.height) ? sideIndex2 : sideIndex1;
+    NodeIndex attachIndex, remainIndex;
+    if ((nodes[grandChild1Index].height > nodes[grandChild2Index].height))
+    {
+        attachIndex = grandChild1Index;
+        remainIndex = grandChild2Index;
+    }
+    else
+    {
+        attachIndex = grandChild2Index;
+        remainIndex = grandChild1Index;
+    }
 
     if (isRightRotation)
     {
-        up.child2Index = attachIndex;
+        movingUpChild.child2Index = attachIndex;
         node.child2Index = remainIndex;
     }
     else
     {
-        up.child2Index = attachIndex;
+        movingUpChild.child2Index = attachIndex;
         node.child1Index = remainIndex;
     }
 
-    nodes[attachIndex].parentIndex = upIndex;
+    nodes[attachIndex].parentIndex = movingUpChildIndex;
     nodes[remainIndex].parentIndex = index;
 
     // Recompute AABBs and heights
     if (isRightRotation)
     {
         node.aabb = AABB::combine(child1.aabb, nodes[remainIndex].aabb);
-        up.aabb = AABB::combine(node.aabb, nodes[attachIndex].aabb);
+        movingUpChild.aabb = AABB::combine(node.aabb, nodes[attachIndex].aabb);
 
         node.height = 1 + std::max(child1.height, nodes[remainIndex].height);
-        up.height = 1 + std::max(node.height, nodes[attachIndex].height);
+        movingUpChild.height = 1 + std::max(node.height, nodes[attachIndex].height);
     }
     else
     {
         node.aabb = AABB::combine(child2.aabb, nodes[remainIndex].aabb);
-        up.aabb = AABB::combine(node.aabb, nodes[attachIndex].aabb);
+        movingUpChild.aabb = AABB::combine(node.aabb, nodes[attachIndex].aabb);
 
         node.height = 1 + std::max(child2.height, nodes[remainIndex].height);
-        up.height = 1 + std::max(node.height, nodes[attachIndex].height);
+        movingUpChild.height = 1 + std::max(node.height, nodes[attachIndex].height);
     }
 
-    return upIndex;
+    return movingUpChildIndex;
 }
 
 template<typename IdType>

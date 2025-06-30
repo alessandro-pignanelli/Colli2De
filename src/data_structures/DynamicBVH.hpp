@@ -71,6 +71,7 @@ public:
     void clear();
     uint32_t size() const { return nodeCount; }
     uint32_t capacity() const { return nodes.size(); }
+    uint32_t proxies() const { return proxyCount; }
     
     NodeIndex getRootIndex() const { return rootIndex; }
     const BVHNode<IdType>& getNode(NodeIndex index) const { return nodes[index]; }
@@ -108,6 +109,7 @@ public:
 private:
     std::vector<BVHNode<IdType>> nodes;
     uint32_t nodeCount = 0;
+    uint32_t proxyCount = 0;
 
     NodeIndex rootIndex = INVALID_NODE_INDEX;
     NodeIndex nextAvailableIndex = INVALID_NODE_INDEX;
