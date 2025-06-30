@@ -110,24 +110,26 @@ inline void exportBenchmarks(const std::filesystem::path& filePath)
         println(__VA_ARGS__)
 
     // Header
-    println2("{:<{}} | Threshold (ms) | Avg (ms)       | Min (ms)       | Max (ms)       |",
+    println2("{:<{}} | Status | Threshold (ms) | Avg (ms)    | Min (ms)    | Max (ms)    |",
              benchmarkNameStr, maxBenchmarkNameLength);
 
     // Separator
-    println2("{} | {} | {} | {} | {} |", 
+    println2("{} | {} | {} | {} | {} | {} |", 
              std::string(maxBenchmarkNameLength, '-'),
+             std::string(6, '-'),
              std::string(14, '-'),
-             std::string(14, '-'),
-             std::string(14, '-'),
-             std::string(14, '-'));
+             std::string(11, '-'),
+             std::string(11, '-'),
+             std::string(11, '-'));
 
     // Results
     const auto resultIntDigits = static_cast<int>(std::to_string(static_cast<int>(maxTime.count() / 1000.0f)).size());
     const auto resultTotalDigits = resultIntDigits + 4; // 3 decimal places + 1 for the dot
     for (const auto& result : benchmarkResults)
     {
-        println2("{:<{}} | {:<14} | {:<14} | {:<14} | {:<14} |",
+        println2("{:<{}} | {:<6} | {:<14} | {:<11} | {:<11} | {:<11} |",
                  result.name, maxBenchmarkNameLength,
+                 (result.avgTime <= result.threshold) ? "PASS" : "FAIL",
                  std::format("{:{}.3f}", result.threshold, resultTotalDigits),
                  std::format("{:{}.3f}", result.avgTime, resultTotalDigits),
                  std::format("{:{}.3f}", result.minTime, resultTotalDigits),
