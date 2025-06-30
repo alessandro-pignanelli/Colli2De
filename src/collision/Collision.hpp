@@ -120,8 +120,8 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape,
     if (initialManifold.pointCount > 0)
         return SweepManifold{0.0f, initialManifold};
 
-    const int32_t coarseSteps = 8;
-    const int32_t refinementSteps = 10;
+    constexpr int32_t coarseSteps = 8;
+    constexpr int32_t refinementSteps = 10;
     float fractionLower = 0.0f;
     float fractionUpper = 1.0f;
     Manifold hitManifold{};
@@ -155,6 +155,10 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape,
         {
             fractionLower = midFraction;
         }
+
+        // Stop if the precision is sufficient
+        if (fractionUpper - fractionLower < 1e-6f)
+            break;
     }
 
     return SweepManifold{fractionUpper, hitManifold};

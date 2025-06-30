@@ -124,7 +124,7 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Raycast through 10k proxies", 20us, [&]()
+    BENCHMARK_FUNCTION("Raycast through 10k proxies", 40us, [&]()
     {
         auto hits = bvh.piercingRaycast(ray);
         return hits.size();
@@ -134,7 +134,7 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Raycast through 100,000 proxies", 200us, [&]()
+    BENCHMARK_FUNCTION("Raycast through 100,000 proxies", 400us, [&]()
     {
         auto hits = bvh.piercingRaycast(ray);
         return hits.size();

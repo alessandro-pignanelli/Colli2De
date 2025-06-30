@@ -33,12 +33,14 @@ void DynamicBVH<IdType>::allocateNodes(uint32_t capacity)
 template<typename IdType>
 void DynamicBVH<IdType>::doubleCapacity()
 {
+    assert(nextAvailableIndex == INVALID_NODE_INDEX);
+
     const uint32_t currentCapacity = capacity();
     assert(nodeCount == currentCapacity);
 
     const uint32_t newCapacity = currentCapacity << 1;
-
     nodes.resize(newCapacity);
+    
     for (NodeIndex i = currentCapacity - 1; i < newCapacity - 1; ++i)
         nodes[i].parentIndex = i + 1;
     nodes[newCapacity - 1].parentIndex = INVALID_NODE_INDEX;
@@ -120,10 +122,24 @@ bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB, Vec2 displ
     if (nodes[nodeIndex].aabb.contains(newAABB))
         return false;
 
-    // Otherwise, remove and re-insert with a newly fattened AABB
-    removeLeaf(nodeIndex);
-    nodes[nodeIndex].aabb = newAABB.fattened(fatAABBMargin, displacement);
-    insertLeaf(nodeIndex);
+    // Update the leaf AABB in place and propagate the change up the tree.
+    // This avoids expensive remove/insert operations for large displacements.
+    const AABB fatAabb = newAABB.fattened(fatAABBMargin, displacement);
+    nodes[nodeIndex].aabb = fatAabb;
+
+    NodeIndex currentIndex = nodes[nodeIndex].parentIndex;
+    while (currentIndex != INVALID_NODE_INDEX)
+    {
+        NodeIndex child1 = nodes[currentIndex].child1Index;
+        NodeIndex child2 = nodes[currentIndex].child2Index;
+
+        const AABB newParentAABB = AABB::combine(nodes[child1].aabb, nodes[child2].aabb);
+        if (newParentAABB == nodes[currentIndex].aabb)
+            break;
+
+        nodes[currentIndex].aabb = newParentAABB;
+        currentIndex = nodes[currentIndex].parentIndex;
+    }
     return true;
 }
 

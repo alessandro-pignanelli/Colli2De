@@ -50,7 +50,7 @@ class DynamicBVH
 {
 public:
     class LeafConstIterator;
-    static constexpr uint32_t initialCapacity = 16;
+    static constexpr uint32_t initialCapacity = 64;
     using RaycastInfo = RaycastHit<IdType>;
     using const_iterator = LeafConstIterator;
     using value_type = BVHNode<IdType>;

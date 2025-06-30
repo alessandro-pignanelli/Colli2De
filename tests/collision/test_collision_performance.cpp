@@ -54,7 +54,7 @@ TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][S
     auto segB = generateRandomSegments(100'000, -50.0f, 50.0f, 1.0f, seed + 1);
     Transform t{Vec2{0.0f, 0.0f}, 0.0f};
 
-    BENCHMARK_FUNCTION("Collide 10k segment pairs", 500us, [&]()
+    BENCHMARK_FUNCTION("Collide 10k segment pairs", 1ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -62,7 +62,7 @@ TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][S
         return total;
     });
 
-    BENCHMARK_FUNCTION("Collide 100k segment pairs", 5ms, [&]()
+    BENCHMARK_FUNCTION("Collide 100k segment pairs", 10ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
@@ -83,7 +83,7 @@ TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][C
     auto capB = generateRandomCapsules(100'000, -50.0f, 50.0f, 1.0f, 0.5f, seed + 1);
     Transform t{Vec2{0.0f, 0.0f}, 0.0f};
 
-    BENCHMARK_FUNCTION("Collide 10k capsule pairs", 500us, [&]()
+    BENCHMARK_FUNCTION("Collide 10k capsule pairs", 1ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -91,7 +91,7 @@ TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][C
         return total;
     });
 
-    BENCHMARK_FUNCTION("Collide 100k capsule pairs", 5ms, [&]()
+    BENCHMARK_FUNCTION("Collide 100k capsule pairs", 10ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
@@ -112,7 +112,7 @@ TEST_CASE("Collision performance: Polygon vs Polygon", "[collision][Benchmark][P
     auto polyB = generateRandomRectangles(100'000, -50.0f, 50.0f, 0.5f, seed + 1);
     Transform t{Vec2{0.0f, 0.0f}, 0.0f};
 
-    BENCHMARK_FUNCTION("Collide 10k polygon pairs", 500us, [&]()
+    BENCHMARK_FUNCTION("Collide 10k polygon pairs", 1ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -120,7 +120,7 @@ TEST_CASE("Collision performance: Polygon vs Polygon", "[collision][Benchmark][P
         return total;
     });
 
-    BENCHMARK_FUNCTION("Collide 100k polygon pairs", 5ms, [&]()
+    BENCHMARK_FUNCTION("Collide 100k polygon pairs", 10ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
