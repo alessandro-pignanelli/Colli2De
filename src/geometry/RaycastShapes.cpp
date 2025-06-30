@@ -189,7 +189,7 @@ std::optional<std::pair<float, float>> raycast(const Polygon& polygon,
     const Vec2 rayDirection = ray.direction;
 
     float lower = 0.0f;
-    float upper = std::numeric_limits<float>::infinity();
+    float upper = std::numeric_limits<float>::max();
     for (uint8_t i = 0; i < polygon.count; ++i)
     {
         const Vec2 vertex = transform.apply(polygon.vertices[i]);
@@ -247,8 +247,8 @@ std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
     Ray localRay{ toLocal(ray.p1), toLocal(ray.p2) };
     AABB core{ Vec2{0.0f, -radius}, Vec2{length, radius} };
 
-    float entryTime = std::numeric_limits<float>::infinity();
-    float exitTime = -std::numeric_limits<float>::infinity();
+    float entryTime = std::numeric_limits<float>::max();
+    float exitTime = std::numeric_limits<float>::min();
     bool hit = false;
 
     auto update = [&](std::optional<std::pair<float, float>> iv)
@@ -310,8 +310,8 @@ std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
                                 ray.direction.dot(side) } };
     AABB core{ Vec2{0.0f, -radius}, Vec2{length, radius} };
 
-    float entryTime = std::numeric_limits<float>::infinity();
-    float exitTime = -std::numeric_limits<float>::infinity();
+    float entryTime = std::numeric_limits<float>::max();
+    float exitTime = std::numeric_limits<float>::min();
     bool hit = false;
 
     auto update = [&](std::optional<std::pair<float, float>> iv)

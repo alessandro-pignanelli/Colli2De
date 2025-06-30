@@ -111,7 +111,7 @@ std::optional<std::pair<float, float>> AABB::intersects(Ray ray) const
 std::optional<std::pair<float, float>> AABB::intersects(InfiniteRay ray) const
 {
     float intersectionTimeMin = 0.0f;
-    float intersectionTimeMax = std::numeric_limits<float>::infinity();
+    float intersectionTimeMax = std::numeric_limits<float>::max();
 
     // X intersection
     {

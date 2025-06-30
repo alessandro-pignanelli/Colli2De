@@ -8,32 +8,6 @@
 
 #include "utils/methods.hpp"
 
-namespace
-{
-    float inverseSqrt(float number)
-    {
-        const float threehalfs = 1.5F;
-
-        float x2 = number * 0.5F;
-        float y = number;
-
-        // evil floating point bit level hacking
-        long i = * ( long * ) &y;
-
-        // value is pre-assumed
-        i = 0x5f3759df - ( i >> 1 );
-        y = * ( float * ) &i;
-
-        // 1st iteration
-        y = y * ( threehalfs - ( x2 * y * y ) );
-
-        // 2nd iteration, this can be removed
-        y = y * ( threehalfs - ( x2 * y * y ) );
-
-        return y;
-    }
-}
-
 namespace c2d
 {
 
@@ -64,7 +38,7 @@ public:
     constexpr Vec2 normalize() const;
     static constexpr Vec2 normalized(float x, float y)
     {
-        const float inverseLen = inverseSqrt(x * x + y * y);
+        const float inverseLen = 1.0f / std::sqrt(x * x + y * y);
         return Vec2(x * inverseLen, y * inverseLen);
     }
 
@@ -120,7 +94,7 @@ constexpr float Vec2::length() const
 
 constexpr float Vec2::inverseLength() const
 {
-    return inverseSqrt(x * x + y * y);
+    return 1.0f / std::sqrt(x * x + y * y);
 }
 
 constexpr float Vec2::lengthSqr() const
