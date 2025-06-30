@@ -94,6 +94,72 @@ Manifold collide(const Segment& segment,
                  const Polygon& polygon,
                  Transform transformB);
 
+// --- Core collision boolean checks ---
+bool isColliding(const Circle& circleA,
+                 Transform transformA,
+                 const Circle& circleB,
+                 Transform transformB);
+bool isColliding(const Capsule& capsule,
+                 Transform transformA,
+                 const Circle& circle,
+                 Transform transformB);
+bool isColliding(const Circle& circle,
+                 Transform transformA,
+                 const Capsule& capsule,
+                 Transform transformB);
+bool isColliding(const Capsule& capsuleA,
+                 Transform transformA,
+                 const Capsule& capsuleB,
+                 Transform transformB);
+bool isColliding(const Segment& segmentA,
+                 Transform transformA,
+                 const Segment& segmentB,
+                 Transform transformB);
+bool isColliding(const Circle& circle,
+                 Transform transformA,
+                 const Segment& segment,
+                 Transform transformB);
+bool isColliding(const Segment& segment,
+                 Transform transformA,
+                 const Circle& circle,
+                 Transform transformB);
+bool isColliding(const Capsule& capsule,
+                 Transform transformA,
+                 const Segment& segment,
+                 Transform transformB);
+bool isColliding(const Segment& segment,
+                 Transform transformA,
+                 const Capsule& capsule,
+                 Transform transformB);
+bool isColliding(const Polygon& polygonA,
+                 Transform transformA,
+                 const Polygon& polygonB,
+                 Transform transformB);
+bool isColliding(const Polygon& polygon,
+                 Transform transformA,
+                 const Circle& circle,
+                 Transform transformB);
+bool isColliding(const Circle& circle,
+                 Transform transformA,
+                 const Polygon& polygon,
+                 Transform transformB);
+bool isColliding(const Capsule& capsule,
+                 Transform transformA,
+                 const Polygon& polygon,
+                 Transform transformB);
+bool isColliding(const Polygon& polygon,
+                 Transform transformA,
+                 const Capsule& capsule,
+                 Transform transformB);
+bool isColliding(const Polygon& polygon,
+                 Transform transformA,
+                 const Segment& segment,
+                 Transform transformB);
+bool isColliding(const Segment& segment,
+                 Transform transformA,
+                 const Polygon& polygon,
+                 Transform transformB);
+
 
 // --- Sweep collision detection ---
 template <typename ShapeA, typename ShapeB>
