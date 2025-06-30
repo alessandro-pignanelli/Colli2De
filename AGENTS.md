@@ -59,6 +59,10 @@ To run tests, run the following command:
 
 Make sure to always run the script with the `-r` option, or the build will fail.
 
-The tag "[Benchmark]" is used to mark performance tests. They might take a long time to run, so if you didn't edit them, it's better to exclude them from the majority of the test runs. Make sure to run them at least once before committing your changes.
+The tag "[Benchmark]" is used to mark performance tests. They might take a long time to run, so if you didn't edit them, it's better to exclude them from the majority of the test runs.
 
 Tests are created using the `Catch2` framework. When creating new tests, make sure to follow the conventions of the existing tests.
+
+If any performance test is ran, a table containing the results of all the performance tests will be generated in the `test_data/` directory and printed in the console. The file will be named `benchmarks--<date>--<time>.md`.
+
+Before committing, always run `./test.sh --cmake -b -r` without any filter, to ensure all tests pass.

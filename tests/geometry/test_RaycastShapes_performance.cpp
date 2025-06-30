@@ -4,7 +4,7 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 
 #include "geometry/RaycastShapes.hpp"
-#include "utils/Print.hpp"
+#include "utils/Performance.hpp"
 #include "utils/Random.hpp"
 
 using namespace c2d;
@@ -22,37 +22,27 @@ TEST_CASE("Raycast performance: Circle", "[Raycast][Benchmark][Circle]")
     auto circles = generateRandomCircles(100'000, -50.0f, 50.0f, 1.0f, seed);
     auto rays = generateRandomRays(100'000, -60.0f, 60.0f, seed + 1);
 
-    BENCHMARK("Raycast 10k circles")
+    BENCHMARK_FUNCTION("Raycast 10k circles", 500us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
         {
             if (raycast(circles[i], Transform{}, rays[i]))
                 ++total;
         }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 500us);
-    printElapsed(elapsed, 500us);
+    });
 
-    BENCHMARK("Raycast 100k circles")
+    BENCHMARK_FUNCTION("Raycast 100k circles", 5ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
         {
             if (raycast(circles[i], Transform{}, rays[i]))
                 ++total;
         }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 5000us);
-    printElapsed(elapsed, 5000us);
+    });
 }
 
 TEST_CASE("Raycast performance: Segment", "[Raycast][Benchmark][Segment]")
@@ -66,37 +56,27 @@ TEST_CASE("Raycast performance: Segment", "[Raycast][Benchmark][Segment]")
     auto segments = generateRandomSegments(100'000, -50.0f, 50.0f, 4.0f, seed);
     auto rays = generateRandomRays(100'000, -60.0f, 60.0f, seed + 1);
 
-    BENCHMARK("Raycast 10k segments")
+    BENCHMARK_FUNCTION("Raycast 10k segments", 500us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
         {
             if (raycast(segments[i], Transform{}, rays[i]))
                 ++total;
         }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 500us);
-    printElapsed(elapsed, 500us);
+    });
 
-    BENCHMARK("Raycast 100k segments")
+    BENCHMARK_FUNCTION("Raycast 100k segments", 5ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
         {
             if (raycast(segments[i], Transform{}, rays[i]))
                 ++total;
         }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 5000us);
-    printElapsed(elapsed, 5000us);
+    });
 }
 
 TEST_CASE("Raycast performance: Capsule", "[Raycast][Benchmark][Capsule]")
@@ -110,37 +90,27 @@ TEST_CASE("Raycast performance: Capsule", "[Raycast][Benchmark][Capsule]")
     auto capsules = generateRandomCapsules(100'000, -50.0f, 50.0f, 4.0f, 1.0f, seed);
     auto rays = generateRandomRays(100'000, -60.0f, 60.0f, seed + 1);
 
-    BENCHMARK("Raycast 10k capsules")
+    BENCHMARK_FUNCTION("Raycast 10k capsules", 1ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
         {
             if (raycast(capsules[i], Transform{}, rays[i]))
                 ++total;
         }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 1000us);
-    printElapsed(elapsed, 1000us);
+    });
 
-    BENCHMARK("Raycast 100k capsules")
+    BENCHMARK_FUNCTION("Raycast 100k capsules", 10ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
         {
             if (raycast(capsules[i], Transform{}, rays[i]))
                 ++total;
         }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 10000us);
-    printElapsed(elapsed, 10000us);
+    });
 }
 
 TEST_CASE("Raycast performance: Polygon", "[Raycast][Benchmark][Polygon]")
@@ -154,35 +124,25 @@ TEST_CASE("Raycast performance: Polygon", "[Raycast][Benchmark][Polygon]")
     auto polygons = generateRandomRectangles(100'000, -50.0f, 50.0f, 0.5f, seed);
     auto rays = generateRandomRays(100'000, -60.0f, 60.0f, seed + 1);
 
-    BENCHMARK("Raycast 10k polygons")
+    BENCHMARK_FUNCTION("Raycast 10k polygons", 500us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
         {
             if (raycast(polygons[i], Transform{}, rays[i]))
                 ++total;
         }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 500us);
-    printElapsed(elapsed, 500us);
+    });
 
-    BENCHMARK("Raycast 100k polygons")
+    BENCHMARK_FUNCTION("Raycast 100k polygons", 5ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
         {
             if (raycast(polygons[i], Transform{}, rays[i]))
                 ++total;
         }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 5000us);
-    printElapsed(elapsed, 5000us);
+    });
 }

@@ -7,6 +7,7 @@
 
 #include "data_structures/DynamicBVH.hpp"
 #include "geometry/AABB.hpp"
+#include "utils/Print.hpp"
 #include "utils/Random.hpp"
 
 using namespace c2d;
@@ -55,8 +56,8 @@ TEST_CASE("DynamicBVH stays balanced with 100k proxies", "[DynamicBVH][Stress][B
     uint32_t height = bvh.getNode(rootIndex).height;
     int logN = static_cast<int>(std::ceil(std::log2(aabbs.size())));
     // Allow a little extra for imperfect balancing and fattening
-    std::cout << "Tree height: " << height << ", optimal = " << logN << " expected <= " << logN + 4 << std::endl;
-    CHECK(height <= logN + 4);
+    println("Tree height: {}, optimal = {}, expected <= {}", height, logN, logN + 3);
+    CHECK(height <= logN + 3);
 
     // Traverse tree: count leaves and check parent links
     std::vector<NodeIndex> stack{rootIndex};

@@ -109,7 +109,7 @@ cd build\%build_type%\tests
 
 :RUN_TESTS
 
-call Colli2DeTests.exe %cmd_args%
+call Colli2DeTests.exe %cmd_args% %~dp0test_data\
 IF %ERRORLEVEL% NEQ 0 (
     echo [31m[Colli2De] Tests failed![0m
     exit /b %ERRORLEVEL%

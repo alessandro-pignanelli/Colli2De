@@ -60,6 +60,12 @@ struct Manifold
     }
 };
 
+struct SweepManifold
+{
+    float fraction{};
+    Manifold manifold{};
+};
+
 } // namespace c2d
 
 
@@ -80,5 +86,16 @@ struct std::formatter<c2d::Manifold> : std::formatter<std::string>
 	auto format(const c2d::Manifold& manifold, FormatContext& ctx) const
 	{
 		return std::formatter<std::string>::format(manifold.toString(), ctx);
+	}
+};
+
+template<>
+struct std::formatter<c2d::SweepManifold> : std::formatter<std::string>
+{
+	template<typename FormatContext>
+	auto format(const c2d::SweepManifold& sweepManifold, FormatContext& ctx) const
+	{
+		return std::formatter<std::string>::format(std::format("SweepManifold(fraction={}, manifold={})",
+			sweepManifold.fraction, sweepManifold.manifold), ctx);
 	}
 };

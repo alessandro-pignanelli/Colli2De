@@ -6,7 +6,7 @@
 
 #include "data_structures/DynamicBVH.hpp"
 #include "geometry/AABB.hpp"
-#include "utils/Print.hpp"
+#include "utils/Performance.hpp"
 #include "utils/Random.hpp"
 
 using namespace c2d;
@@ -23,29 +23,21 @@ TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Ins
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
 
-    BENCHMARK("Insert 10,000 proxies")
+    BENCHMARK_FUNCTION("Insert 10k proxies", 10ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         DynamicBVH<uint32_t> bvh;
         for (uint32_t i = 0; i < 10'000; ++i)
             bvh.createProxy(aabbs[i], i);
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
-    };
-    CHECK(elapsed < 10ms);
-    printElapsed(elapsed, 10ms);
+        return bvh.size();
+    });
 
-    BENCHMARK("Insert 100,000 proxies")
+    BENCHMARK_FUNCTION("Insert 100k proxies", 100ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         DynamicBVH<uint32_t> bvh;
         for (uint32_t i = 0; i < 100'000; ++i)
             bvh.createProxy(aabbs[i], i);
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
-    };
-    CHECK(elapsed < 100ms);
-    printElapsed(elapsed, 100ms);
+        return bvh.size();
+    });
 }
 
 TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Move]")
@@ -63,36 +55,24 @@ TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Mov
     for (uint32_t i = 0; i < 10'000; ++i)
         indices.push_back(bvh.createProxy(aabbs[i], i));
 
-    BENCHMARK("Move 10,000 proxies to new location")
+    BENCHMARK_FUNCTION("Move 10k proxies to new location", 300us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         for (size_t i = 0; i < indices.size(); ++i)
-        {
             bvh.moveProxy(indices[i], aabbs[i].move(Vec2{ 50.0f, 0 }), Vec2{50.0f, 0});
-        }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
-    };
-    CHECK(elapsed < 80us);
-    printElapsed(elapsed, 80us);
+        return bvh.size();
+    });
 
     bvh.clear();
     indices.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
         indices.push_back(bvh.createProxy(aabbs[i], i));
 
-    BENCHMARK("Move 100,000 proxies to new location")
+    BENCHMARK_FUNCTION("Move 100k proxies to new location", 3ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         for (size_t i = 0; i < indices.size(); ++i)
-        {
             bvh.moveProxy(indices[i], aabbs[i].move(Vec2{ 50.0f, 0 }), Vec2{50.0f, 0});
-        }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
-    };
-    CHECK(elapsed < 800us);
-    printElapsed(elapsed, 800us);
+        return bvh.size();
+    });
 }
 
 TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]")
@@ -110,33 +90,23 @@ TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchm
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK("Query 10,000 proxies")
+    BENCHMARK_FUNCTION("Query 10k proxies", 10us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         size_t count = 0;
         count += bvh.query(query).size();
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return count;
-    };
-    CHECK(elapsed < 10us);
-    printElapsed(elapsed, 10us);
+    });
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK("Query 100,000 proxies")
+    BENCHMARK_FUNCTION("Query 100k proxies", 100us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         size_t count = 0;
         count += bvh.query(query).size();
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return count;
-    };
-    CHECK(elapsed < 100us);
-    printElapsed(elapsed, 100us);
+    });
 }
 
 TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
@@ -154,31 +124,21 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK("Raycast through 10,000 proxies")
+    BENCHMARK_FUNCTION("Raycast through 10k proxies", 20us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         auto hits = bvh.piercingRaycast(ray);
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return hits.size();
-    };
-    CHECK(elapsed < 20us);
-    printElapsed(elapsed, 20us);
+    });
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK("Raycast through 100,000 proxies")
+    BENCHMARK_FUNCTION("Raycast through 100,000 proxies", 200us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         auto hits = bvh.piercingRaycast(ray);
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return hits.size();
-    };
-    CHECK(elapsed < 200us);
-    printElapsed(elapsed, 200us);
+    });
 }
 
 TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[DynamicBVH][BroadPhaseCollisions][Benchmark]")
@@ -195,47 +155,29 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
     for (uint32_t i = 0; i < 1'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK("Find all overlapping pairs among 1k proxies")
+    BENCHMARK_FUNCTION("Find all overlapping pairs among 1k proxies", 50us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         const auto pairs = bvh.findBroadPhaseCollisions();
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
-        return pairs.size(); // Return to prevent optimization
-    };
-
-    CHECK(elapsed < 50us);
-    printElapsed(elapsed, 50us);
+        return pairs.size();
+    });
 
     bvh.clear();
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK("Find all overlapping pairs among 10k proxies")
+    BENCHMARK_FUNCTION("Find all overlapping pairs among 10k proxies", 5ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         const auto pairs = bvh.findBroadPhaseCollisions();
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
-        return pairs.size(); // Return to prevent optimization
-    };
-
-    CHECK(elapsed < 5ms);
-    printElapsed(elapsed, 5ms);
+        return pairs.size();
+    });
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK("Find all overlapping pairs among 100k proxies")
+    BENCHMARK_FUNCTION("Find all overlapping pairs among 100k proxies", 100ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         const auto pairs = bvh.findBroadPhaseCollisions();
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
-        return pairs.size(); // Return to prevent optimization
-    };
-
-    CHECK(elapsed < 100ms);
-    printElapsed(elapsed, 100ms);
+        return pairs.size();
+    });
 }

@@ -1,4 +1,5 @@
 libs/
+test_data/
 
 # Prerequisites
 *.d

@@ -6,7 +6,7 @@
 
 #include "collision/Collision.hpp"
 #include "geometry/Transformations.hpp"
-#include "utils/Print.hpp"
+#include "utils/Performance.hpp"
 #include "utils/Random.hpp"
 
 using namespace c2d;
@@ -25,35 +25,21 @@ TEST_CASE("Collision performance: Circle vs Circle", "[collision][Benchmark][Cir
     auto circlesB = generateRandomCircles(100'000, -50.0f, 50.0f, 1.0f, seed + 1);
     Transform t{Vec2{0.0f, 0.0f}, 0.0f};
 
-    BENCHMARK("Collide 10k circle pairs")
+    BENCHMARK_FUNCTION("Collide 10k circle pairs", 500us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
-        {
             total += collide(circlesA[i], t, circlesB[i], t).pointCount;
-        }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 500us);
-    printElapsed(elapsed, 500us);
+    });
 
-    BENCHMARK("Collide 100k circle pairs")
+    BENCHMARK_FUNCTION("Collide 100k circle pairs", 5ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
-        {
             total += collide(circlesA[i], t, circlesB[i], t).pointCount;
-        }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 5ms);
-    printElapsed(elapsed, 5ms);
+    });
 }
 
 TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][Segment]")
@@ -68,35 +54,21 @@ TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][S
     auto segB = generateRandomSegments(100'000, -50.0f, 50.0f, 1.0f, seed + 1);
     Transform t{Vec2{0.0f, 0.0f}, 0.0f};
 
-    BENCHMARK("Collide 10k segment pairs")
+    BENCHMARK_FUNCTION("Collide 10k segment pairs", 500us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
-        {
             total += collide(segA[i], t, segB[i], t).pointCount;
-        }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 500us);
-    printElapsed(elapsed, 500us);
+    });
 
-    BENCHMARK("Collide 100k segment pairs")
+    BENCHMARK_FUNCTION("Collide 100k segment pairs", 5ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
-        {
             total += collide(segA[i], t, segB[i], t).pointCount;
-        }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 5ms);
-    printElapsed(elapsed, 5ms);
+    });
 }
 
 TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][Capsule]")
@@ -111,35 +83,21 @@ TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][C
     auto capB = generateRandomCapsules(100'000, -50.0f, 50.0f, 1.0f, 0.5f, seed + 1);
     Transform t{Vec2{0.0f, 0.0f}, 0.0f};
 
-    BENCHMARK("Collide 10k capsule pairs")
+    BENCHMARK_FUNCTION("Collide 10k capsule pairs", 500us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
-        {
             total += collide(capA[i], t, capB[i], t).pointCount;
-        }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 500us);
-    printElapsed(elapsed, 500us);
+    });
 
-    BENCHMARK("Collide 100k capsule pairs")
+    BENCHMARK_FUNCTION("Collide 100k capsule pairs", 5ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
-        {
             total += collide(capA[i], t, capB[i], t).pointCount;
-        }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 5ms);
-    printElapsed(elapsed, 5ms);
+    });
 }
 
 TEST_CASE("Collision performance: Polygon vs Polygon", "[collision][Benchmark][Polygon]")
@@ -154,33 +112,19 @@ TEST_CASE("Collision performance: Polygon vs Polygon", "[collision][Benchmark][P
     auto polyB = generateRandomRectangles(100'000, -50.0f, 50.0f, 0.5f, seed + 1);
     Transform t{Vec2{0.0f, 0.0f}, 0.0f};
 
-    BENCHMARK("Collide 10k polygon pairs")
+    BENCHMARK_FUNCTION("Collide 10k polygon pairs", 500us, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
-        {
             total += collide(polyA[i], t, polyB[i], t).pointCount;
-        }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 500us);
-    printElapsed(elapsed, 500us);
+    });
 
-    BENCHMARK("Collide 100k polygon pairs")
+    BENCHMARK_FUNCTION("Collide 100k polygon pairs", 5ms, [&]()
     {
-        const auto start = high_resolution_clock::now();
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
-        {
             total += collide(polyA[i], t, polyB[i], t).pointCount;
-        }
-        const auto end = high_resolution_clock::now();
-        elapsed = duration_cast<microseconds>(end - start);
         return total;
-    };
-    CHECK(elapsed < 5ms);
-    printElapsed(elapsed, 5ms);
+    });
 }

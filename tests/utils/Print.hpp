@@ -4,14 +4,18 @@ using namespace std::literals::chrono_literals;
 
 #if __has_include(<print>)
     #include <print>
-    #define print(...) ::std::print(__VA_ARGS__)
-    #define println(...) ::std::println(__VA_ARGS__)
+    #define print(...) (::std::print(__VA_ARGS__))
+    #define println(...) (::std::println(__VA_ARGS__))
+    #define printFile(file, ...) (print(file, __VA_ARGS__))
+    #define printlnFile(file, ...) (println(file, __VA_ARGS__))
 #else
     #include <iostream>
     #include <format>
 
     #define print(...) (std::cout << std::format(__VA_ARGS__))
     #define println(...) (std::cout << std::format(__VA_ARGS__) << std::endl)
+    #define printFile(file, ...) (file << std::format(__VA_ARGS__))
+    #define printlnFile(file, ...) (file << std::format(__VA_ARGS__) << std::endl)
 #endif
 
 inline void printElapsed(const std::chrono::microseconds& elapsed, const std::chrono::microseconds& threshold)

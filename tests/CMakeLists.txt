@@ -29,11 +29,11 @@ endif()
 file(GLOB_RECURSE TESTS "test_*.cpp")
 
 # Unit test executable
-add_executable(Colli2DeTests ${TESTS})
+add_executable(Colli2DeTests ${TESTS} ${CMAKE_SOURCE_DIR}/tests/main.cpp)
 
 target_link_libraries(Colli2DeTests
     PRIVATE
-    Catch2::Catch2WithMain
+    Catch2::Catch2
     colli2de
 )
 

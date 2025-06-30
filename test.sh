@@ -73,7 +73,8 @@ fi
 # Run the tests executable
 executable_path="build/$build_type/tests/Colli2DeTests"
 if [[ -f "$executable_path" ]]; then
-    "$executable_path" "${args[@]}"
+    current_dir=$(pwd)
+    "$executable_path" "${args[@]}" "$current_dir"
     if [[ $? -eq 0 ]]; then
         echo -e "\033[0;32m[Colli2De] All tests passed successfully.\033[0m"
     else
