@@ -478,7 +478,7 @@ TEST_CASE("DynamicBVH::firstHitRaycastDetailed with infinite ray returns id, ent
     CHECK(hit->exit.y  == Approx(0.5f));
 }
 
-TEST_CASE("DynamicBVH: findBroadPhaseCollisions finds correct pairs", "[DynamicBVH][BroadPhaseCollisions]")
+TEST_CASE("DynamicBVH: findAllCollisions finds correct pairs", "[DynamicBVH][BroadPhaseCollisions]")
 {
     DynamicBVH<uint32_t> bvh;
 
@@ -492,7 +492,7 @@ TEST_CASE("DynamicBVH: findBroadPhaseCollisions finds correct pairs", "[DynamicB
     bvh.createProxy({Vec2{4,4}, Vec2{5,5}}, 2);
     bvh.createProxy({Vec2{1.5f,1.5f}, Vec2{2.5f,2.5f}}, 3);
 
-    const auto pairs = bvh.findBroadPhaseCollisions();
+    const auto pairs = bvh.findAllCollisions();
 
     // Build a set for easy checking
     std::set<std::pair<uint32_t, uint32_t>> found;

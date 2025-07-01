@@ -31,7 +31,9 @@ inline void printElapsed(const std::chrono::microseconds& elapsed, const std::ch
     }
     else
     {
+#ifdef NDEBUG
         println("\n---- ERROR ----");
+#endif
         println("Elapsed time: {}{} (exceeded threshold of {}{})", elapsedUnit, unit, thresholdUnit, unit);
     }
 }

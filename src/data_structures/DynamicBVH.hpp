@@ -5,8 +5,8 @@
 #include <utils/methods.hpp>
 #include <vector>
 
+#include "colli2de/Ray.hpp"
 #include "geometry/AABB.hpp"
-#include "geometry/Ray.hpp"
 
 namespace
 {
@@ -26,6 +26,7 @@ namespace
 namespace c2d
 {
 
+using BitMaskType = uint64_t;
 using NodeIndex = int32_t;
 static constexpr NodeIndex INVALID_NODE_INDEX = -99;
 
@@ -33,6 +34,8 @@ template<typename IdType>
 struct BVHNode
 {
     AABB aabb;
+    BitMaskType categoryBits = 1;      // for collision filtering
+    BitMaskType isHittingBits = ~0ull; // for collision filtering
 
     NodeIndex parentIndex = INVALID_NODE_INDEX;
     NodeIndex child1Index = INVALID_NODE_INDEX;
@@ -43,6 +46,7 @@ struct BVHNode
     IdType id{}; // stored payload (instead of void*)
 
     bool isLeaf() const { return child1Index == -1; }
+    bool matchesMask(BitMaskType mask) const { return (categoryBits & mask) != 0; }
 };
 
 template<typename IdType>
@@ -63,7 +67,7 @@ public:
     void destroyNode(NodeIndex nodeId);
     
     // Inserts a new object {aabb, id} into the BVH and returns the index of the created node
-    NodeIndex createProxy(AABB aabb, IdType id);
+    NodeIndex createProxy(AABB aabb, IdType id, BitMaskType categoryBits = 1, BitMaskType isHittingBits = ~0ull);
     void destroyProxy(NodeIndex leafIndex);
     // Moves the proxy to a new AABB, returns true if the tree structure has changed
     bool moveProxy(NodeIndex nodeIndex, AABB aabb, Vec2 displacement = Vec2{0.0f, 0.0f});
@@ -84,22 +88,22 @@ public:
     LeafConstIterator cend() const { return LeafConstIterator(nodes, nodes.size()); }
 
     // AABB queries
-    std::vector<IdType> query(AABB queryAABB) const;
-    std::vector<std::vector<IdType>> batchQuery(const std::vector<AABB>& queries, size_t numThreads) const;
+    std::vector<IdType> query(AABB queryAABB, BitMaskType maskBits = ~0ull) const;
+    std::vector<std::vector<IdType>> batchQuery(const std::vector<AABB>& queries, size_t numThreads, BitMaskType maskBits = ~0ull) const;
 
     // Finite raycast queries
-    std::optional<IdType> firstHitRaycast(Ray ray) const;
-    std::optional<RaycastInfo> firstHitRaycastDetailed(Ray ray) const;
-    std::vector<IdType> piercingRaycast(Ray ray) const;
-    std::vector<RaycastInfo> piercingRaycastDetailed(Ray ray) const;
+    std::optional<IdType> firstHitRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;
+    std::optional<RaycastInfo> firstHitRaycastDetailed(Ray ray, BitMaskType maskBits = ~0ull) const;
+    std::vector<IdType> piercingRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;
+    std::vector<RaycastInfo> piercingRaycastDetailed(Ray ray, BitMaskType maskBits = ~0ull) const;
 
     // Infinite raycast queries
-    std::optional<IdType> firstHitRaycast(InfiniteRay ray) const;
-    std::optional<RaycastInfo> firstHitRaycastDetailed(InfiniteRay ray) const;
-    std::vector<IdType> piercingRaycast(InfiniteRay ray) const;
-    std::vector<RaycastInfo> piercingRaycastDetailed(InfiniteRay ray) const;
+    std::optional<IdType> firstHitRaycast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
+    std::optional<RaycastInfo> firstHitRaycastDetailed(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
+    std::vector<IdType> piercingRaycast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
+    std::vector<RaycastInfo> piercingRaycastDetailed(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
 
-    std::vector<std::pair<IdType, IdType>> findBroadPhaseCollisions() const;
+    std::vector<std::pair<IdType, IdType>> findAllCollisions() const;
 
     void serialize(std::ostream& out) const;
     static DynamicBVH<IdType> deserialize(std::istream& in);
@@ -121,7 +125,7 @@ private:
     void removeLeaf(NodeIndex leafIndex);
     void collectLeaves(NodeIndex nodeIdx, std::vector<NodeIndex>& out) const;
     void findPairsBetween(NodeIndex nodeAIdx, NodeIndex nodeBIdx, std::vector<std::pair<IdType, IdType>>& out) const;
-    void findBroadPhaseCollisionsRecursive(NodeIndex nodeIdx, std::vector<std::pair<IdType, IdType>>& out) const;
+    void findAllCollisionsRecursive(NodeIndex nodeIdx, std::vector<std::pair<IdType, IdType>>& out) const;
 
     NodeIndex findBestSiblingIndex(AABB leaf) const;
     NodeIndex balance(NodeIndex index);

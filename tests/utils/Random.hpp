@@ -4,10 +4,10 @@
 #include <random>
 #include <ctime>
 
-#include "colli2de/Vec2.hpp"
+#include "colli2de/Ray.hpp"
 #include "colli2de/Shapes.hpp"
+#include "colli2de/Vec2.hpp"
 #include "geometry/AABB.hpp"
-#include "geometry/Ray.hpp"
 
 using namespace c2d;
 

@@ -85,14 +85,15 @@ void DynamicBVH<IdType>::destroyNode(NodeIndex nodeId)
 }
 
 template<typename IdType>
-NodeIndex DynamicBVH<IdType>::createProxy(AABB aabb, IdType id)
+NodeIndex DynamicBVH<IdType>::createProxy(AABB aabb, IdType id, BitMaskType categoryBits, BitMaskType isHittingBits)
 {
     const NodeIndex nodeId = createNode();
     BVHNode<IdType>& node = nodes[nodeId];
 
     node.aabb = aabb.fattened(fatAABBMargin);
     node.id = id;
-    node.height = 0;
+    node.categoryBits = categoryBits;
+    node.isHittingBits = isHittingBits;
 
     ++proxyCount;
     insertLeaf(nodeId);
@@ -164,6 +165,7 @@ void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
     nodes[newParentIndex].parentIndex = oldParentIndex;
     nodes[newParentIndex].aabb = AABB::combine(leaf, nodes[siblingIndex].aabb);
     nodes[newParentIndex].height = nodes[siblingIndex].height + 1;
+    nodes[newParentIndex].categoryBits = nodes[siblingIndex].categoryBits | nodes[leafIndex].categoryBits;
 
     if (oldParentIndex != INVALID_NODE_INDEX)
     {
@@ -197,6 +199,7 @@ void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
 
         nodes[currentNodeIndex].aabb = AABB::combine(nodes[child1Index].aabb, nodes[child2Index].aabb);
         nodes[currentNodeIndex].height = 1 + std::max(nodes[child1Index].height, nodes[child2Index].height);
+        nodes[currentNodeIndex].categoryBits = nodes[child1Index].categoryBits | nodes[child2Index].categoryBits;
 
         currentNodeIndex = nodes[currentNodeIndex].parentIndex;
     }
@@ -247,6 +250,7 @@ void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
 
         nodes[currentNodeIndex].aabb = AABB::combine(nodes[child1].aabb, nodes[child2].aabb);
         nodes[currentNodeIndex].height = 1 + std::max(nodes[child1].height, nodes[child2].height);
+        nodes[currentNodeIndex].categoryBits = nodes[child1].categoryBits | nodes[child2].categoryBits;
 
         currentNodeIndex = nodes[currentNodeIndex].parentIndex;
     }
@@ -380,6 +384,9 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 
         node.height = 1 + std::max(child1.height, nodes[remainIndex].height);
         movingUpChild.height = 1 + std::max(node.height, nodes[attachIndex].height);
+
+        node.categoryBits = child1.categoryBits | nodes[remainIndex].categoryBits;
+        movingUpChild.categoryBits = node.categoryBits | nodes[attachIndex].categoryBits;
     }
     else
     {
@@ -388,6 +395,9 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 
         node.height = 1 + std::max(child2.height, nodes[remainIndex].height);
         movingUpChild.height = 1 + std::max(node.height, nodes[attachIndex].height);
+
+        node.categoryBits = child2.categoryBits | nodes[remainIndex].categoryBits;
+        movingUpChild.categoryBits = node.categoryBits | nodes[attachIndex].categoryBits;
     }
 
     return movingUpChildIndex;

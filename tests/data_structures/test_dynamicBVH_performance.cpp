@@ -157,7 +157,7 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
 
     BENCHMARK_FUNCTION("Find all overlapping pairs among 1k proxies", 100us, [&]()
     {
-        const auto pairs = bvh.findBroadPhaseCollisions();
+        const auto pairs = bvh.findAllCollisions();
         return pairs.size();
     });
 
@@ -167,7 +167,7 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
 
     BENCHMARK_FUNCTION("Find all overlapping pairs among 10k proxies", 5ms, [&]()
     {
-        const auto pairs = bvh.findBroadPhaseCollisions();
+        const auto pairs = bvh.findAllCollisions();
         return pairs.size();
     });
 
@@ -177,7 +177,7 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
 
     BENCHMARK_FUNCTION("Find all overlapping pairs among 100k proxies", 100ms, [&]()
     {
-        const auto pairs = bvh.findBroadPhaseCollisions();
+        const auto pairs = bvh.findAllCollisions();
         return pairs.size();
     });
 }

@@ -4,6 +4,8 @@
 #include <cmath>
 #include <limits>
 
+#include "geometry/AABB.hpp"
+
 namespace c2d
 {
 

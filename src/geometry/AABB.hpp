@@ -2,8 +2,8 @@
 
 #include <optional>
 
+#include "colli2de/Ray.hpp"
 #include "colli2de/Vec2.hpp"
-#include "geometry/Ray.hpp"
 
 namespace c2d
 {

@@ -14,6 +14,8 @@ using namespace std::chrono;
 using namespace std::literals::chrono_literals;
 using namespace Catch;
 
+#ifdef NDEBUG
+
 #define BENCHMARK_FUNCTION(name, threshold, func) \
 { \
     std::vector<microseconds> elapsedTimes; \
@@ -30,6 +32,19 @@ using namespace Catch;
     printElapsed(elapsedAvg, threshold); \
     storeBenchmark(name, elapsedTimes, threshold); \
 }
+
+#else
+
+#define BENCHMARK_FUNCTION(name, threshold, func) \
+{ \
+    const auto start = high_resolution_clock::now(); \
+    const auto result = func(); \
+    const auto end = high_resolution_clock::now(); \
+    const auto elapsed = duration_cast<microseconds>(end - start); \
+    printElapsed(elapsed, threshold); \
+}
+
+#endif
 
 struct BenchmarkResult
 {

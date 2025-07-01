@@ -3,10 +3,9 @@
 #include <optional>
 #include <utility>
 
+#include "colli2de/Ray.hpp"
 #include "colli2de/Shapes.hpp"
-#include "geometry/Ray.hpp"
 #include "geometry/Transformations.hpp"
-#include "geometry/AABB.hpp"
 
 namespace c2d
 {
