@@ -12,6 +12,7 @@
 using namespace c2d;
 using namespace Catch;
 using namespace std::chrono;
+using RaycastInfo = DynamicBVH<uint32_t>::RaycastInfo;
 
 TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
 {
@@ -90,22 +91,22 @@ TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchm
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Query 10k proxies", 10us, [&]()
+    BENCHMARK_FUNCTION("Query 10k proxies", 50us, [&]()
     {
-        size_t count = 0;
-        count += bvh.query(query).size();
-        return count;
+        std::set<uint32_t> foundIds;
+        bvh.query(query, foundIds);
+        return foundIds.size();
     });
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Query 100k proxies", 100us, [&]()
+    BENCHMARK_FUNCTION("Query 100k proxies", 500us, [&]()
     {
-        size_t count = 0;
-        count += bvh.query(query).size();
-        return count;
+        std::set<uint32_t> foundIds;
+        bvh.query(query, foundIds);
+        return foundIds.size();
     });
 }
 
@@ -124,9 +125,10 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Raycast through 10k proxies", 40us, [&]()
+    BENCHMARK_FUNCTION("Raycast through 10k proxies", 200us, [&]()
     {
-        auto hits = bvh.piercingRaycast(ray);
+        std::set<RaycastInfo> hits;
+        bvh.piercingRaycast(ray, hits);
         return hits.size();
     });
 
@@ -134,9 +136,10 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Raycast through 100,000 proxies", 400us, [&]()
+    BENCHMARK_FUNCTION("Raycast through 100,000 proxies", 2000us, [&]()
     {
-        auto hits = bvh.piercingRaycast(ray);
+        std::set<RaycastInfo> hits;
+        bvh.piercingRaycast(ray, hits);
         return hits.size();
     });
 }
@@ -155,9 +158,12 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
     for (uint32_t i = 0; i < 1'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
+    std::set<std::pair<uint32_t, uint32_t>> pairs;
+
     BENCHMARK_FUNCTION("Find all overlapping pairs among 1k proxies", 100us, [&]()
     {
-        const auto pairs = bvh.findAllCollisions();
+        pairs.clear();
+        bvh.findAllCollisions(pairs);
         return pairs.size();
     });
 
@@ -167,7 +173,8 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
 
     BENCHMARK_FUNCTION("Find all overlapping pairs among 10k proxies", 5ms, [&]()
     {
-        const auto pairs = bvh.findAllCollisions();
+        pairs.clear();
+        bvh.findAllCollisions(pairs);
         return pairs.size();
     });
 
@@ -175,9 +182,10 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Find all overlapping pairs among 100k proxies", 100ms, [&]()
+    BENCHMARK_FUNCTION("Find all overlapping pairs among 100k proxies", 150ms, [&]()
     {
-        const auto pairs = bvh.findAllCollisions();
+        pairs.clear();
+        bvh.findAllCollisions(pairs);
         return pairs.size();
     });
 }

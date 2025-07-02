@@ -1,3 +1,4 @@
+#include <colli2de/Ray.hpp>
 #include <cstdint>
 #include <iostream>
 #include <ranges>
@@ -293,14 +294,15 @@ TEST_CASE("DynamicBVH handles moving proxies with remove and reinsert", "[Dynami
 
     // Query at old location should NOT find proxy
     AABB oldArea{Vec2{-1,-1}, Vec2{2,2}};
-    std::vector<uint32_t> hits;
-    hits = bvh.query(oldArea);
-    REQUIRE_FALSE(std::find(hits.begin(), hits.end(), 5) != hits.end());
+    std::set<uint32_t> hits;
+    bvh.query(oldArea, hits);
+    REQUIRE_FALSE(hits.count(5));
 
     // Query at new location should find proxy
     AABB newArea{Vec2{9,9}, Vec2{12,12}};
-    hits = bvh.query(newArea);
-    REQUIRE(std::find(hits.begin(), hits.end(), 5) != hits.end());
+    hits.clear();
+    bvh.query(newArea, hits);
+    REQUIRE(hits.count(5));
 }
 
 TEST_CASE("DynamicBVH can serialize and deserialize correctly", "[DynamicBVH][Serialize][Deserialize]")
@@ -328,19 +330,18 @@ TEST_CASE("DynamicBVH can serialize and deserialize correctly", "[DynamicBVH][Se
     // 5. Query both and compare results
     AABB query{Vec2{20, 20}, Vec2{40, 40}};
     
-    // std::set<uint32_t> hits1, hits2;
-    const auto hits1 = bvh.query(query);
-    const auto hits2 = bvh2.query(query);
+    std::set<uint32_t> hits1, hits2;
+    bvh.query(query, hits1);
+    bvh2.query(query, hits2);
 
     CHECK(hits1 == hits2);
 
     // 6. Also test a raycast
+    std::set<RaycastHit<uint32_t>> rayHits1, rayHits2;
     Ray ray{Vec2{19.5f, 19.5f}, Vec2{41.0f, 41.0f}};
-    auto ids1 = bvh.piercingRaycast(ray);
-    auto ids2 = bvh2.piercingRaycast(ray);
-    REQUIRE(ids1.size() == ids2.size());
-    for (size_t i = 0; i < ids1.size(); ++i)
-        CHECK(ids1[i] == ids2[i]);
+    bvh.piercingRaycast(ray, rayHits1);
+    bvh2.piercingRaycast(ray, rayHits2);
+    CHECK(rayHits1 == rayHits2);
 
     // 7. Check that the tree structure is preserved
     CHECK(bvh == bvh2);
@@ -423,12 +424,13 @@ TEST_CASE("DynamicBVH batchQuery with multiple threads", "[DynamicBVH][BatchQuer
         bvh.createProxy({Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}}, i);
 
     std::vector<AABB> queries;
-    std::vector<std::vector<uint32_t>> expectedResults;
+    std::vector<std::set<uint32_t>> expectedResults;
     for (uint32_t i = 0; i < 20000; ++i)
     {
         queries.push_back({Vec2{float(i * 10), float(i * 10)}, Vec2{float((i + 1) * 10), float((i + 1) * 10)}});
-        const auto& result = bvh.query(queries.back());
-        expectedResults.push_back(result);
+        std::set<uint32_t> hits;
+        bvh.query(queries.back(), hits);
+        expectedResults.push_back(std::move(hits));
     }
 
     auto results = bvh.batchQuery(queries, 8);
@@ -440,6 +442,6 @@ TEST_CASE("DynamicBVH batchQuery with multiple threads", "[DynamicBVH][BatchQuer
         const auto& hits = results[i];
         const auto& expected = expectedResults[i];
 
-        REQUIRE(hits == expected);
+        CHECK(hits == expected);
     }
 }

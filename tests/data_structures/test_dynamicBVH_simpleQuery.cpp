@@ -1,16 +1,29 @@
 #include <algorithm>
+#include <colli2de/Ray.hpp>
 #include <cstdint>
-#include <map>
 #include <set>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include "data_structures/DynamicBVH.hpp"
 #include "geometry/AABB.hpp"
+#include "utils/Print.hpp"
 
 using namespace c2d;
 using namespace Catch;
 using RaycastInfo = DynamicBVH<uint32_t>::RaycastInfo;
+
+namespace
+{
+    std::vector<uint32_t> toVectorIds(const std::set<RaycastInfo>& hits)
+    {
+        std::vector<uint32_t> ids;
+        ids.reserve(hits.size());
+        for (const auto& hit : hits)
+            ids.push_back(hit.id);
+        return ids;
+    }
+}
 
 TEST_CASE("DynamicBVH::query finds all overlapping proxies", "[DynamicBVH][Query]")
 {
@@ -52,11 +65,11 @@ TEST_CASE("DynamicBVH::query finds all overlapping proxies", "[DynamicBVH][Query
         }
     }
 
-    std::vector<uint32_t> foundIds;
+    std::set<uint32_t> foundIds;
     
     // Query an area covering (2,2) to (4,4)
     AABB queryAABB{Vec2{2.0f, 2.0f}, Vec2{4.0f, 4.0f}};
-    foundIds = bvh.query(queryAABB);
+    bvh.query(queryAABB, foundIds);
 
     // Expect overlaps:
     // - {(1, 1), (2, 2)}, {(1, 2), (2, 3)}, {(1, 3), (2, 4)}, {(1, 4), (2, 5)}
@@ -71,23 +84,25 @@ TEST_CASE("DynamicBVH::query finds all overlapping proxies", "[DynamicBVH][Query
 
     // Query an area that does not overlap with any proxies
     AABB nonOverlappingQuery{Vec2{6.5f, 6.5f}, Vec2{7.5f, 7.5f}};
-    foundIds = bvh.query(nonOverlappingQuery);
+    foundIds.clear();
+    bvh.query(nonOverlappingQuery, foundIds);
 
     // Should find no ids
     CHECK(foundIds.empty());
 
     // Query an area that overlaps with a single proxy
     AABB singleOverlapQuery{Vec2{3.2f, 3.2f}, Vec2{3.8f, 3.8f}};
-    foundIds = bvh.query(singleOverlapQuery);
+    foundIds.clear();
+    bvh.query(singleOverlapQuery, foundIds);
 
     // Should find exactly one id
     CHECK(foundIds.size() == 1);
-    CHECK(foundIds[0] == 21); // The proxy with AABB{(3, 3), (4, 4)}
+    CHECK(foundIds.count(21) == 1); // The proxy with AABB{(3, 3), (4, 4)}
 
     // Query an area that overlaps with every proxy
-    foundIds.clear();
     AABB fullOverlapQuery{Vec2{0.0f, 0.0f}, Vec2{6.0f, 6.0f}};
-    foundIds = bvh.query(fullOverlapQuery);
+    foundIds.clear();
+    bvh.query(fullOverlapQuery, foundIds);
 
     // Should find all 36 ids
     CHECK(foundIds.size() == gridSize * gridSize);
@@ -105,7 +120,9 @@ TEST_CASE("DynamicBVH::piercingRaycast finds intersected proxies", "[DynamicBVH]
     // Ray from (-1,0.5) to (11,0.5) passes through all AABBs
     Ray ray{ Vec2{-1.0f, 0.5f }, Vec2{11.0f, 0.5f } };
     std::vector<uint32_t> foundIds;
-    foundIds = bvh.piercingRaycast(ray);
+    std::set<RaycastInfo> hits;
+    bvh.piercingRaycast(ray, hits);
+    foundIds = toVectorIds(hits);
 
     CHECK(foundIds.size() == 10);
     for (uint32_t i = 0; i < 10; ++i)
@@ -113,13 +130,16 @@ TEST_CASE("DynamicBVH::piercingRaycast finds intersected proxies", "[DynamicBVH]
 
     // Ray that does not intersect any AABBs
     Ray nonIntersectingRay{ Vec2{12.0f, 0.5f }, Vec2{13.0f, 0.5f } };
-    foundIds = bvh.piercingRaycast(nonIntersectingRay);
-    CHECK(foundIds.empty());
+    hits.clear();
+    bvh.piercingRaycast(nonIntersectingRay, hits);
+    CHECK(hits.empty());
 
     // Ray that intersects only two AABB
     Ray singleIntersectionRay{ Vec2{5.5f, 0.5f }, Vec2{6.5f, 0.5f } };
-    foundIds = bvh.piercingRaycast(singleIntersectionRay);
-    CHECK(foundIds.size() == 2);
+    hits.clear();
+    bvh.piercingRaycast(singleIntersectionRay, hits);
+    foundIds = toVectorIds(hits);
+    CHECK(hits.size() == 2);
     CHECK(std::find(foundIds.begin(), foundIds.end(), 5) != foundIds.end());
     CHECK(std::find(foundIds.begin(), foundIds.end(), 6) != foundIds.end());
 }
@@ -136,23 +156,23 @@ TEST_CASE("DynamicBVH::firstHitRaycast finds the nearest hit", "[DynamicBVH][Fir
 
     // Ray from (-1,0.5) to (6,0.5) should hit ID=1 first
     Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
-    auto firstId = bvh.firstHitRaycast(ray);
-    REQUIRE(firstId);
-    CHECK(*firstId == 1);
+    auto firstHit = bvh.firstHitRaycast(ray);
+    REQUIRE(firstHit);
+    CHECK(firstHit->id == 1);
 
     // Ray that does not hit any boxes
     Ray noHitRay{Vec2{7,0.5f}, Vec2{8,0.5f}};
-    firstId = bvh.firstHitRaycast(noHitRay);
-    CHECK(!firstId);
+    firstHit = bvh.firstHitRaycast(noHitRay);
+    CHECK(!firstHit);
 
     // Ray that hits only the second box
     Ray singleHitRay{Vec2{1.5f,0.5f}, Vec2{3.5f,0.5f}};
-    firstId = bvh.firstHitRaycast(singleHitRay);
-    REQUIRE(firstId);
-    CHECK(*firstId == 2);
+    firstHit = bvh.firstHitRaycast(singleHitRay);
+    REQUIRE(firstHit);
+    CHECK(firstHit->id == 2);
 }
 
-TEST_CASE("DynamicBVH::piercingRaycastDetailed finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast]")
+TEST_CASE("DynamicBVH::piercingRaycast finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -163,7 +183,8 @@ TEST_CASE("DynamicBVH::piercingRaycastDetailed finds all hits with entry/exit po
 
     // Ray passes through all three boxes
     Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
-    auto hits = bvh.piercingRaycastDetailed(ray);
+    std::set<RaycastInfo> hits;
+    bvh.piercingRaycast(ray, hits);
 
     CHECK(hits.size() == 3);
     for (const auto& hit : hits) {
@@ -189,22 +210,24 @@ TEST_CASE("DynamicBVH::piercingRaycastDetailed finds all hits with entry/exit po
 
     // Ray that does not hit any boxes
     Ray noHitRay{ Vec2{7,0.5f }, Vec2{8,0.5f } };
-    hits = bvh.piercingRaycastDetailed(noHitRay);
+    hits.clear();
+    bvh.piercingRaycast(noHitRay, hits);
 
     CHECK(hits.empty());
 
     // Ray that hits only the second box
     Ray singleHitRay{ Vec2{1.5f,0.5f }, Vec2{3.5f,0.5f } };
-    hits = bvh.piercingRaycastDetailed(singleHitRay);
+    hits.clear();
+    bvh.piercingRaycast(singleHitRay, hits);
 
     CHECK(hits.size() == 1);
-    CHECK(hits[0].id == 20);
-    CHECK(hits[0].entry.x == Approx(2.0f));
-    CHECK(hits[0].exit.x  == Approx(3.0f));
-    CHECK(hits[0].entry.y == Approx(0.5f));
+    CHECK(hits.begin()->id == 20);
+    CHECK(hits.begin()->entry.x == Approx(2.0f));
+    CHECK(hits.begin()->exit.x  == Approx(3.0f));
+    CHECK(hits.begin()->entry.y == Approx(0.5f));
 }
 
-TEST_CASE("DynamicBVH::firstHitRaycastDetailed returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycastDetailed]")
+TEST_CASE("DynamicBVH::firstHitRaycast returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -215,7 +238,7 @@ TEST_CASE("DynamicBVH::firstHitRaycastDetailed returns id, entry, and exit for c
 
     // Ray from (0, 1.5) to (5, 1.5) hits 101 first, then 102
     Ray ray{Vec2{0,1.5f}, Vec2{5,1.5f}};
-    auto hit = bvh.firstHitRaycastDetailed(ray);
+    auto hit = bvh.firstHitRaycast(ray);
 
     REQUIRE(hit);
     CHECK(hit->id == 101);
@@ -226,12 +249,12 @@ TEST_CASE("DynamicBVH::firstHitRaycastDetailed returns id, entry, and exit for c
 
     // Ray that does not hit any boxes
     Ray noHitRay{ Vec2{7,1.5f }, Vec2{8,1.5f } };
-    hit = bvh.firstHitRaycastDetailed(noHitRay);
+    hit = bvh.firstHitRaycast(noHitRay);
     CHECK(!hit); // Should return no hit
 
     // Ray that hits only the second box
     Ray singleHitRay{ Vec2{2.5f,1.5f }, Vec2{3.5f,1.5f } };
-    hit = bvh.firstHitRaycastDetailed(singleHitRay);
+    hit = bvh.firstHitRaycast(singleHitRay);
     REQUIRE(hit);
     CHECK(hit->id == 102);
     CHECK(hit->entry.x == Approx(3.0f));
@@ -241,7 +264,7 @@ TEST_CASE("DynamicBVH::firstHitRaycastDetailed returns id, entry, and exit for c
 
     // Backwards ray that hits all boxes
     Ray backwardsRay{ Vec2{6,1.5f }, Vec2{0,1.5f } };
-    hit = bvh.firstHitRaycastDetailed(backwardsRay);
+    hit = bvh.firstHitRaycast(backwardsRay);
     REQUIRE(hit);
     CHECK(hit->id == 103);
     CHECK(hit->entry.x == Approx(6.0f));
@@ -262,7 +285,9 @@ TEST_CASE("DynamicBVH::piercingRaycast with infinite ray finds intersected proxi
     // Ray from (-1,0.5) to (+inf,0.5) passes through all AABBs
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
     std::vector<uint32_t> foundIds;
-    foundIds = bvh.piercingRaycast(ray);
+    std::set<RaycastInfo> hits;
+    bvh.piercingRaycast(ray, hits);
+    foundIds = toVectorIds(hits);
 
     CHECK(foundIds.size() == 10);
     for (uint32_t i = 0; i < 10; ++i)
@@ -270,25 +295,33 @@ TEST_CASE("DynamicBVH::piercingRaycast with infinite ray finds intersected proxi
 
     // Ray that does not intersect any AABBs
     InfiniteRay nonIntersectingRay{ Vec2{12.0f, 0.5f}, Vec2{1.0f, 0.0f} };
-    foundIds = bvh.piercingRaycast(nonIntersectingRay);
+    hits.clear();
+    bvh.piercingRaycast(nonIntersectingRay, hits);
+    foundIds = toVectorIds(hits);
     CHECK(foundIds.empty());
 
     // Ray that intersects only half AABB
     InfiniteRay halfIntersectionsRay{ Vec2{5.5f, 0.5f}, Vec2{1.0f, 0.0f} };
-    foundIds = bvh.piercingRaycast(halfIntersectionsRay);
+    hits.clear();
+    bvh.piercingRaycast(halfIntersectionsRay, hits);
+    foundIds = toVectorIds(hits);
     CHECK(foundIds.size() == 5);
     for (uint32_t i = 5; i < 10; ++i)
         CHECK(std::find(foundIds.begin(), foundIds.end(), i) != foundIds.end());
 
     // Ray that intersects only one AABB
     InfiniteRay oneIntersectionRay{ Vec2{9.5f, 0.5f}, Vec2{1.0f, 0.0f} };
-    foundIds = bvh.piercingRaycast(oneIntersectionRay);
+    hits.clear();
+    bvh.piercingRaycast(oneIntersectionRay, hits);
+    foundIds = toVectorIds(hits);
     REQUIRE(foundIds.size() == 1);
     CHECK(foundIds[0] == 9); // The last AABB at (9,0) to (10,1)
 
     // Backwards ray that hits all boxes
     InfiniteRay backwardsRay{ Vec2{11.0f, 0.5f}, Vec2{-1.0f, 0.0f} };
-    foundIds = bvh.piercingRaycast(backwardsRay);
+    hits.clear();
+    bvh.piercingRaycast(backwardsRay, hits);
+    foundIds = toVectorIds(hits);
     CHECK(foundIds.size() == 10);
     for (uint32_t i = 0; i < 10; ++i)
         CHECK(std::find(foundIds.begin(), foundIds.end(), i) != foundIds.end());
@@ -305,37 +338,37 @@ TEST_CASE("DynamicBVH::firstHitRaycast with infinite ray finds the nearest hit",
 
     // Ray from (-1,0.5) to (+inf,0.5) passes through all AABBs
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
-    std::optional<uint32_t> foundId;
-    foundId = bvh.firstHitRaycast(ray);
+    std::optional<RaycastInfo> firstHit;
+    firstHit = bvh.firstHitRaycast(ray);
 
-    REQUIRE(foundId);
-    CHECK(*foundId == 0); // The first AABB at (0,0) to (1,1)
+    REQUIRE(firstHit);
+    CHECK(firstHit->id == 0); // The first AABB at (0,0) to (1,1)
 
     // Ray that does not intersect any AABBs
     InfiniteRay nonIntersectingRay{ Vec2{12.0f, 0.5f}, Vec2{1.0f, 0.0f} };
-    foundId = bvh.firstHitRaycast(nonIntersectingRay);
-    CHECK(!foundId); // Should return no hit
+    firstHit = bvh.firstHitRaycast(nonIntersectingRay);
+    CHECK(!firstHit); // Should return no hit
 
     // Ray that intersects only half AABB
     InfiniteRay halfIntersectionsRay{ Vec2{5.5f, 0.5f}, Vec2{1.0f, 0.0f} };
-    foundId = bvh.firstHitRaycast(halfIntersectionsRay);
-    REQUIRE(foundId);
-    CHECK(*foundId == 5); // The first AABB at (5,0
+    firstHit = bvh.firstHitRaycast(halfIntersectionsRay);
+    REQUIRE(firstHit);
+    CHECK(firstHit->id == 5); // The first AABB at (5,0) to (6,1)
 
     // Ray that intersects only one AABB
     InfiniteRay oneIntersectionRay{ Vec2{9.5f, 0.5f}, Vec2{1.0f, 0.0f} };
-    foundId = bvh.firstHitRaycast(oneIntersectionRay);
-    REQUIRE(foundId);
-    CHECK(*foundId == 9); // The last AABB at (9,0) to (10,1)
+    firstHit = bvh.firstHitRaycast(oneIntersectionRay);
+    REQUIRE(firstHit);
+    CHECK(firstHit->id == 9); // The last AABB at (9,0) to (10,1)
 
     // Backwards ray that hits all boxes
     InfiniteRay backwardsRay{ Vec2{11.0f, 0.5f}, Vec2{-1.0f, 0.0f} };
-    foundId = bvh.firstHitRaycast(backwardsRay);
-    REQUIRE(foundId);
-    CHECK(*foundId == 9); // The last AABB at (9,0) to (10,1)
+    firstHit = bvh.firstHitRaycast(backwardsRay);
+    REQUIRE(firstHit);
+    CHECK(firstHit->id == 9); // The last AABB at (9,0) to (10,1)
 }
 
-TEST_CASE("DynamicBVH::piercingRaycastDetailed with infinite ray finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast]")
+TEST_CASE("DynamicBVH::piercingRaycast with infinite ray finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -346,82 +379,74 @@ TEST_CASE("DynamicBVH::piercingRaycastDetailed with infinite ray finds all hits 
 
     // Ray from (-1,0.5) to (+inf,0.5) passes through all AABBs
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
-    std::vector<RaycastInfo> hits;
-    hits = bvh.piercingRaycastDetailed(ray);
+    std::set<RaycastInfo> hits;
+    bvh.piercingRaycast(ray, hits);
 
     REQUIRE(hits.size() == 10);
-    for (uint32_t i = 0; i < 10; ++i)
+    for (const auto& hit : hits)
     {
-        const auto& hit = hits[i];
-        CHECK(hit.id == i);
-        CHECK(hit.entry.x == Approx(static_cast<float>(i)));
-        CHECK(hit.exit.x  == Approx(static_cast<float>(i + 1)));
+        CHECK(hit.id < 10);
+        CHECK(hit.entry.x == Approx(static_cast<float>(hit.id)));
+        CHECK(hit.exit.x  == Approx(static_cast<float>(hit.id + 1)));
         CHECK(hit.entry.y == Approx(0.5f));
         CHECK(hit.exit.y  == Approx(0.5f));
     }
 
     // Ray that does not intersect any AABBs
     InfiniteRay nonIntersectingRay{ Vec2{12.0f, 0.5f}, Vec2{1.0f, 0.0f} };
-    hits = bvh.piercingRaycastDetailed(nonIntersectingRay);
+    hits.clear();
+    bvh.piercingRaycast(nonIntersectingRay, hits);
     CHECK(hits.empty());
 
     // Ray that intersects only half AABB
     InfiniteRay halfIntersectionsRay{ Vec2{5.5f, 0.5f}, Vec2{1.0f, 0.0f} };
-    hits = bvh.piercingRaycastDetailed(halfIntersectionsRay);
+    hits.clear();
+    bvh.piercingRaycast(halfIntersectionsRay, hits);
     REQUIRE(hits.size() == 5);
-    for (uint32_t i = 5; i < 10; ++i)
+    for (const auto& hit : hits)
     {
-        const auto& hit = hits[i - 5];
-        CHECK(hit.id == i);
-        CHECK(hit.entry.x == Approx(std::max(static_cast<float>(i), halfIntersectionsRay.start.x)));
-        CHECK(hit.exit.x  == Approx(static_cast<float>(i + 1)));
+        CHECK(hit.id >= 5);
+        CHECK(hit.id < 10);
+        CHECK(hit.entry.x == Approx(std::max(static_cast<float>(hit.id), halfIntersectionsRay.start.x)));
+        CHECK(hit.exit.x  == Approx(static_cast<float>(hit.id + 1)));
         CHECK(hit.entry.y == Approx(0.5f));
         CHECK(hit.exit.y  == Approx(0.5f));
     }
 
     // Ray that intersects only one AABB
     InfiniteRay oneIntersectionRay{ Vec2{9.5f, 0.5f}, Vec2{1.0f, 0.0f} };
-    hits = bvh.piercingRaycastDetailed(oneIntersectionRay);
+    hits.clear();
+    bvh.piercingRaycast(oneIntersectionRay, hits);
     REQUIRE(hits.size() == 1);
-    CHECK(hits[0].id == 9); // The last AABB at (9,0) to (10,1)
-    CHECK(hits[0].entry.x == Approx(9.5f));
-    CHECK(hits[0].exit.x  == Approx(10.0f));
-    CHECK(hits[0].entry.y == Approx(0.5f));
-    CHECK(hits[0].exit.y  == Approx(0.5f));
+    CHECK(hits.begin()->id == 9); // The last AABB at (9,0) to (10,1)
+    CHECK(hits.begin()->entry.x == Approx(9.5f));
+    CHECK(hits.begin()->exit.x  == Approx(10.0f));
+    CHECK(hits.begin()->entry.y == Approx(0.5f));
+    CHECK(hits.begin()->exit.y  == Approx(0.5f));
 
     // Backwards ray that hits all boxes
     InfiniteRay backwardsRay{ Vec2{11.0f, 0.5f}, Vec2{-1.0f, 0.0f} };
-    hits = bvh.piercingRaycastDetailed(backwardsRay);
+    hits.clear();
+    bvh.piercingRaycast(backwardsRay, hits);
     REQUIRE(hits.size() == 10);
 
-    std::map<uint32_t, RaycastInfo> expectedHits;
-    for (uint32_t i = 0; i < 10; ++i)
+    // Check that all hits are in reverse order
+    auto lastHit = hits.begin();
+    for (const auto& hit : hits)
     {
-        expectedHits.emplace(i, RaycastInfo {
-            i,
-            Vec2{static_cast<float>(i + 1), 0.5f},
-            Vec2{static_cast<float>(i), 0.5f}
-        });
-    }
-    for (uint32_t i = 0; i < 10; ++i)
-    {
-        const auto& hit = hits[i];
-        const auto it = expectedHits.find(hits[i].id);
-        REQUIRE(it != expectedHits.end());
+        CHECK(hit.id >= 0);
+        CHECK(hit.id < 10);
+        CHECK(hit.entry.x == Approx(static_cast<float>(hit.id + 1)));
+        CHECK(hit.exit.x  == Approx(static_cast<float>(hit.id)));
+        CHECK(hit.entry.y == Approx(0.5f));
+        CHECK(hit.exit.y  == Approx(0.5f));
 
-        // Check the hit details
-        const auto& expectedHit = it->second;
-        CHECK(hit.id == expectedHit.id);
-        CHECK(hit.entry.x == Approx(expectedHit.entry.x).margin(1e-6));
-        CHECK(hit.exit.x  == Approx(expectedHit.exit.x).margin(1e-6));
-        CHECK(hit.entry.y == Approx(expectedHit.entry.y).margin(1e-6));
-        CHECK(hit.exit.y  == Approx(expectedHit.exit.y).margin(1e-6));
-        
-        expectedHits.erase(it);
+        CHECK(hit.id <= lastHit->id);
+        CHECK(hit.entryTime >= lastHit->entryTime);
     }
 }
 
-TEST_CASE("DynamicBVH::firstHitRaycastDetailed with infinite ray returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycastDetailed]")
+TEST_CASE("DynamicBVH::firstHitRaycast with infinite ray returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -433,7 +458,7 @@ TEST_CASE("DynamicBVH::firstHitRaycastDetailed with infinite ray returns id, ent
     // Ray from (-1,0.5) to (+inf,0.5) passes through all AABBs
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
     std::optional<RaycastInfo> hit;
-    hit = bvh.firstHitRaycastDetailed(ray);
+    hit = bvh.firstHitRaycast(ray);
 
     REQUIRE(hit);
     CHECK(hit->id == 0); // The first AABB at (0,0) to (1,1)
@@ -444,12 +469,12 @@ TEST_CASE("DynamicBVH::firstHitRaycastDetailed with infinite ray returns id, ent
 
     // Ray that does not intersect any AABBs
     InfiniteRay nonIntersectingRay{ Vec2{12.0f, 0.5f}, Vec2{1.0f, 0.0f} };
-    hit = bvh.firstHitRaycastDetailed(nonIntersectingRay);
+    hit = bvh.firstHitRaycast(nonIntersectingRay);
     CHECK(!hit); // Should return no hit
 
     // Ray that intersects only half AABB
     InfiniteRay halfIntersectionsRay{ Vec2{5.5f, 0.5f}, Vec2{1.0f, 0.0f} };
-    hit = bvh.firstHitRaycastDetailed(halfIntersectionsRay);
+    hit = bvh.firstHitRaycast(halfIntersectionsRay);
     REQUIRE(hit);
     CHECK(hit->id == 5); // The first AABB at (5,0) to (6,1)
     CHECK(hit->entry.x == Approx(5.5f));
@@ -459,7 +484,7 @@ TEST_CASE("DynamicBVH::firstHitRaycastDetailed with infinite ray returns id, ent
 
     // Ray that intersects only one AABB
     InfiniteRay oneIntersectionRay{ Vec2{9.5f, 0.5f}, Vec2{1.0f, 0.0f} };
-    hit = bvh.firstHitRaycastDetailed(oneIntersectionRay);
+    hit = bvh.firstHitRaycast(oneIntersectionRay);
     REQUIRE(hit);
     CHECK(hit->id == 9); // The last AABB at (9,0) to (10,1)
     CHECK(hit->entry.x == Approx(9.5f));
@@ -469,7 +494,7 @@ TEST_CASE("DynamicBVH::firstHitRaycastDetailed with infinite ray returns id, ent
 
     // Backwards ray that hits all boxes
     InfiniteRay backwardsRay{ Vec2{11.0f, 0.5f}, Vec2{-1.0f, 0.0f} };
-    hit = bvh.firstHitRaycastDetailed(backwardsRay);
+    hit = bvh.firstHitRaycast(backwardsRay);
     REQUIRE(hit);
     CHECK(hit->id == 9); // The last AABB at (9,0) to (10,1)
     CHECK(hit->entry.x == Approx(10.0f));
@@ -492,27 +517,18 @@ TEST_CASE("DynamicBVH: findAllCollisions finds correct pairs", "[DynamicBVH][Bro
     bvh.createProxy({Vec2{4,4}, Vec2{5,5}}, 2);
     bvh.createProxy({Vec2{1.5f,1.5f}, Vec2{2.5f,2.5f}}, 3);
 
-    const auto pairs = bvh.findAllCollisions();
-
-    // Build a set for easy checking
-    std::set<std::pair<uint32_t, uint32_t>> found;
-    for (auto p : pairs)
-    {
-        // Order doesn't matter (but avoid duplicate pairs)
-        if (p.first > p.second)
-            std::swap(p.first, p.second);
-        found.insert(p);
-    }
+    std::set<std::pair<uint32_t, uint32_t>> pairs;
+    bvh.findAllCollisions(pairs);
 
     // Should find (0,1), (0,3), (1,3)
     std::set<std::pair<uint32_t, uint32_t>> expected {
         {0,1}, {0,3}, {1,3}
     };
 
-    REQUIRE(found.size() == expected.size());
+    REQUIRE(pairs.size() == expected.size());
     for (const auto& e : expected)
     {
-        CHECK(found.find(e) != found.end());
+        CHECK(pairs.find(e) != pairs.end());
     }
 }
 

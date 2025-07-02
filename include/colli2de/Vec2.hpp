@@ -75,7 +75,9 @@ public:
         return index == 0 ? x : y;
     }
     constexpr bool operator==(Vec2 other) const;
+    constexpr bool operator!=(Vec2 other) const;
     constexpr bool operator<(Vec2 other) const;
+    constexpr bool operator>(Vec2 other) const;
     friend std::ostream& operator<<(std::ostream& os, const Vec2& vec)
     {
         return os << vec.toString();
@@ -272,6 +274,11 @@ constexpr bool Vec2::operator==(Vec2 other) const
     return float_equals(x, other.x) && float_equals(y, other.y);
 }
 
+constexpr bool Vec2::operator!=(Vec2 other) const
+{
+    return !(*this == other);
+}
+
 constexpr bool Vec2::operator<(Vec2 other) const
 {
     if (x < other.x)
@@ -281,6 +288,14 @@ constexpr bool Vec2::operator<(Vec2 other) const
     return y < other.y;
 }
 
+constexpr bool Vec2::operator>(Vec2 other) const
+{
+    if (x > other.x)
+        return true;
+    if (x < other.x)
+        return false;
+    return y > other.y;
+}
 
 constexpr float Vec2::cross(Vec2 other) const
 {

@@ -4,24 +4,24 @@
 #include <future>
 #include <ranges>
 #include <stack>
+#include <vector>
 
 namespace c2d
 {
 
 template<typename IdType>
-std::vector<IdType> DynamicBVH<IdType>::query(AABB queryAABB, BitMaskType maskBits) const
+void DynamicBVH<IdType>::query(AABB queryAABB, std::set<IdType>& intersections, BitMaskType maskBits) const
 {
     if (rootIndex == INVALID_NODE_INDEX)
-        return {};
+        return;
 
-    std::vector<IdType> intersections;
-    std::stack<NodeIndex> stack;
-    stack.push(rootIndex);
+    std::vector<NodeIndex> stack;
+    stack.push_back(rootIndex);
 
     while (!stack.empty())
     {
-        NodeIndex nodeIndex = stack.top();
-        stack.pop();
+        NodeIndex nodeIndex = stack.back();
+        stack.pop_back();
         const auto& node = nodes[nodeIndex];
 
         // Collision detected only if the node's categoryBits match the maskBits
@@ -33,25 +33,23 @@ std::vector<IdType> DynamicBVH<IdType>::query(AABB queryAABB, BitMaskType maskBi
 
         if (node.isLeaf())
         {
-            intersections.push_back(node.id);
+            intersections.insert(node.id);
         }
         else
         {
-            stack.push(node.child1Index);
-            stack.push(node.child2Index);
+            stack.push_back(node.child1Index);
+            stack.push_back(node.child2Index);
         }
     }
-
-    return intersections;
 }
 
 template<typename IdType>
-std::vector<std::vector<IdType>> DynamicBVH<IdType>::batchQuery(const std::vector<AABB>& queries,
+std::vector<std::set<IdType>> DynamicBVH<IdType>::batchQuery(const std::vector<AABB>& queries,
                                                                 size_t numThreads,
                                                                 BitMaskType maskBits) const
 {
     size_t n = queries.size();
-    std::vector<std::vector<IdType>> results(n);
+    std::vector<std::set<IdType>> results(n);
     std::vector<std::future<void>> futures;
 
     size_t chunk = (n + numThreads - 1) / numThreads;
@@ -62,7 +60,7 @@ std::vector<std::vector<IdType>> DynamicBVH<IdType>::batchQuery(const std::vecto
 
         futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end, maskBits]() {
             for (size_t i = begin; i < end; ++i)
-                results[i] = this->query(queries[i], maskBits);
+                this->query(queries[i], results[i], maskBits);
         }));
     }
 
@@ -73,57 +71,20 @@ std::vector<std::vector<IdType>> DynamicBVH<IdType>::batchQuery(const std::vecto
 }
 
 template<typename IdType>
-std::vector<IdType> DynamicBVH<IdType>::piercingRaycast(Ray ray, BitMaskType maskBits) const
+void DynamicBVH<IdType>::piercingRaycast(Ray ray,
+                                         std::set<typename DynamicBVH<IdType>::RaycastInfo>& hits,
+                                         BitMaskType maskBits) const
 {
     if (rootIndex == INVALID_NODE_INDEX)
-        return {};
+        return;
 
-    std::vector<IdType> hits;
-    std::stack<NodeIndex> stack;
-    stack.push(rootIndex);
+    std::vector<NodeIndex> stack;
+    stack.push_back(rootIndex);
 
     while (!stack.empty())
     {
-        NodeIndex nodeIndex = stack.top();
-        stack.pop();
-        const auto& node = nodes[nodeIndex];
-        
-        // Collision detected only if the node's categoryBits match the maskBits
-        if (!node.matchesMask(maskBits))
-            continue;
-        if (!node.aabb.intersects(ray))
-            continue;
-
-        if (node.isLeaf())
-        {
-            hits.push_back(node.id);
-        }
-        else
-        {
-            stack.push(node.child1Index);
-            stack.push(node.child2Index);
-        }
-    }
-
-    return hits;
-}
-
-template<typename IdType>
-std::optional<IdType> DynamicBVH<IdType>::firstHitRaycast(Ray ray, BitMaskType maskBits) const
-{
-    if (rootIndex == INVALID_NODE_INDEX)
-        return std::nullopt;
-
-    std::optional<IdType> closestId;
-    float firstHitTime = std::numeric_limits<float>::max();
-
-    std::stack<NodeIndex> stack;
-    stack.push(rootIndex);
-
-    while (!stack.empty())
-    {
-        NodeIndex nodeIndex = stack.top();
-        stack.pop();
+        NodeIndex nodeIndex = stack.back();
+        stack.pop_back();
         const auto& node = nodes[nodeIndex];
 
         // Collision detected only if the node's categoryBits match the maskBits
@@ -136,69 +97,19 @@ std::optional<IdType> DynamicBVH<IdType>::firstHitRaycast(Ray ray, BitMaskType m
 
         if (node.isLeaf())
         {
-            if (intersection->first < firstHitTime)
-            {
-                firstHitTime = intersection->first;
-                closestId = node.id;
-            }
+            hits.insert(RaycastInfo::fromRay(node.id, ray, *intersection));
         }
         else
         {
-            stack.push(node.child1Index);
-            stack.push(node.child2Index);
+            stack.push_back(node.child1Index);
+            stack.push_back(node.child2Index);
         }
     }
-
-    return closestId;
 }
 
 template<typename IdType>
-std::vector<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::piercingRaycastDetailed(Ray ray,
-                                                                                                  BitMaskType maskBits) const
-{
-    if (rootIndex == INVALID_NODE_INDEX)
-        return {};
-
-    std::vector<RaycastInfo> hits;
-    std::stack<NodeIndex> stack;
-    stack.push(rootIndex);
-
-    while (!stack.empty())
-    {
-        NodeIndex nodeIndex = stack.top();
-        stack.pop();
-        const auto& node = nodes[nodeIndex];
-
-        // Collision detected only if the node's categoryBits match the maskBits
-        if (!node.matchesMask(maskBits))
-            continue;
-
-        const auto intersection = node.aabb.intersects(ray);
-        if (!intersection)
-            continue;
-
-        if (node.isLeaf())
-        {
-            hits.push_back(RaycastInfo::fromRay(node.id, ray, *intersection));
-        }
-        else
-        {
-            stack.push(node.child1Index);
-            stack.push(node.child2Index);
-        }
-    }
-
-    std::sort(hits.begin(), hits.end(), [&](const RaycastInfo& a, const RaycastInfo& b)
-    {
-        return (a.entry - ray.p1).lengthSqr() < (b.entry - ray.p1).lengthSqr();
-    });
-
-    return hits;
-}
-
-template<typename IdType>
-std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firstHitRaycastDetailed(Ray ray,
-                                                                                                    BitMaskType maskBits) const
+std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firstHitRaycast(Ray ray,
+                                                                                            BitMaskType maskBits) const
 {
     if (rootIndex == INVALID_NODE_INDEX)
         return std::nullopt;
@@ -206,13 +117,13 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
     std::optional<RaycastInfo> firstHit;
     float firstHitTime = std::numeric_limits<float>::max();
 
-    std::stack<NodeIndex> stack;
-    stack.push(rootIndex);
+    std::vector<NodeIndex> stack;
+    stack.push_back(rootIndex);
 
     while (!stack.empty())
     {
-        NodeIndex nodeIndex = stack.top();
-        stack.pop();
+        NodeIndex nodeIndex = stack.back();
+        stack.pop_back();
         const auto& node = nodes[nodeIndex];
 
         // Collision detected only if the node's categoryBits match the maskBits
@@ -233,8 +144,8 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
         }
         else
         {
-            stack.push(node.child1Index);
-            stack.push(node.child2Index);
+            stack.push_back(node.child1Index);
+            stack.push_back(node.child2Index);
         }
     }
 
@@ -242,57 +153,20 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
 }
 
 template<typename IdType>
-std::vector<IdType> DynamicBVH<IdType>::piercingRaycast(InfiniteRay ray, BitMaskType maskBits) const
+void DynamicBVH<IdType>::piercingRaycast(InfiniteRay ray,
+                                         std::set<typename DynamicBVH<IdType>::RaycastInfo>& hits,
+                                         BitMaskType maskBits) const
 {
     if (rootIndex == INVALID_NODE_INDEX)
-        return {};
+        return;
 
-    std::vector<IdType> hits;
-    std::stack<NodeIndex> stack;
-    stack.push(rootIndex);
+    std::vector<NodeIndex> stack;
+    stack.push_back(rootIndex);
 
     while (!stack.empty())
     {
-        NodeIndex nodeIndex = stack.top();
-        stack.pop();
-        const auto& node = nodes[nodeIndex];
-
-        // Collision detected only if the node's categoryBits match the maskBits
-        if (!node.matchesMask(maskBits))
-            continue;
-        if (!node.aabb.intersects(ray))
-            continue;
-
-        if (node.isLeaf())
-        {
-            hits.push_back(node.id);
-        }
-        else
-        {
-            stack.push(node.child1Index);
-            stack.push(node.child2Index);
-        }
-    }
-
-    return hits;
-}
-
-template<typename IdType>
-std::optional<IdType> DynamicBVH<IdType>::firstHitRaycast(InfiniteRay ray, BitMaskType maskBits) const
-{
-    if (rootIndex == INVALID_NODE_INDEX)
-        return std::nullopt;
-
-    std::optional<IdType> closestId;
-    float firstHitTime = std::numeric_limits<float>::max();
-
-    std::stack<NodeIndex> stack;
-    stack.push(rootIndex);
-
-    while (!stack.empty())
-    {
-        NodeIndex nodeIndex = stack.top();
-        stack.pop();
+        NodeIndex nodeIndex = stack.back();
+        stack.pop_back();
         const auto& node = nodes[nodeIndex];
 
         // Collision detected only if the node's categoryBits match the maskBits
@@ -305,69 +179,19 @@ std::optional<IdType> DynamicBVH<IdType>::firstHitRaycast(InfiniteRay ray, BitMa
 
         if (node.isLeaf())
         {
-            if (intersection->first < firstHitTime)
-            {
-                firstHitTime = intersection->first;
-                closestId = node.id;
-            }
+            hits.insert(RaycastInfo::fromRay(node.id, ray, *intersection));
         }
         else
         {
-            stack.push(node.child1Index);
-            stack.push(node.child2Index);
+            stack.push_back(node.child1Index);
+            stack.push_back(node.child2Index);
         }
     }
-
-    return closestId;
 }
 
 template<typename IdType>
-std::vector<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::piercingRaycastDetailed(InfiniteRay ray,
-                                                                                                  BitMaskType maskBits) const
-{
-    if (rootIndex == INVALID_NODE_INDEX)
-        return {};
-
-    std::vector<RaycastInfo> hits;
-    std::stack<NodeIndex> stack;
-    stack.push(rootIndex);
-
-    while (!stack.empty())
-    {
-        NodeIndex nodeIndex = stack.top();
-        stack.pop();
-        const auto& node = nodes[nodeIndex];
-
-        // Collision detected only if the node's categoryBits match the maskBits
-        if (!node.matchesMask(maskBits))
-            continue;
-
-        const auto intersection = node.aabb.intersects(ray);
-        if (!intersection)
-            continue;
-
-        if (node.isLeaf())
-        {
-            hits.push_back(RaycastInfo::fromRay(node.id, ray, *intersection));
-        }
-        else
-        {
-            stack.push(node.child1Index);
-            stack.push(node.child2Index);
-        }
-    }
-
-    std::sort(hits.begin(), hits.end(), [&](const RaycastInfo& a, const RaycastInfo& b)
-    {
-        return (a.entry - ray.start).lengthSqr() < (b.entry - ray.start).lengthSqr();
-    });
-
-    return hits;
-}
-
-template<typename IdType>
-std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firstHitRaycastDetailed(InfiniteRay ray,
-                                                                                                    BitMaskType maskBits) const
+std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firstHitRaycast(InfiniteRay ray,
+                                                                                            BitMaskType maskBits) const
 {
     if (rootIndex == INVALID_NODE_INDEX)
         return std::nullopt;
@@ -375,13 +199,13 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
     std::optional<RaycastInfo> firstHit;
     float firstHitTime = std::numeric_limits<float>::max();
 
-    std::stack<NodeIndex> stack;
-    stack.push(rootIndex);
+    std::vector<NodeIndex> stack;
+    stack.push_back(rootIndex);
 
     while (!stack.empty())
     {
-        NodeIndex nodeIndex = stack.top();
-        stack.pop();
+        NodeIndex nodeIndex = stack.back();
+        stack.pop_back();
         const auto& node = nodes[nodeIndex];
 
         // Collision detected only if the node's categoryBits match the maskBits
@@ -402,8 +226,8 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
         }
         else
         {
-            stack.push(node.child1Index);
-            stack.push(node.child2Index);
+            stack.push_back(node.child1Index);
+            stack.push_back(node.child2Index);
         }
     }
 
@@ -411,14 +235,9 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
 }
 
 template<typename IdType>
-std::vector<std::pair<IdType, IdType>> DynamicBVH<IdType>::findAllCollisions() const
+void DynamicBVH<IdType>::findAllCollisions(std::set<std::pair<IdType, IdType>>& out) const
 {
-    if (rootIndex == INVALID_NODE_INDEX)
-        return {};
-
-    std::vector<std::pair<IdType, IdType>> pairs;
-    findAllCollisionsRecursive(rootIndex, pairs);
-    return pairs;
+    findAllCollisionsRecursive(rootIndex, out);
 }
 
 template<typename IdType>
@@ -438,7 +257,7 @@ void DynamicBVH<IdType>::collectLeaves(NodeIndex nodeIdx, std::vector<NodeIndex>
 template<typename IdType>
 void DynamicBVH<IdType>::findPairsBetween(NodeIndex nodeAIdx,
                                           NodeIndex nodeBIdx,
-                                          std::vector<std::pair<IdType, IdType>>& out) const
+                                          std::set<std::pair<IdType, IdType>>& out) const
 {
     if (nodeAIdx == INVALID_NODE_INDEX || nodeBIdx == INVALID_NODE_INDEX || nodeAIdx == nodeBIdx)
         return;
@@ -456,9 +275,9 @@ void DynamicBVH<IdType>::findPairsBetween(NodeIndex nodeAIdx,
     {
         // Always store (min, max) to avoid (A, B) and (B, A) being different
         if (nodeA.id < nodeB.id)
-            out.emplace_back(nodeA.id, nodeB.id);
+            out.emplace(nodeA.id, nodeB.id);
         else
-            out.emplace_back(nodeB.id, nodeA.id);
+            out.emplace(nodeB.id, nodeA.id);
         return;
     }
 
@@ -477,7 +296,7 @@ void DynamicBVH<IdType>::findPairsBetween(NodeIndex nodeAIdx,
 
 template<typename IdType>
 void DynamicBVH<IdType>::findAllCollisionsRecursive(NodeIndex nodeIdx,
-                                                           std::vector<std::pair<IdType, IdType>>& out) const
+                                                    std::set<std::pair<IdType, IdType>>& out) const
 {
     if (nodeIdx == INVALID_NODE_INDEX)
         return;

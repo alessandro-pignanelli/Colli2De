@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <set>
 #include <utility>
 #include <utils/methods.hpp>
 #include <vector>
@@ -88,22 +89,17 @@ public:
     LeafConstIterator cend() const { return LeafConstIterator(nodes, nodes.size()); }
 
     // AABB queries
-    std::vector<IdType> query(AABB queryAABB, BitMaskType maskBits = ~0ull) const;
-    std::vector<std::vector<IdType>> batchQuery(const std::vector<AABB>& queries, size_t numThreads, BitMaskType maskBits = ~0ull) const;
+    void query(AABB queryAABB, std::set<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
+    std::vector<std::set<IdType>> batchQuery(const std::vector<AABB>& queries, size_t numThreads, BitMaskType maskBits = ~0ull) const;
+    void findAllCollisions(std::set<std::pair<IdType, IdType>>& collisions) const;
 
     // Finite raycast queries
-    std::optional<IdType> firstHitRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;
-    std::optional<RaycastInfo> firstHitRaycastDetailed(Ray ray, BitMaskType maskBits = ~0ull) const;
-    std::vector<IdType> piercingRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;
-    std::vector<RaycastInfo> piercingRaycastDetailed(Ray ray, BitMaskType maskBits = ~0ull) const;
+    std::optional<RaycastInfo> firstHitRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;
+    void piercingRaycast(Ray ray, std::set<RaycastInfo>& hits, BitMaskType maskBits = ~0ull) const;
 
     // Infinite raycast queries
-    std::optional<IdType> firstHitRaycast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
-    std::optional<RaycastInfo> firstHitRaycastDetailed(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
-    std::vector<IdType> piercingRaycast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
-    std::vector<RaycastInfo> piercingRaycastDetailed(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
-
-    std::vector<std::pair<IdType, IdType>> findAllCollisions() const;
+    std::optional<RaycastInfo> firstHitRaycast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
+    void piercingRaycast(InfiniteRay ray, std::set<RaycastInfo>& hits, BitMaskType maskBits = ~0ull) const;
 
     void serialize(std::ostream& out) const;
     static DynamicBVH<IdType> deserialize(std::istream& in);
@@ -124,8 +120,8 @@ private:
     void insertLeaf(NodeIndex leaf);
     void removeLeaf(NodeIndex leafIndex);
     void collectLeaves(NodeIndex nodeIdx, std::vector<NodeIndex>& out) const;
-    void findPairsBetween(NodeIndex nodeAIdx, NodeIndex nodeBIdx, std::vector<std::pair<IdType, IdType>>& out) const;
-    void findAllCollisionsRecursive(NodeIndex nodeIdx, std::vector<std::pair<IdType, IdType>>& out) const;
+    void findPairsBetween(NodeIndex nodeAIdx, NodeIndex nodeBIdx, std::set<std::pair<IdType, IdType>>& out) const;
+    void findAllCollisionsRecursive(NodeIndex nodeIdx, std::set<std::pair<IdType, IdType>>& out) const;
 
     NodeIndex findBestSiblingIndex(AABB leaf) const;
     NodeIndex balance(NodeIndex index);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+
 #include "colli2de/Vec2.hpp"
 
 namespace c2d
@@ -17,12 +19,17 @@ struct InfiniteRay
     Vec2 direction;
 };
 
+template <typename RayType>
+concept IsRay = std::is_same_v<RayType, Ray> || std::is_same_v<RayType, InfiniteRay>;
+
 template <typename IdType>
 struct RaycastHit
 {
     IdType id;
     Vec2 entry;
     Vec2 exit;
+    float entryTime;
+    float exitTime;
 
     static RaycastHit<IdType> fromRay(IdType id, Ray ray, float entryTime, float exitTime)
     {
@@ -30,7 +37,9 @@ struct RaycastHit
         {
             id,
             ray.p1 + (ray.p2 - ray.p1) * entryTime,
-            ray.p1 + (ray.p2 - ray.p1) * exitTime
+            ray.p1 + (ray.p2 - ray.p1) * exitTime,
+            entryTime,
+            exitTime
         };
     }
     static RaycastHit<IdType> fromRay(IdType id, Ray ray, std::pair<float, float> intersectionTimes)
@@ -39,7 +48,9 @@ struct RaycastHit
         {
             id,
             ray.p1 + (ray.p2 - ray.p1) * intersectionTimes.first,
-            ray.p1 + (ray.p2 - ray.p1) * intersectionTimes.second
+            ray.p1 + (ray.p2 - ray.p1) * intersectionTimes.second,
+            intersectionTimes.first,
+            intersectionTimes.second
         };
     }
     static RaycastHit<IdType> fromRay(IdType id, InfiniteRay ray, float entryTime, float exitTime)
@@ -48,7 +59,9 @@ struct RaycastHit
         {
             id,
             ray.start + ray.direction * entryTime,
-            ray.start + ray.direction * exitTime
+            ray.start + ray.direction * exitTime,
+            entryTime,
+            exitTime
         };
     }
     static RaycastHit<IdType> fromRay(IdType id, InfiniteRay ray, std::pair<float, float> intersectionTimes)
@@ -57,8 +70,27 @@ struct RaycastHit
         {
             id,
             ray.start + ray.direction * intersectionTimes.first,
-            ray.start + ray.direction * intersectionTimes.second
+            ray.start + ray.direction * intersectionTimes.second,
+            intersectionTimes.first,
+            intersectionTimes.second
         };
+    }
+
+    bool operator==(const RaycastHit<IdType>& other) const
+    {
+        return id == other.id;
+    }
+    bool operator!=(const RaycastHit<IdType>& other) const
+    {
+        return !(*this == other);
+    }
+    bool operator<(const RaycastHit<IdType>& other) const
+    {
+        return entryTime < other.entryTime || (entryTime == other.entryTime && exitTime < other.exitTime);
+    }
+    bool operator>(const RaycastHit<IdType>& other) const
+    {
+        return entryTime > other.entryTime || (entryTime == other.entryTime && exitTime > other.exitTime);
     }
 };
 
