@@ -48,7 +48,8 @@ namespace
                                   c2d::AABB newAabb,
                                   int32_t cellSize,
                                   const std::function<void(GridCell)>& onCellAdded,
-                                  const std::function<void(GridCell)>& onCellRemoved)
+                                  const std::function<void(GridCell)>& onCellRemoved,
+                                  const std::function<void(GridCell)>& onCellCommon)
     {
         const int32_t oldMinX = int32_t(oldAabb.min.x) / cellSize;
         const int32_t oldMinY = int32_t(oldAabb.min.y) / cellSize;
@@ -76,6 +77,8 @@ namespace
                     onCellAdded(cell);
                 else if (isNotInNew)
                     onCellRemoved(cell);
+                else
+                    onCellCommon(cell);
             }
     }
 }
@@ -100,13 +103,16 @@ public:
         BitMaskType maskBits;               // For collision filtering
     };
 
-    BroadPhaseTree(int32_t cellSize = 64) : cellSize(cellSize) {}
+    BroadPhaseTree(int32_t cellSize = 64) : cellSize(cellSize)
+    {
+        proxies.reserve(32);
+    }
 
     // Add a new proxy, returns handle for later moves/removal
     BroadPhaseTreeHandle addProxy(IdType entityId, AABB aabb, BitMaskType categoryBits = 1, BitMaskType maskBits = ~0ull);
     void removeProxy(BroadPhaseTreeHandle handle);
     void removeProxyFrom(BroadPhaseTreeHandle handle, GridCell cell);
-    void moveProxy(BroadPhaseTreeHandle handle, AABB aabb, bool wake = true);
+    void moveProxy(BroadPhaseTreeHandle handle, AABB aabb);
 
     void setSleeping(BroadPhaseTreeHandle handle, bool sleeping);
     void updateSleeping();
@@ -154,6 +160,7 @@ BroadPhaseTreeHandle BroadPhaseTree<IdType>::addProxy(IdType entityId, AABB aabb
     else
     {
         treeHandle = static_cast<IdType>(proxies.size());
+        proxies.emplace_back();
     }
 
     auto& proxy = proxies[treeHandle];
@@ -198,11 +205,11 @@ void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
 }
 
 template<typename IdType>
-void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb, bool wake)
+void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 {
     assert(isValidHandle(handle));
 
-    const auto addToCell = [this, handle](GridCell cell)
+    const auto addToCell = [this, handle, aabb](GridCell cell)
     {
         // Region stores every proxy that belongs to it
         auto& region = regions[cell];
@@ -210,8 +217,8 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb, b
 
         // Proxy stores the BVH handle for each cell (region) it belongs to
         auto& proxy = proxies[handle];
-        const auto bvhHandle = region.bvh.createProxy(proxy.aabb, proxy.entityId, proxy.categoryBits, proxy.maskBits);
-        proxy.bvhHandles.emplace_back(cell, bvhHandle);
+        const auto bvhHandle = region.bvh.createProxy(aabb, proxy.entityId, proxy.categoryBits, proxy.maskBits);
+        proxy.bvhHandles.emplace(cell, bvhHandle);
     };
     const auto removeFromCell = [this, handle](GridCell cell)
     {
@@ -226,9 +233,16 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb, b
         region.bvh.destroyProxy(bvhHandleInRegion->second);
         proxy.bvhHandles.erase(bvhHandleInRegion);
     };
+    const auto moveSameCell = [this, handle, aabb](GridCell cell)
+    {
+        // If the proxy is still in the same cell, just update the BVH
+        auto& region = regions[cell];
+        auto& proxy = proxies[handle];
+        region.bvh.moveProxy(proxy.bvhHandles[cell], aabb);
+    };
 
     Proxy& proxy = proxies[handle];
-    forEachCellDiff(proxy.aabb, aabb, cellSize, addToCell, removeFromCell);
+    forEachCellDiff(proxy.aabb, aabb, cellSize, addToCell, removeFromCell, moveSameCell);
     proxy.aabb = aabb;
 }
 
