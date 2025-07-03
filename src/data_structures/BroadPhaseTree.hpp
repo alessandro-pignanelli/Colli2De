@@ -211,7 +211,7 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb, b
         // Proxy stores the BVH handle for each cell (region) it belongs to
         auto& proxy = proxies[handle];
         const auto bvhHandle = region.bvh.createProxy(proxy.aabb, proxy.entityId, proxy.categoryBits, proxy.maskBits);
-        proxy.bvhHandles.emplace_back(cell, bvhHandle);
+        proxy.bvhHandles.emplace(cell, bvhHandle);
     };
     const auto removeFromCell = [this, handle](GridCell cell)
     {
