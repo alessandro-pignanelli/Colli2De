@@ -532,3 +532,31 @@ TEST_CASE("DynamicBVH: findAllCollisions finds correct pairs", "[DynamicBVH][Bro
     }
 }
 
+TEST_CASE("DynamicBVH batchQuery with multiple threads", "[DynamicBVH][BatchQuery]")
+{
+    DynamicBVH<uint32_t> bvh;
+    for (uint32_t i = 0; i < 1000; ++i)
+        bvh.createProxy({Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}}, i);
+
+    std::vector<AABB> queries;
+    std::vector<std::set<uint32_t>> expectedResults;
+    for (uint32_t i = 0; i < 20000; ++i)
+    {
+        queries.push_back({Vec2{float(i * 10), float(i * 10)}, Vec2{float((i + 1) * 10), float((i + 1) * 10)}});
+        std::set<uint32_t> hits;
+        bvh.query(queries.back(), hits);
+        expectedResults.push_back(std::move(hits));
+    }
+
+    auto results = bvh.batchQuery(queries, 8);
+    CHECK(results.size() == expectedResults.size());
+
+    for (size_t i = 0; i < results.size(); ++i)
+    {
+        const auto& query = queries[i];
+        const auto& hits = results[i];
+        const auto& expected = expectedResults[i];
+
+        CHECK(hits == expected);
+    }
+}

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <catch2/catch_approx.hpp>
@@ -107,6 +108,29 @@ TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchm
         std::set<uint32_t> foundIds;
         bvh.query(query, foundIds);
         return foundIds.size();
+    });
+
+    std::vector<AABB> queries;
+    for (uint32_t i = 0; i < 10'000; ++i)
+    {
+        float x = static_cast<float>(i % 100);
+        float y = static_cast<float>(i % 50);
+        queries.emplace_back(Vec2{x, y}, Vec2{x + 1.0f, y + 1.0f});
+    }
+    std::shuffle(queries.begin(), queries.end(), std::mt19937{std::random_device{}()});
+
+    BENCHMARK_FUNCTION("10k Queries 100k proxies", 200ms, [&]()
+    {
+        std::set<uint32_t> foundIds;
+        for (const auto& query : queries)
+            bvh.query(query, foundIds);
+        return foundIds.size();
+    });
+
+    BENCHMARK_FUNCTION("10k Batch Queries 100k proxies", 80ms, [&]()
+    {
+        std::vector<std::set<uint32_t>> results = bvh.batchQuery(queries, 24);
+        return results.size();
     });
 }
 

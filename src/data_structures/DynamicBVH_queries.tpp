@@ -45,18 +45,19 @@ void DynamicBVH<IdType>::query(AABB queryAABB, std::set<IdType>& intersections, 
 
 template<typename IdType>
 std::vector<std::set<IdType>> DynamicBVH<IdType>::batchQuery(const std::vector<AABB>& queries,
-                                                                size_t numThreads,
-                                                                BitMaskType maskBits) const
+                                                             size_t numThreads,
+                                                             BitMaskType maskBits) const
 {
-    size_t n = queries.size();
+    const size_t n = queries.size();
     std::vector<std::set<IdType>> results(n);
     std::vector<std::future<void>> futures;
 
-    size_t chunk = (n + numThreads - 1) / numThreads;
+    numThreads = std::min(numThreads, n / 5 + 1); // Ensure at least one thread per 5 queries
+    const size_t chunk = (n + numThreads - 1) / numThreads;
 
     for (size_t t = 0; t < numThreads; ++t) {
-        size_t begin = t * chunk;
-        size_t end = std::min(n, begin + chunk);
+        const size_t begin = t * chunk;
+        const size_t end = std::min(n, begin + chunk);
 
         futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end, maskBits]() {
             for (size_t i = begin; i < end; ++i)
