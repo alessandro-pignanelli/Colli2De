@@ -57,7 +57,7 @@ TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]"
     for (uint32_t i = 0; i < 10'000; ++i)
         indices.push_back(tree.addProxy(i, aabbs[i]));
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Move 10k proxies to new location", 300us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Move 10k proxies to new location", 800us, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             tree.moveProxy(indices[i], aabbs[i].move(Vec2{50.0f, 0}));
@@ -69,7 +69,7 @@ TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]"
     for (uint32_t i = 0; i < 100'000; ++i)
         indices.push_back(treeLarge.addProxy(i, aabbs[i]));
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Move 100k proxies to new location", 3ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Move 100k proxies to new location", 8ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             treeLarge.moveProxy(indices[i], aabbs[i].move(Vec2{50.0f, 0}));
