@@ -25,7 +25,7 @@ namespace
     }
 }
 
-TEST_CASE("DynamicBVH::query finds all overlapping proxies", "[DynamicBVH][Query]")
+TEST_CASE("DynamicBVH | query finds all overlapping proxies", "[DynamicBVH][Query]")
 {
     const float margin = 0.1f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -108,7 +108,7 @@ TEST_CASE("DynamicBVH::query finds all overlapping proxies", "[DynamicBVH][Query
     CHECK(foundIds.size() == gridSize * gridSize);
 }
 
-TEST_CASE("DynamicBVH::piercingRaycast finds intersected proxies", "[DynamicBVH][PiercingRaycast]")
+TEST_CASE("DynamicBVH | piercingRaycast finds intersected proxies", "[DynamicBVH][PiercingRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(0.1f);
@@ -144,7 +144,7 @@ TEST_CASE("DynamicBVH::piercingRaycast finds intersected proxies", "[DynamicBVH]
     CHECK(std::find(foundIds.begin(), foundIds.end(), 6) != foundIds.end());
 }
 
-TEST_CASE("DynamicBVH::firstHitRaycast finds the nearest hit", "[DynamicBVH][FirstHitRaycast]")
+TEST_CASE("DynamicBVH | firstHitRaycast finds the nearest hit", "[DynamicBVH][FirstHitRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -172,7 +172,7 @@ TEST_CASE("DynamicBVH::firstHitRaycast finds the nearest hit", "[DynamicBVH][Fir
     CHECK(firstHit->id == 2);
 }
 
-TEST_CASE("DynamicBVH::piercingRaycast finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast]")
+TEST_CASE("DynamicBVH | piercingRaycast finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -227,7 +227,7 @@ TEST_CASE("DynamicBVH::piercingRaycast finds all hits with entry/exit points", "
     CHECK(hits.begin()->entry.y == Approx(0.5f));
 }
 
-TEST_CASE("DynamicBVH::firstHitRaycast returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycast]")
+TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -273,7 +273,7 @@ TEST_CASE("DynamicBVH::firstHitRaycast returns id, entry, and exit for closest h
     CHECK(hit->exit.y  == Approx(1.5f));
 }
 
-TEST_CASE("DynamicBVH::piercingRaycast with infinite ray finds intersected proxies", "[DynamicBVH][PiercingRaycast]")
+TEST_CASE("DynamicBVH | piercingRaycast with infinite ray finds intersected proxies", "[DynamicBVH][PiercingRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -327,7 +327,7 @@ TEST_CASE("DynamicBVH::piercingRaycast with infinite ray finds intersected proxi
         CHECK(std::find(foundIds.begin(), foundIds.end(), i) != foundIds.end());
 }
 
-TEST_CASE("DynamicBVH::firstHitRaycast with infinite ray finds the nearest hit", "[DynamicBVH][FirstHitRaycast]")
+TEST_CASE("DynamicBVH | firstHitRaycast with infinite ray finds the nearest hit", "[DynamicBVH][FirstHitRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -368,7 +368,7 @@ TEST_CASE("DynamicBVH::firstHitRaycast with infinite ray finds the nearest hit",
     CHECK(firstHit->id == 9); // The last AABB at (9,0) to (10,1)
 }
 
-TEST_CASE("DynamicBVH::piercingRaycast with infinite ray finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast]")
+TEST_CASE("DynamicBVH | piercingRaycast with infinite ray finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -446,7 +446,7 @@ TEST_CASE("DynamicBVH::piercingRaycast with infinite ray finds all hits with ent
     }
 }
 
-TEST_CASE("DynamicBVH::firstHitRaycast with infinite ray returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycast]")
+TEST_CASE("DynamicBVH | firstHitRaycast with infinite ray returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycast]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -503,7 +503,7 @@ TEST_CASE("DynamicBVH::firstHitRaycast with infinite ray returns id, entry, and 
     CHECK(hit->exit.y  == Approx(0.5f));
 }
 
-TEST_CASE("DynamicBVH: findAllCollisions finds correct pairs", "[DynamicBVH][BroadPhaseCollisions]")
+TEST_CASE("DynamicBVH | findAllCollisions finds correct pairs", "[DynamicBVH][BroadPhaseCollisions]")
 {
     DynamicBVH<uint32_t> bvh;
 
@@ -532,7 +532,7 @@ TEST_CASE("DynamicBVH: findAllCollisions finds correct pairs", "[DynamicBVH][Bro
     }
 }
 
-TEST_CASE("DynamicBVH batchQuery with multiple threads", "[DynamicBVH][BatchQuery]")
+TEST_CASE("DynamicBVH | batchQuery with multiple threads", "[DynamicBVH][BatchQuery]")
 {
     DynamicBVH<uint32_t> bvh;
     for (uint32_t i = 0; i < 1000; ++i)

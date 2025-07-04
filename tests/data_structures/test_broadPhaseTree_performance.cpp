@@ -15,7 +15,7 @@ using namespace Catch;
 using namespace std::chrono;
 using BPTRaycastInfo = RaycastInfo<uint32_t>;
 
-TEST_CASE("BroadPhaseTree performance: Bulk insertion", "[BroadPhaseTree][Benchmark][Insert]")
+TEST_CASE("BroadPhaseTree | Bulk insertion", "[BroadPhaseTree][Benchmark][Insert]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -25,7 +25,7 @@ TEST_CASE("BroadPhaseTree performance: Bulk insertion", "[BroadPhaseTree][Benchm
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
 
-    BENCHMARK_FUNCTION("Insert 10k proxies", 10ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Insert 10k proxies", 10ms, [&]()
     {
         BroadPhaseTree<uint32_t> tree;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -33,7 +33,7 @@ TEST_CASE("BroadPhaseTree performance: Bulk insertion", "[BroadPhaseTree][Benchm
         return tree.size();
     });
 
-    BENCHMARK_FUNCTION("Insert 100k proxies", 130ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Insert 100k proxies", 130ms, [&]()
     {
         BroadPhaseTree<uint32_t> tree;
         for (uint32_t i = 0; i < 100'000; ++i)
@@ -42,7 +42,7 @@ TEST_CASE("BroadPhaseTree performance: Bulk insertion", "[BroadPhaseTree][Benchm
     });
 }
 
-TEST_CASE("BroadPhaseTree performance: Moving proxies", "[BroadPhaseTree][Benchmark][Move]")
+TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -57,7 +57,7 @@ TEST_CASE("BroadPhaseTree performance: Moving proxies", "[BroadPhaseTree][Benchm
     for (uint32_t i = 0; i < 10'000; ++i)
         indices.push_back(tree.addProxy(i, aabbs[i]));
 
-    BENCHMARK_FUNCTION("Move 10k proxies to new location", 300us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Move 10k proxies to new location", 300us, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             tree.moveProxy(indices[i], aabbs[i].move(Vec2{50.0f, 0}));
@@ -69,7 +69,7 @@ TEST_CASE("BroadPhaseTree performance: Moving proxies", "[BroadPhaseTree][Benchm
     for (uint32_t i = 0; i < 100'000; ++i)
         indices.push_back(treeLarge.addProxy(i, aabbs[i]));
 
-    BENCHMARK_FUNCTION("Move 100k proxies to new location", 3ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Move 100k proxies to new location", 3ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             treeLarge.moveProxy(indices[i], aabbs[i].move(Vec2{50.0f, 0}));
@@ -77,7 +77,7 @@ TEST_CASE("BroadPhaseTree performance: Moving proxies", "[BroadPhaseTree][Benchm
     });
 }
 
-TEST_CASE("BroadPhaseTree performance: Broad-phase AABB query", "[BroadPhaseTree][Benchmark][Query]")
+TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark][Query]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -92,7 +92,7 @@ TEST_CASE("BroadPhaseTree performance: Broad-phase AABB query", "[BroadPhaseTree
     for (uint32_t i = 0; i < 10'000; ++i)
         tree.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("Query 10k proxies", 50us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Query 10k proxies", 50us, [&]()
     {
         std::set<uint32_t> foundIds = tree.query(query);
         return foundIds.size();
@@ -102,7 +102,7 @@ TEST_CASE("BroadPhaseTree performance: Broad-phase AABB query", "[BroadPhaseTree
     for (uint32_t i = 0; i < 100'000; ++i)
         treeLargeQuery.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("Query 100k proxies", 500us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Query 100k proxies", 500us, [&]()
     {
         std::set<uint32_t> foundIds = treeLargeQuery.query(query);
         return foundIds.size();
@@ -117,7 +117,7 @@ TEST_CASE("BroadPhaseTree performance: Broad-phase AABB query", "[BroadPhaseTree
     }
     std::shuffle(queries.begin(), queries.end(), std::mt19937{std::random_device{}()});
 
-    BENCHMARK_FUNCTION("10k Queries 100k proxies", 200ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Queries 100k proxies", 200ms, [&]()
     {
         std::set<uint32_t> foundIds;
         for (const auto& query : queries)
@@ -125,14 +125,14 @@ TEST_CASE("BroadPhaseTree performance: Broad-phase AABB query", "[BroadPhaseTree
         return foundIds.size();
     });
 
-    BENCHMARK_FUNCTION("10k Batch Queries 100k proxies", 80ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Batch Queries 100k proxies", 80ms, [&]()
     {
         std::vector<std::set<uint32_t>> results = tree.batchQuery(queries, 24);
         return results.size();
     });
 }
 
-TEST_CASE("BroadPhaseTree performance: Piercing raycast", "[BroadPhaseTree][Benchmark][Raycast]")
+TEST_CASE("BroadPhaseTree | Piercing raycast", "[BroadPhaseTree][Benchmark][Raycast]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -147,7 +147,7 @@ TEST_CASE("BroadPhaseTree performance: Piercing raycast", "[BroadPhaseTree][Benc
     for (uint32_t i = 0; i < 10'000; ++i)
         tree.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("Raycast through 10k proxies", 200us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Raycast through 10k proxies", 200us, [&]()
     {
         std::set<BPTRaycastInfo> hits = tree.piercingRaycast(ray);
         return hits.size();
@@ -157,14 +157,14 @@ TEST_CASE("BroadPhaseTree performance: Piercing raycast", "[BroadPhaseTree][Benc
     for (uint32_t i = 0; i < 100'000; ++i)
         treeLargeRay.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("Raycast through 100,000 proxies", 2000us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Raycast through 100,000 proxies", 2000us, [&]()
     {
         std::set<BPTRaycastInfo> hits = treeLargeRay.piercingRaycast(ray);
         return hits.size();
     });
 }
 
-TEST_CASE("BroadPhaseTree: BroadPhaseCollisions benchmark (10k random proxies)", "[BroadPhaseTree][BroadPhaseCollisions][Benchmark]")
+TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)", "[BroadPhaseTree][BroadPhaseCollisions][Benchmark]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -180,7 +180,7 @@ TEST_CASE("BroadPhaseTree: BroadPhaseCollisions benchmark (10k random proxies)",
 
     std::set<std::pair<uint32_t, uint32_t>> pairs;
 
-    BENCHMARK_FUNCTION("Find all overlapping pairs among 1k proxies", 100us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Find all overlapping pairs among 1k proxies", 100us, [&]()
     {
         pairs = tree.findAllCollisions();
         return pairs.size();
@@ -190,7 +190,7 @@ TEST_CASE("BroadPhaseTree: BroadPhaseCollisions benchmark (10k random proxies)",
     for (uint32_t i = 0; i < 10'000; ++i)
         treePairs10k.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("Find all overlapping pairs among 10k proxies", 5ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Find all overlapping pairs among 10k proxies", 5ms, [&]()
     {
         pairs = treePairs10k.findAllCollisions();
         return pairs.size();
@@ -200,7 +200,7 @@ TEST_CASE("BroadPhaseTree: BroadPhaseCollisions benchmark (10k random proxies)",
     for (uint32_t i = 0; i < 100'000; ++i)
         treePairs100k.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("Find all overlapping pairs among 100k proxies", 150ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Find all overlapping pairs among 100k proxies", 150ms, [&]()
     {
         pairs = treePairs100k.findAllCollisions();
         return pairs.size();

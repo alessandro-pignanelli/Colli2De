@@ -13,7 +13,7 @@
 using namespace c2d;
 using namespace Catch;
 
-TEST_CASE("Node allocation", "[DynamicBVH]")
+TEST_CASE("DynamicBVH | Node allocation", "[DynamicBVH]")
 {
     const auto initialCapacity = DynamicBVH<uint32_t>::initialCapacity;
     DynamicBVH<uint32_t> bvh;
@@ -41,7 +41,7 @@ TEST_CASE("Node allocation", "[DynamicBVH]")
     CHECK(allocatedIds.find(id) == allocatedIds.end());
 }
 
-TEST_CASE("Node deallocation", "[DynamicBVH]")
+TEST_CASE("DynamicBVH | Node deallocation", "[DynamicBVH]")
 {
     const auto initialCapacity = DynamicBVH<uint32_t>::initialCapacity;
     DynamicBVH<uint32_t> bvh;
@@ -81,7 +81,7 @@ TEST_CASE("Node deallocation", "[DynamicBVH]")
     CHECK(allocatedIds.size() == initialCapacity);
 }
 
-TEST_CASE("Create proxy inserts node into tree", "[DynamicBVH]")
+TEST_CASE("DynamicBVH | Create proxy inserts node into tree", "[DynamicBVH]")
 {
     constexpr float margin = 3.0f;
     DynamicBVH<std::string> bvh(margin);
@@ -119,7 +119,7 @@ TEST_CASE("Create proxy inserts node into tree", "[DynamicBVH]")
     REQUIRE(root.aabb.max.y == Approx(expected.max.y));
 }
 
-TEST_CASE("DynamicBVH balancing: height after sequential insertions", "[DynamicBVH][Balance]") 
+TEST_CASE("DynamicBVH | balancing: height after sequential insertions", "[DynamicBVH][Balance]") 
 {
     DynamicBVH<uint32_t> bvh;
 
@@ -166,7 +166,7 @@ TEST_CASE("DynamicBVH balancing: height after sequential insertions", "[DynamicB
     REQUIRE(leafCount == 100); // All proxies present
 }
 
-TEST_CASE("DynamicBVH balancing: tree remains valid after zigzag insertions", "[DynamicBVH][Balance]")
+TEST_CASE("DynamicBVH | balancing: tree remains valid after zigzag insertions", "[DynamicBVH][Balance]")
 {
     DynamicBVH<uint32_t> bvh;
     // Insert left, right, left, right to force tree rotations
@@ -200,7 +200,7 @@ TEST_CASE("DynamicBVH balancing: tree remains valid after zigzag insertions", "[
     REQUIRE(leaves == 50);
 }
 
-TEST_CASE("DynamicBVH removes proxies and maintains balance", "[DynamicBVH][Remove]") 
+TEST_CASE("DynamicBVH | removes proxies and maintains balance", "[DynamicBVH][Remove]") 
 {
     DynamicBVH<uint32_t> bvh;
     std::vector<NodeIndex> proxies;
@@ -243,7 +243,7 @@ TEST_CASE("DynamicBVH removes proxies and maintains balance", "[DynamicBVH][Remo
     REQUIRE(height <= 5);
 }
 
-TEST_CASE("DynamicBVH uses fattened AABB for proxies", "[DynamicBVH][Fattened]") 
+TEST_CASE("DynamicBVH | uses fattened AABB for proxies", "[DynamicBVH][Fattened]") 
 {
     const float margin = 3.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -256,7 +256,7 @@ TEST_CASE("DynamicBVH uses fattened AABB for proxies", "[DynamicBVH][Fattened]")
     REQUIRE(node.aabb.max.y == Approx(aabb.max.y + margin));
 }
 
-TEST_CASE("DynamicBVH proxy update skips tree change for small moves", "[DynamicBVH][Fattened][MoveProxy]") 
+TEST_CASE("DynamicBVH | proxy update skips tree change for small moves", "[DynamicBVH][Fattened][MoveProxy]") 
 {
     const float margin = 3.0f;
     const Vec2 displacement{ 2.0f, 2.0f };
@@ -281,7 +281,7 @@ TEST_CASE("DynamicBVH proxy update skips tree change for small moves", "[Dynamic
     CHECK(node.aabb.max == largeMove.max + margin + displacement);
 }
 
-TEST_CASE("DynamicBVH handles moving proxies with remove and reinsert", "[DynamicBVH][Advanced][Move]")
+TEST_CASE("DynamicBVH | handles moving proxies with remove and reinsert", "[DynamicBVH][Advanced][Move]")
 {
     constexpr float margin = 0.1f;
     DynamicBVH<uint32_t> bvh(0.1f);
@@ -305,7 +305,7 @@ TEST_CASE("DynamicBVH handles moving proxies with remove and reinsert", "[Dynami
     REQUIRE(hits.count(5));
 }
 
-TEST_CASE("DynamicBVH can serialize and deserialize correctly", "[DynamicBVH][Serialize][Deserialize]")
+TEST_CASE("DynamicBVH | can serialize and deserialize correctly", "[DynamicBVH][Serialize][Deserialize]")
 {
     // 1. Build and populate a BVH
     DynamicBVH<uint32_t> bvh(0.2f);
@@ -347,7 +347,7 @@ TEST_CASE("DynamicBVH can serialize and deserialize correctly", "[DynamicBVH][Se
     CHECK(bvh == bvh2);
 }
 
-TEST_CASE("DynamicBVH iterator", "[DynamicBVH][Iterator]")
+TEST_CASE("DynamicBVH | iterator", "[DynamicBVH][Iterator]")
 {
     DynamicBVH<uint32_t> bvh;
     std::set<uint32_t> ids;
@@ -370,7 +370,7 @@ TEST_CASE("DynamicBVH iterator", "[DynamicBVH][Iterator]")
     CHECK(ids.empty());
 }
 
-TEST_CASE("DynamicBVH data()", "[DynamicBVH][Data]")
+TEST_CASE("DynamicBVH | data()", "[DynamicBVH][Data]")
 {
     DynamicBVH<uint32_t> bvh;
     std::set<uint32_t> ids;
@@ -394,7 +394,7 @@ TEST_CASE("DynamicBVH data()", "[DynamicBVH][Data]")
     }
 }
 
-TEST_CASE("DynamicBVH range view", "[DynamicBVH][RangeView]")
+TEST_CASE("DynamicBVH | range view", "[DynamicBVH][RangeView]")
 {
     DynamicBVH<uint32_t> bvh;
     std::set<uint32_t> ids;

@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cstdint>
-#include <map>
 #include <set>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -24,7 +23,7 @@ namespace
     }
 }
 
-TEST_CASE("DynamicBVH::query with mask bits filters correctly", "[DynamicBVH][Query][BitsMask]")
+TEST_CASE("DynamicBVH | query with mask bits filters correctly", "[DynamicBVH][Query][BitsMask]")
 {
     DynamicBVH<uint32_t> bvh;
 
@@ -38,7 +37,7 @@ TEST_CASE("DynamicBVH::query with mask bits filters correctly", "[DynamicBVH][Qu
     AABB allAABB{Vec2{0,0}, Vec2{4,1}};
 
     // Query with mask that matches only category 2
-    SECTION("Query with mask for category 2")
+    SECTION("DynamicBVH | Query with mask for category 2")
     {
         BitMaskType only2 = 0b0100;
         std::set<uint32_t> result;
@@ -48,7 +47,7 @@ TEST_CASE("DynamicBVH::query with mask bits filters correctly", "[DynamicBVH][Qu
     }
 
     // Query with mask that matches category 1 and 3
-    SECTION("Query with mask for category 1 and 3")
+    SECTION("DynamicBVH | Query with mask for category 1 and 3")
     {
         BitMaskType oneAndThree = 0b1010;
         std::set<uint32_t> result;
@@ -59,7 +58,7 @@ TEST_CASE("DynamicBVH::query with mask bits filters correctly", "[DynamicBVH][Qu
     }
 
     // Query with mask that matches all
-    SECTION("Query with mask for all categories")
+    SECTION("DynamicBVH | Query with mask for all categories")
     {
         BitMaskType all = 0b1111;
         std::set<uint32_t> result;
@@ -72,7 +71,7 @@ TEST_CASE("DynamicBVH::query with mask bits filters correctly", "[DynamicBVH][Qu
     }
 }
 
-TEST_CASE("DynamicBVH::piercingRaycast finds intersected proxies", "[DynamicBVH][PiercingRaycast][BitsMask]")
+TEST_CASE("DynamicBVH | piercingRaycast finds intersected proxies", "[DynamicBVH][PiercingRaycast][BitsMask]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -84,7 +83,7 @@ TEST_CASE("DynamicBVH::piercingRaycast finds intersected proxies", "[DynamicBVH]
     // Ray from (-1,0.5) to (11,0.5) passes through all AABBs
     Ray ray{ Vec2{-1.0f, 0.5f}, Vec2{11.0f, 0.5f} };
 
-    SECTION("No mask - finds all")
+    SECTION("DynamicBVH | No mask - finds all")
     {
         std::set<RaycastInfo> hits;
         bvh.piercingRaycast(ray, hits);
@@ -94,7 +93,7 @@ TEST_CASE("DynamicBVH::piercingRaycast finds intersected proxies", "[DynamicBVH]
             CHECK(std::find(foundIds.begin(), foundIds.end(), i) != foundIds.end());
     }
 
-    SECTION("Mask for category 2 only")
+    SECTION("DynamicBVH | Mask for category 2 only")
     {
         BitMaskType mask = 1ull << 2;
         std::set<RaycastInfo> hits;
@@ -103,7 +102,7 @@ TEST_CASE("DynamicBVH::piercingRaycast finds intersected proxies", "[DynamicBVH]
         CHECK(hits.begin()->id == 2);
     }
 
-    SECTION("Mask for categories 4 and 7 only")
+    SECTION("DynamicBVH | Mask for categories 4 and 7 only")
     {
         BitMaskType mask = (1ull << 4) | (1ull << 7);
         std::set<RaycastInfo> hits;
@@ -115,7 +114,7 @@ TEST_CASE("DynamicBVH::piercingRaycast finds intersected proxies", "[DynamicBVH]
     }
 }
 
-TEST_CASE("DynamicBVH::firstHitRaycast finds the nearest hit", "[DynamicBVH][FirstHitRaycast][BitsMask]")
+TEST_CASE("DynamicBVH | firstHitRaycast finds the nearest hit", "[DynamicBVH][FirstHitRaycast][BitsMask]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -126,14 +125,14 @@ TEST_CASE("DynamicBVH::firstHitRaycast finds the nearest hit", "[DynamicBVH][Fir
 
     Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
 
-    SECTION("No mask - hits the first AABB")
+    SECTION("DynamicBVH | No mask - hits the first AABB")
     {
         auto firstId = bvh.firstHitRaycast(ray);
         REQUIRE(firstId);
         CHECK(firstId->id == 1);
     }
 
-    SECTION("Mask for category 2 (only hits id 3)")
+    SECTION("DynamicBVH | Mask for category 2 (only hits id 3)")
     {
         BitMaskType mask = 0b100;
         auto firstId = bvh.firstHitRaycast(ray, mask);
@@ -141,7 +140,7 @@ TEST_CASE("DynamicBVH::firstHitRaycast finds the nearest hit", "[DynamicBVH][Fir
         CHECK(firstId->id == 3);
     }
 
-    SECTION("Mask for category 1 (only hits id 2)")
+    SECTION("DynamicBVH | Mask for category 1 (only hits id 2)")
     {
         BitMaskType mask = 0b010;
         auto firstId = bvh.firstHitRaycast(ray, mask);
@@ -149,7 +148,7 @@ TEST_CASE("DynamicBVH::firstHitRaycast finds the nearest hit", "[DynamicBVH][Fir
         CHECK(firstId->id == 2);
     }
 
-    SECTION("Mask for category 8 (no matches)")
+    SECTION("DynamicBVH | Mask for category 8 (no matches)")
     {
         BitMaskType mask = 0b1000;
         auto firstId = bvh.firstHitRaycast(ray, mask);
@@ -157,7 +156,7 @@ TEST_CASE("DynamicBVH::firstHitRaycast finds the nearest hit", "[DynamicBVH][Fir
     }
 }
 
-TEST_CASE("DynamicBVH::piercingRaycast finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast][BitsMask]")
+TEST_CASE("DynamicBVH | piercingRaycast finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast][BitsMask]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -168,7 +167,7 @@ TEST_CASE("DynamicBVH::piercingRaycast finds all hits with entry/exit points", "
 
     Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
 
-    SECTION("No mask - finds all")
+    SECTION("DynamicBVH | No mask - finds all")
     {
         std::set<RaycastInfo> hits;
         bvh.piercingRaycast(ray, hits);
@@ -179,7 +178,7 @@ TEST_CASE("DynamicBVH::piercingRaycast finds all hits with entry/exit points", "
         CHECK(foundIds[2] == 30);
     }
 
-    SECTION("Mask for category 2 (id 30 only)")
+    SECTION("DynamicBVH | Mask for category 2 (id 30 only)")
     {
         BitMaskType mask = 0b100;
         std::set<RaycastInfo> hits;
@@ -189,7 +188,7 @@ TEST_CASE("DynamicBVH::piercingRaycast finds all hits with entry/exit points", "
         CHECK(foundIds[0] == 30);
     }
 
-    SECTION("Mask for category 1 (id 20 only)")
+    SECTION("DynamicBVH | Mask for category 1 (id 20 only)")
     {
         BitMaskType mask = 0b010;
         std::set<RaycastInfo> hits;
@@ -200,7 +199,7 @@ TEST_CASE("DynamicBVH::piercingRaycast finds all hits with entry/exit points", "
     }
 }
 
-TEST_CASE("DynamicBVH::firstHitRaycast returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycast][BitsMask]")
+TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycast][BitsMask]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -211,14 +210,14 @@ TEST_CASE("DynamicBVH::firstHitRaycast returns id, entry, and exit for closest h
 
     Ray ray{Vec2{0,1.5f}, Vec2{5,1.5f}};
 
-    SECTION("No mask - first hit is 101")
+    SECTION("DynamicBVH | No mask - first hit is 101")
     {
         auto hit = bvh.firstHitRaycast(ray);
         REQUIRE(hit);
         CHECK(hit->id == 101);
     }
 
-    SECTION("Mask for category 2 (id 103)")
+    SECTION("DynamicBVH | Mask for category 2 (id 103)")
     {
         BitMaskType mask = 0b100;
         auto hit = bvh.firstHitRaycast(ray, mask);
@@ -226,7 +225,7 @@ TEST_CASE("DynamicBVH::firstHitRaycast returns id, entry, and exit for closest h
         CHECK(hit->id == 103);
     }
 
-    SECTION("Mask for category 1 (id 102)")
+    SECTION("DynamicBVH | Mask for category 1 (id 102)")
     {
         BitMaskType mask = 0b010;
         auto hit = bvh.firstHitRaycast(ray, mask);
@@ -235,7 +234,7 @@ TEST_CASE("DynamicBVH::firstHitRaycast returns id, entry, and exit for closest h
     }
 }
 
-TEST_CASE("DynamicBVH::piercingRaycast with infinite ray finds intersected proxies", "[DynamicBVH][PiercingRaycast][BitsMask]")
+TEST_CASE("DynamicBVH | piercingRaycast with infinite ray finds intersected proxies", "[DynamicBVH][PiercingRaycast][BitsMask]")
 {
     DynamicBVH<uint32_t> bvh(0.0f);
 
@@ -244,7 +243,7 @@ TEST_CASE("DynamicBVH::piercingRaycast with infinite ray finds intersected proxi
 
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
 
-    SECTION("Mask for category 3 (id 3 only)")
+    SECTION("DynamicBVH | Mask for category 3 (id 3 only)")
     {
         BitMaskType mask = 1ull << 3;
         std::set<RaycastInfo> hits;
@@ -254,7 +253,7 @@ TEST_CASE("DynamicBVH::piercingRaycast with infinite ray finds intersected proxi
         CHECK(foundIds[0] == 3);
     }
 
-    SECTION("Mask for categories 2-5")
+    SECTION("DynamicBVH | Mask for categories 2-5")
     {
         BitMaskType mask = (1ull << 2) | (1ull << 3) | (1ull << 4) | (1ull << 5);
         std::set<RaycastInfo> hits;

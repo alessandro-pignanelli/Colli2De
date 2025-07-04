@@ -25,7 +25,7 @@ namespace
     }
 }
 
-TEST_CASE("BroadPhaseTree::query finds all overlapping proxies", "[BroadPhaseTree][Query]")
+TEST_CASE("BroadPhaseTree | query finds all overlapping proxies", "[BroadPhaseTree][Query]")
 {
     BroadPhaseTree<uint32_t> tree;
 
@@ -107,7 +107,7 @@ TEST_CASE("BroadPhaseTree::query finds all overlapping proxies", "[BroadPhaseTre
     CHECK(foundIds.size() == gridSize * gridSize);
 }
 
-TEST_CASE("BroadPhaseTree::piercingRaycast finds intersected proxies", "[BroadPhaseTree][PiercingRaycast]")
+TEST_CASE("BroadPhaseTree | piercingRaycast finds intersected proxies", "[BroadPhaseTree][PiercingRaycast]")
 {
     BroadPhaseTree<uint32_t> tree;
 
@@ -142,7 +142,7 @@ TEST_CASE("BroadPhaseTree::piercingRaycast finds intersected proxies", "[BroadPh
     CHECK(std::find(foundIds.begin(), foundIds.end(), 6) != foundIds.end());
 }
 
-TEST_CASE("BroadPhaseTree::firstHitRaycast finds the nearest hit", "[BroadPhaseTree][FirstHitRaycast]")
+TEST_CASE("BroadPhaseTree | firstHitRaycast finds the nearest hit", "[BroadPhaseTree][FirstHitRaycast]")
 {
     BroadPhaseTree<uint32_t> tree;
 
@@ -169,7 +169,7 @@ TEST_CASE("BroadPhaseTree::firstHitRaycast finds the nearest hit", "[BroadPhaseT
     CHECK(firstHit->id == 2);
 }
 
-TEST_CASE("BroadPhaseTree::piercingRaycast finds all hits with entry/exit points", "[BroadPhaseTree][PiercingRaycast]")
+TEST_CASE("BroadPhaseTree | piercingRaycast finds all hits with entry/exit points", "[BroadPhaseTree][PiercingRaycast]")
 {
     BroadPhaseTree<uint32_t> tree;
 
@@ -223,7 +223,7 @@ TEST_CASE("BroadPhaseTree::piercingRaycast finds all hits with entry/exit points
     CHECK(hits.begin()->entry.y == Approx(0.5f));
 }
 
-TEST_CASE("BroadPhaseTree::firstHitRaycast returns id, entry, and exit for closest hit", "[BroadPhaseTree][FirstHitRaycast]")
+TEST_CASE("BroadPhaseTree | firstHitRaycast returns id, entry, and exit for closest hit", "[BroadPhaseTree][FirstHitRaycast]")
 {    BroadPhaseTree<uint32_t> tree;
 
     tree.addProxy(101, {Vec2{1,1 }, Vec2{2,2 } });
@@ -267,7 +267,7 @@ TEST_CASE("BroadPhaseTree::firstHitRaycast returns id, entry, and exit for close
     CHECK(hit->exit.y  == Approx(1.5f));
 }
 
-TEST_CASE("BroadPhaseTree::piercingRaycast with infinite ray finds intersected proxies", "[BroadPhaseTree][PiercingRaycast]")
+TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds intersected proxies", "[BroadPhaseTree][PiercingRaycast]")
 {    BroadPhaseTree<uint32_t> tree;
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10
@@ -319,7 +319,7 @@ TEST_CASE("BroadPhaseTree::piercingRaycast with infinite ray finds intersected p
         CHECK(std::find(foundIds.begin(), foundIds.end(), i) != foundIds.end());
 }
 
-TEST_CASE("BroadPhaseTree::firstHitRaycast with infinite ray finds the nearest hit", "[BroadPhaseTree][FirstHitRaycast]")
+TEST_CASE("BroadPhaseTree | firstHitRaycast with infinite ray finds the nearest hit", "[BroadPhaseTree][FirstHitRaycast]")
 {    BroadPhaseTree<uint32_t> tree;
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10
@@ -358,7 +358,7 @@ TEST_CASE("BroadPhaseTree::firstHitRaycast with infinite ray finds the nearest h
     CHECK(firstHit->id == 9); // The last AABB at (9,0) to (10,1)
 }
 
-TEST_CASE("BroadPhaseTree::piercingRaycast with infinite ray finds all hits with entry/exit points", "[BroadPhaseTree][PiercingRaycast]")
+TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds all hits with entry/exit points", "[BroadPhaseTree][PiercingRaycast]")
 {    BroadPhaseTree<uint32_t> tree;
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10
@@ -434,7 +434,7 @@ TEST_CASE("BroadPhaseTree::piercingRaycast with infinite ray finds all hits with
     }
 }
 
-TEST_CASE("BroadPhaseTree::firstHitRaycast with infinite ray returns id, entry, and exit for closest hit", "[BroadPhaseTree][FirstHitRaycast]")
+TEST_CASE("BroadPhaseTree | firstHitRaycast with infinite ray returns id, entry, and exit for closest hit", "[BroadPhaseTree][FirstHitRaycast]")
 {    BroadPhaseTree<uint32_t> tree;
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10

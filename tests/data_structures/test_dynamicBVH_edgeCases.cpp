@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cstdint>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -9,7 +8,7 @@
 using namespace c2d;
 using namespace Catch;
 
-TEST_CASE("DynamicBVH::query handles degenerate and thin AABBs", "[DynamicBVH][Advanced][Degenerate]")
+TEST_CASE("DynamicBVH | query handles degenerate and thin AABBs", "[DynamicBVH][Advanced][Degenerate]")
 {
     constexpr float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -32,7 +31,7 @@ TEST_CASE("DynamicBVH::query handles degenerate and thin AABBs", "[DynamicBVH][A
     REQUIRE(hits.count(3) == 1);
 }
 
-TEST_CASE("DynamicBVH::raycastFirstHit detects grazing rays", "[DynamicBVH][Advanced][RayGrazing]")
+TEST_CASE("DynamicBVH | raycastFirstHit detects grazing rays", "[DynamicBVH][Advanced][RayGrazing]")
 {
     DynamicBVH<uint32_t> bvh;
     bvh.createProxy({Vec2{2,2}, Vec2{4,4}}, 1);

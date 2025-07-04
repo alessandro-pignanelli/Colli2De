@@ -15,7 +15,7 @@
 using namespace c2d;
 using namespace Catch;
 
-TEST_CASE("DynamicBVH can handle many proxies", "[DynamicBVH][Stress]")
+TEST_CASE("DynamicBVH | handle many proxies", "[DynamicBVH][Stress]")
 {
     constexpr float margin = 0.01f;
     DynamicBVH<uint32_t> bvh(margin);
@@ -37,7 +37,7 @@ TEST_CASE("DynamicBVH can handle many proxies", "[DynamicBVH][Stress]")
     CHECK(hits.size() <= 110);
 }
 
-TEST_CASE("DynamicBVH stays balanced with 100k proxies", "[DynamicBVH][Stress][Balance]")
+TEST_CASE("DynamicBVH | balance with 100k proxies", "[DynamicBVH][Stress][Balance]")
 {
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     constexpr float regionMin = 0.0f, regionMax = 10'000.0f, size = 1.0f;
@@ -45,7 +45,7 @@ TEST_CASE("DynamicBVH stays balanced with 100k proxies", "[DynamicBVH][Stress][B
     // Deterministic random AABBs
     const std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
 
-    BENCHMARK_FUNCTION("BVH 100k Proxy creation and destruction", 300ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | 100k Proxy creation and destruction", 300ms, [&]()
     {
         DynamicBVH<uint32_t> bvh;
         std::vector<uint32_t> ids;

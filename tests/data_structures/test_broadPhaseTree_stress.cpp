@@ -4,12 +4,11 @@
 
 #include "data_structures/BroadPhaseTree.hpp"
 #include "geometry/AABB.hpp"
-#include "utils/Random.hpp"
 
 using namespace c2d;
 using namespace Catch;
 
-TEST_CASE("BroadPhaseTree can handle many proxies", "[BroadPhaseTree][Stress]")
+TEST_CASE("BroadPhaseTree | handle many proxies", "[BroadPhaseTree][Stress]")
 {
     BroadPhaseTree<uint32_t> tree;
     const int N = 1000;

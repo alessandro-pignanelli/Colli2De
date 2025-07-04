@@ -15,7 +15,7 @@ using namespace Catch;
 using namespace std::chrono;
 using RaycastInfo = DynamicBVH<uint32_t>::RaycastInfo;
 
-TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
+TEST_CASE("DynamicBVH | Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -25,7 +25,7 @@ TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Ins
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
 
-    BENCHMARK_FUNCTION("Insert 10k proxies", 10ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Insert 10k proxies", 10ms, [&]()
     {
         DynamicBVH<uint32_t> bvh;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -33,7 +33,7 @@ TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Ins
         return bvh.size();
     });
 
-    BENCHMARK_FUNCTION("Insert 100k proxies", 130ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Insert 100k proxies", 130ms, [&]()
     {
         DynamicBVH<uint32_t> bvh;
         for (uint32_t i = 0; i < 100'000; ++i)
@@ -42,7 +42,7 @@ TEST_CASE("DynamicBVH performance: Bulk insertion", "[DynamicBVH][Benchmark][Ins
     });
 }
 
-TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Move]")
+TEST_CASE("DynamicBVH | Moving proxies", "[DynamicBVH][Benchmark][Move]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -57,7 +57,7 @@ TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Mov
     for (uint32_t i = 0; i < 10'000; ++i)
         indices.push_back(bvh.createProxy(aabbs[i], i));
 
-    BENCHMARK_FUNCTION("Move 10k proxies to new location", 300us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Move 10k proxies to new location", 300us, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             bvh.moveProxy(indices[i], aabbs[i].move(Vec2{ 50.0f, 0 }), Vec2{50.0f, 0});
@@ -69,7 +69,7 @@ TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Mov
     for (uint32_t i = 0; i < 100'000; ++i)
         indices.push_back(bvh.createProxy(aabbs[i], i));
 
-    BENCHMARK_FUNCTION("Move 100k proxies to new location", 3ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Move 100k proxies to new location", 3ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             bvh.moveProxy(indices[i], aabbs[i].move(Vec2{ 50.0f, 0 }), Vec2{50.0f, 0});
@@ -77,7 +77,7 @@ TEST_CASE("DynamicBVH performance: Moving proxies", "[DynamicBVH][Benchmark][Mov
     });
 }
 
-TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]")
+TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -92,7 +92,7 @@ TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchm
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Query 10k proxies", 50us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Query 10k proxies", 50us, [&]()
     {
         std::set<uint32_t> foundIds;
         bvh.query(query, foundIds);
@@ -103,7 +103,7 @@ TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchm
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Query 100k proxies", 500us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Query 100k proxies", 500us, [&]()
     {
         std::set<uint32_t> foundIds;
         bvh.query(query, foundIds);
@@ -119,7 +119,7 @@ TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchm
     }
     std::shuffle(queries.begin(), queries.end(), std::mt19937{std::random_device{}()});
 
-    BENCHMARK_FUNCTION("10k Queries 100k proxies", 200ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | 10k Queries 100k proxies", 200ms, [&]()
     {
         std::set<uint32_t> foundIds;
         for (const auto& query : queries)
@@ -127,14 +127,14 @@ TEST_CASE("DynamicBVH performance: Broad-phase AABB query", "[DynamicBVH][Benchm
         return foundIds.size();
     });
 
-    BENCHMARK_FUNCTION("10k Batch Queries 100k proxies", 80ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | 10k Batch Queries 100k proxies", 80ms, [&]()
     {
         std::vector<std::set<uint32_t>> results = bvh.batchQuery(queries, 24);
         return results.size();
     });
 }
 
-TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
+TEST_CASE("DynamicBVH | Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -149,7 +149,7 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Raycast through 10k proxies", 200us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Raycast through 10k proxies", 200us, [&]()
     {
         std::set<RaycastInfo> hits;
         bvh.piercingRaycast(ray, hits);
@@ -160,7 +160,7 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Raycast through 100,000 proxies", 2000us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Raycast through 100,000 proxies", 2000us, [&]()
     {
         std::set<RaycastInfo> hits;
         bvh.piercingRaycast(ray, hits);
@@ -168,7 +168,7 @@ TEST_CASE("DynamicBVH performance: Piercing raycast", "[DynamicBVH][Benchmark][R
     });
 }
 
-TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[DynamicBVH][BroadPhaseCollisions][Benchmark]")
+TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)", "[DynamicBVH][BroadPhaseCollisions][Benchmark]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -184,7 +184,7 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
 
     std::set<std::pair<uint32_t, uint32_t>> pairs;
 
-    BENCHMARK_FUNCTION("Find all overlapping pairs among 1k proxies", 100us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Find all overlapping pairs among 1k proxies", 100us, [&]()
     {
         pairs.clear();
         bvh.findAllCollisions(pairs);
@@ -195,7 +195,7 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Find all overlapping pairs among 10k proxies", 5ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Find all overlapping pairs among 10k proxies", 5ms, [&]()
     {
         pairs.clear();
         bvh.findAllCollisions(pairs);
@@ -206,7 +206,7 @@ TEST_CASE("DynamicBVH: BroadPhaseCollisions benchmark (10k random proxies)", "[D
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("Find all overlapping pairs among 100k proxies", 150ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Find all overlapping pairs among 100k proxies", 150ms, [&]()
     {
         pairs.clear();
         bvh.findAllCollisions(pairs);

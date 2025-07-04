@@ -9,7 +9,7 @@
 using namespace c2d;
 using namespace Catch;
 
-TEST_CASE("BroadPhaseTree::query handles degenerate and thin AABBs", "[BroadPhaseTree][Advanced][Degenerate]")
+TEST_CASE("BroadPhaseTree | query handles degenerate and thin AABBs", "[BroadPhaseTree][Advanced][Degenerate]")
 {
     constexpr float margin = 0.0f;
     BroadPhaseTree<uint32_t> tree;
@@ -31,7 +31,7 @@ TEST_CASE("BroadPhaseTree::query handles degenerate and thin AABBs", "[BroadPhas
     REQUIRE(hits.count(3) == 1);
 }
 
-TEST_CASE("BroadPhaseTree::raycastFirstHit detects grazing rays", "[BroadPhaseTree][Advanced][RayGrazing]")
+TEST_CASE("BroadPhaseTree | raycastFirstHit detects grazing rays", "[BroadPhaseTree][Advanced][RayGrazing]")
 {
     BroadPhaseTree<uint32_t> tree;
     tree.addProxy(1, {Vec2{2,2}, Vec2{4,4}});

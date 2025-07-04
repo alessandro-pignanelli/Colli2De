@@ -9,7 +9,7 @@
 using namespace c2d;
 using namespace Catch;
 
-TEST_CASE("BroadPhaseTree proxies can be added and queried", "[BroadPhaseTree]")
+TEST_CASE("BroadPhaseTree | proxies can be added and queried", "[BroadPhaseTree]")
 {
     BroadPhaseTree<uint32_t> tree;
 
@@ -29,7 +29,7 @@ TEST_CASE("BroadPhaseTree proxies can be added and queried", "[BroadPhaseTree]")
     REQUIRE(tree.size() == 1);
 }
 
-TEST_CASE("BroadPhaseTree moveProxy updates location", "[BroadPhaseTree]")
+TEST_CASE("BroadPhaseTree | moveProxy updates location", "[BroadPhaseTree]")
 {
     BroadPhaseTree<uint32_t> tree;
     auto h = tree.addProxy(1, {{0,0}, {1,1}});
@@ -41,7 +41,7 @@ TEST_CASE("BroadPhaseTree moveProxy updates location", "[BroadPhaseTree]")
     CHECK(hits.empty());
 }
 
-TEST_CASE("BroadPhaseTree findAllCollisions detects overlaps", "[BroadPhaseTree]")
+TEST_CASE("BroadPhaseTree | findAllCollisions detects overlaps", "[BroadPhaseTree]")
 {
     BroadPhaseTree<uint32_t> tree;
     tree.addProxy(0, {{0,0}, {2,2}});
