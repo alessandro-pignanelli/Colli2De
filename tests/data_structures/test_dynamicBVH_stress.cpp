@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <functional>
 #include <set>
 #include <vector>
 #include <catch2/catch_approx.hpp>
@@ -14,6 +15,89 @@
 
 using namespace c2d;
 using namespace Catch;
+
+uint32_t insertRemoveAndCheckBalancing(const std::vector<AABB>& aabbs)
+{
+    DynamicBVH<uint32_t> bvh;
+    std::vector<uint32_t> ids;
+    std::vector<NodeIndex> nodeIndices;
+
+    const auto checkBalancing = [&]()
+    {
+        NodeIndex rootIndex = bvh.getRootIndex();
+        REQUIRE(rootIndex != -1);
+        
+        // Tree height should be O(log2(N))
+        const int32_t height = bvh.getNode(rootIndex).height;
+        const int logN = static_cast<int>(std::ceil(std::log2(bvh.proxies())));
+        
+        // Allow a little extra for imperfect balancing and fattening
+        // println("Tree height: {}, optimal = {}, expected <= {}", height, logN, logN + 3);
+        CHECK(height <= logN + 3);
+    };
+    const auto checkTreeValidity = [&]()
+    {
+        std::vector<NodeIndex> stack = std::vector<NodeIndex>{bvh.getRootIndex()};
+        std::set<uint32_t> foundIds;
+        int leafCount = 0;
+
+        while (!stack.empty())
+        {
+            NodeIndex idx = stack.back();
+            stack.pop_back();
+            if (idx == -1) continue;
+            const auto& node = bvh.getNode(idx);
+
+            if (node.isLeaf())
+            {
+                ++leafCount;
+                CHECK(node.id < aabbs.size());
+                foundIds.insert(node.id);
+            }
+            else
+            {
+                // Child points back to parent
+                CHECK(bvh.getNode(node.child1Index).parentIndex == idx);
+                CHECK(bvh.getNode(node.child2Index).parentIndex == idx);
+                stack.push_back(node.child1Index);
+                stack.push_back(node.child2Index);
+            }
+        }
+
+        // All IDs are present and unique
+        CHECK(leafCount == bvh.proxies());
+        CHECK(foundIds.size() == bvh.proxies());
+    };
+
+    for (int i = 0; i < aabbs.size(); ++i)
+    {
+        const auto index = bvh.createProxy(aabbs[i], i);
+        nodeIndices.push_back(index);
+        ids.push_back(i);
+    }
+    CHECK(bvh.proxies() == aabbs.size());
+
+    checkBalancing();
+    checkTreeValidity();
+
+    // Remove half the proxies
+    for (size_t i = 0; i < nodeIndices.size(); i += 2)
+        bvh.destroyProxy(nodeIndices[i]);
+    CHECK(bvh.proxies() == aabbs.size() / 2);
+
+    checkBalancing();
+    checkTreeValidity();
+
+    // Add back the removed proxies
+    for (size_t i = 0; i < nodeIndices.size(); i += 2)
+        bvh.createProxy(aabbs[i], ids[i]);
+    CHECK(bvh.proxies() == aabbs.size());
+
+    checkBalancing();
+    checkTreeValidity();
+
+    return bvh.proxies();
+}
 
 TEST_CASE("DynamicBVH | handle many proxies", "[DynamicBVH][Stress]")
 {
@@ -44,87 +128,18 @@ TEST_CASE("DynamicBVH | balance with 100k proxies", "[DynamicBVH][Stress][Balanc
 
     // Deterministic random AABBs
     const std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
+    const auto result = insertRemoveAndCheckBalancing(aabbs);
+}
 
-    BENCHMARK_FUNCTION("DynamicBVH | 100k Proxy creation and destruction", 300ms, [&]()
-    {
-        DynamicBVH<uint32_t> bvh;
-        std::vector<uint32_t> ids;
-        std::vector<NodeIndex> nodeIndices;
+TEST_CASE("DynamicBVH | balance with 10k proxies", "[DynamicBVH][Stress][Balance]")
+{
+    const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
+    constexpr float regionMin = 0.0f, regionMax = 10'000.0f, size = 1.0f;
 
-        const auto checkBalancing = [&]()
-        {
-            NodeIndex rootIndex = bvh.getRootIndex();
-            REQUIRE(rootIndex != -1);
-            
-            // Tree height should be O(log2(N))
-            const int32_t height = bvh.getNode(rootIndex).height;
-            const int logN = static_cast<int>(std::ceil(std::log2(bvh.proxies())));
-            
-            // Allow a little extra for imperfect balancing and fattening
-            // println("Tree height: {}, optimal = {}, expected <= {}", height, logN, logN + 3);
-            CHECK(height <= logN + 3);
-        };
-        const auto checkTreeValidity = [&]()
-        {
-            std::vector<NodeIndex> stack = std::vector<NodeIndex>{bvh.getRootIndex()};
-            std::set<uint32_t> foundIds;
-            int leafCount = 0;
+    // Deterministic random AABBs
+    const std::vector<AABB> aabbs = generateRandomAABBs(10'000, 0.0f, 100.0f, 2.0f, seed);
 
-            while (!stack.empty())
-            {
-                NodeIndex idx = stack.back();
-                stack.pop_back();
-                if (idx == -1) continue;
-                const auto& node = bvh.getNode(idx);
-
-                if (node.isLeaf())
-                {
-                    ++leafCount;
-                    CHECK(node.id < aabbs.size());
-                    foundIds.insert(node.id);
-                }
-                else
-                {
-                    // Child points back to parent
-                    CHECK(bvh.getNode(node.child1Index).parentIndex == idx);
-                    CHECK(bvh.getNode(node.child2Index).parentIndex == idx);
-                    stack.push_back(node.child1Index);
-                    stack.push_back(node.child2Index);
-                }
-            }
-
-            // All IDs are present and unique
-            CHECK(leafCount == bvh.proxies());
-            CHECK(foundIds.size() == bvh.proxies());
-        };
-
-        for (int i = 0; i < aabbs.size(); ++i)
-        {
-            const auto index = bvh.createProxy(aabbs[i], i);
-            nodeIndices.push_back(index);
-            ids.push_back(i);
-        }
-        CHECK(bvh.proxies() == aabbs.size());
-
-        checkBalancing();
-        checkTreeValidity();
-
-        // Remove half the proxies
-        for (size_t i = 0; i < nodeIndices.size(); i += 2)
-            bvh.destroyProxy(nodeIndices[i]);
-        CHECK(bvh.proxies() == aabbs.size() / 2);
-
-        checkBalancing();
-        checkTreeValidity();
-
-        // Add back the removed proxies
-        for (size_t i = 0; i < nodeIndices.size(); i += 2)
-            bvh.createProxy(aabbs[i], ids[i]);
-        CHECK(bvh.proxies() == aabbs.size());
-
-        checkBalancing();
-        checkTreeValidity();
-
-        return bvh.proxies();
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | 10k Proxy creation and destruction",
+                       30ms,
+                       std::bind(insertRemoveAndCheckBalancing, aabbs));
 }

@@ -9,6 +9,7 @@ SET cmake_arg=0
 SET build_type=Debug
 SET lower_build_type=debug
 SET run_until_failure=0
+SET accurate=0
 SET cmd_args=
 
 FOR %%A IN (%*) DO (
@@ -68,6 +69,14 @@ FOR %%A IN (%*) DO (
         SET run_until_failure=1
         SET allowed=1
     )
+    IF "%%A"=="--accurate" (
+        SET accurate=1
+        SET allowed=1
+    )
+    IF "%%A"=="-a" (
+        SET accurate=1
+        SET allowed=1
+    )
     IF "%%A"=="--help" GOTO PRINT_HELP
     IF "%%A"=="-h" GOTO PRINT_HELP
 
@@ -109,7 +118,15 @@ cd build\%build_type%\tests
 
 :RUN_TESTS
 
-call Colli2DeTests.exe %cmd_args% %~dp0test_data\
+if %accurate%==1 (
+    set cmd_args=!cmd_args! --benchmark-samples 500 --benchmark-warmup-time 50
+)
+
+call Colli2DeTests.exe ^
+    --rng-seed 2700908712 ^
+    --benchmark-no-analysis ^
+    %cmd_args% ^
+    %~dp0test_data\
 IF %ERRORLEVEL% NEQ 0 (
     echo [31m[Colli2De] Tests failed![0m
     exit /b %ERRORLEVEL%

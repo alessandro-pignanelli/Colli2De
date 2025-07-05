@@ -38,7 +38,7 @@ void DynamicBVH<IdType>::doubleCapacity()
     const uint32_t currentCapacity = capacity();
     assert(nodeCount == currentCapacity);
 
-    const uint32_t newCapacity = currentCapacity << 1;
+    const uint32_t newCapacity = currentCapacity <= 4096 ? currentCapacity << 1 : currentCapacity << 1;
     nodes.resize(newCapacity);
     
     for (NodeIndex i = currentCapacity - 1; i < newCapacity - 1; ++i)

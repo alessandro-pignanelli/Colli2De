@@ -117,7 +117,7 @@ TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark
     }
     std::shuffle(queries.begin(), queries.end(), std::mt19937{std::random_device{}()});
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Queries 100k proxies", 200ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Queries 100k proxies", 20ms, [&]()
     {
         std::set<uint32_t> foundIds;
         for (const auto& query : queries)
@@ -125,7 +125,7 @@ TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark
         return foundIds.size();
     });
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Batch Queries 100k proxies", 80ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Batch Queries 100k proxies", 7ms, [&]()
     {
         std::vector<std::set<uint32_t>> results = tree.batchQuery(queries, 24);
         return results.size();

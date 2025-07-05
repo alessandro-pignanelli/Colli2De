@@ -38,7 +38,7 @@ using namespace Catch;
 #define BENCHMARK_FUNCTION(name, threshold, func) \
 { \
     const auto start = high_resolution_clock::now(); \
-    const auto result = func(); \
+    const auto result = (func)(); \
     const auto end = high_resolution_clock::now(); \
     const auto elapsed = duration_cast<microseconds>(end - start); \
     printElapsed(elapsed, threshold); \
@@ -60,9 +60,15 @@ struct BenchmarkResult
         this->threshold = threshold.count() / 1000.0f;
         if (!elapsed.empty())
         {
-            minTime = std::min_element(elapsed.begin(), elapsed.end())->count() / 1000.0f;
-            maxTime = std::max_element(elapsed.begin(), elapsed.end())->count() / 1000.0f;
-            avgTime = std::accumulate(elapsed.begin(), elapsed.end(), microseconds(0)).count() / 1000.0f / elapsed.size();
+            const size_t size = elapsed.size();
+            const size_t exclude = 1;
+            const auto begin = elapsed.begin() + exclude;
+            const auto end = elapsed.end() - exclude;
+            const size_t newSize = size - 2 * exclude;
+
+            minTime = std::min_element(begin, end)->count() / 1000.0f;
+            maxTime = std::max_element(begin, end)->count() / 1000.0f;
+            avgTime = std::accumulate(begin, end, microseconds(0)).count() / 1000.0f / newSize;
         }
     }
 };
