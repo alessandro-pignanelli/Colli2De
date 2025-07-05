@@ -30,6 +30,8 @@ The most important directories to get some context are:
 - `src/collision/Collision.cpp`: Contains the implementation of the collision detection algorithms.
 - `src/collision/Manifold.hpp`: Contains the implementation of the manifold data structure used in collision detection.
 - `src/data_structures/DynamicBVH.hpp`: Contains the implementation of the dynamic bounding volume hierarchy (BVH) data structure.
+- `src/data_structures/BroadPhaseTree.hpp`: Tree that wraps many dynamic BVH and use spatial partitioning to efficiently manage the shapes in the registry.
+- `src/data_structures/Registry.hpp`: Contains the implementation of the `Registry` class, which is the main entry point for the library. It manages the shapes and provides methods for collision detection.
 - `src/geometry/Shapes.cpp`: Contains the implementation of the geometric shapes used in the library.
 
 # Coding Conventions for Agents

@@ -74,11 +74,7 @@ public:
     // Add a new proxy, returns handle for later moves/removal
     BroadPhaseTreeHandle addProxy(IdType entityId, AABB aabb, BitMaskType categoryBits = 1, BitMaskType maskBits = ~0ull);
     void removeProxy(BroadPhaseTreeHandle handle);
-    void removeProxyFrom(BroadPhaseTreeHandle handle, GridCell cell);
     void moveProxy(BroadPhaseTreeHandle handle, AABB aabb);
-
-    void setSleeping(BroadPhaseTreeHandle handle, bool sleeping);
-    void updateSleeping();
 
     // AABB queries
     std::set<IdType> query(AABB queryAABB, BitMaskType maskBits = ~0ull) const;

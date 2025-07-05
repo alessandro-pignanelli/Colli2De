@@ -13,7 +13,7 @@ struct Rotation
     float cos = 1.0f;
 
     constexpr Rotation() = default;
-    constexpr explicit Rotation(float angleRadians)
+    constexpr Rotation(float angleRadians)
         : sin(std::sin(angleRadians)), cos(std::cos(angleRadians)) {}
 
     // Rotate a vector
