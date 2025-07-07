@@ -591,6 +591,8 @@ bool areColliding(const Circle& circleA,
     const Vec2 centerB = transformB.apply(circleB.center);
     const float distSq = (centerB - centerA).lengthSqr();
     const float radius = circleA.radius + circleB.radius;
+    std::println("Circle A: {}, Circle B: {}, Distance Squared: {}, Combined Radius: {}",
+           centerA, centerB, distSq, radius);
     return distSq <= (radius + kEpsilon) * (radius + kEpsilon);
 }
 
