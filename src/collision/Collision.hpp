@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "colli2de/Shapes.hpp"
 #include "collision/Manifold.hpp"
 #include "geometry/Transformations.hpp"
@@ -162,38 +164,16 @@ bool areColliding(const Segment& segment,
 
 
 // --- Sweep collision detection ---
-template <typename ShapeA, typename ShapeB>
-std::optional<SweepManifold> sweep(const ShapeA& movingShape,
-                              Transform startTransform,
-                              Vec2 translation,
-                              Rotation endRotation,
-                              const ShapeB& targetShape,
-                              Transform targetTransform)
+inline std::optional<float> sweepHelper(Transform startTransform,
+                                        Transform endTransform,
+                                        Transform targetTransform,
+                                        const std::function<bool(const Transform&, const Transform&)>& areColliding)
 {
-    const float startAngle = std::atan2(startTransform.rotation.sin, startTransform.rotation.cos);
-    const float endAngle = std::atan2(endRotation.sin, endRotation.cos);
+    if (areColliding(startTransform, targetTransform))
+        return 0.0f;
 
-    const auto hasContactAt = [&](float fraction) -> bool
-    {
-        Transform currentTransform;
-        currentTransform.translation = startTransform.translation + translation * fraction;
-        const float currentAngle = startAngle + (endAngle - startAngle) * fraction;
-        currentTransform.rotation = Rotation{currentAngle};
-        return areColliding(movingShape, currentTransform, targetShape, targetTransform);
-    };
-
-    const auto manifoldAt = [&](float fraction) -> Manifold
-    {
-        Transform currentTransform;
-        currentTransform.translation = startTransform.translation + translation * fraction;
-        const float currentAngle = startAngle + (endAngle - startAngle) * fraction;
-        currentTransform.rotation = Rotation{currentAngle};
-        return collide(movingShape, currentTransform, targetShape, targetTransform);
-    };
-
-    Manifold initialManifold = manifoldAt(0.0f);
-    if (initialManifold.pointCount > 0)
-        return SweepManifold{0.0f, initialManifold};
+    const Transform deltaTransform = endTransform - startTransform;
+    Transform currentTransform;
 
     constexpr int32_t coarseSteps = 8;
     constexpr int32_t refinementSteps = 10;
@@ -203,7 +183,69 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape,
     for (int32_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
     {
         const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
-        if (hasContactAt(testFraction))
+        currentTransform.translation = startTransform.translation + deltaTransform.translation * testFraction;
+        currentTransform.rotation = startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * testFraction;
+
+        if (areColliding(currentTransform, targetTransform))
+        {
+            fractionLower = static_cast<float>(stepIndex - 1) / static_cast<float>(coarseSteps);
+            fractionUpper = testFraction;
+            break;
+        }
+    }
+    
+    // If no collision was found in the coarse steps, return no hit
+    if (fractionLower == 0.0f && fractionUpper == 1.0f)
+        return std::nullopt;
+
+    for (int32_t iteration = 0; iteration < refinementSteps; ++iteration)
+    {
+        const float midFraction = 0.5f * (fractionLower + fractionUpper);
+        currentTransform.translation = startTransform.translation + deltaTransform.translation * midFraction;
+        currentTransform.rotation = startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * midFraction;
+
+        if (areColliding(currentTransform, targetTransform))
+            fractionUpper = midFraction;
+        else
+            fractionLower = midFraction;
+
+        // Stop if the precision is sufficient
+        if (fractionUpper - fractionLower < 1e-6f)
+            break;
+    }
+
+    return fractionUpper;
+}
+
+inline std::optional<float> sweepHelper(Transform startTransform1,
+                                        Transform endTransform1,
+                                        Transform startTransform2,
+                                        Transform endTransform2,
+                                        const std::function<bool(const Transform&, const Transform&)>& areColliding)
+{
+    if (areColliding(startTransform1, startTransform2))
+        return 0.0f;
+
+    const Transform deltaTransform1 = endTransform1 - startTransform1;
+    const Transform deltaTransform2 = endTransform2 - startTransform2;
+    Transform currentTransform1;
+    Transform currentTransform2;
+
+    constexpr int32_t coarseSteps = 8;
+    constexpr int32_t refinementSteps = 10;
+    float fractionLower = 0.0f;
+    float fractionUpper = 1.0f;
+
+    for (int32_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
+    {
+        const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
+
+        currentTransform1.translation = startTransform1.translation + deltaTransform1.translation * testFraction;
+        currentTransform1.rotation = startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * testFraction;
+        currentTransform2.translation = startTransform2.translation + deltaTransform2.translation * testFraction;
+        currentTransform2.rotation = startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * testFraction;
+
+        if (areColliding(currentTransform1, currentTransform2))
         {
             fractionLower = static_cast<float>(stepIndex - 1) / static_cast<float>(coarseSteps);
             fractionUpper = testFraction;
@@ -219,7 +261,12 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape,
     {
         const float midFraction = 0.5f * (fractionLower + fractionUpper);
 
-        if (hasContactAt(midFraction))
+        currentTransform1.translation = startTransform1.translation + deltaTransform1.translation * midFraction;
+        currentTransform1.rotation = startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * midFraction;
+        currentTransform2.translation = startTransform2.translation + deltaTransform2.translation * midFraction;
+        currentTransform2.rotation = startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * midFraction;
+
+        if (areColliding(currentTransform1, currentTransform2))
             fractionUpper = midFraction;
         else
             fractionLower = midFraction;
@@ -229,7 +276,65 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape,
             break;
     }
 
-    return SweepManifold{fractionUpper, manifoldAt(fractionUpper)};
+    return fractionUpper;
+}
+
+template <IsShape ShapeA, IsShape ShapeB>
+std::optional<SweepManifold> sweep(const ShapeA& movingShape,
+                                   Transform startTransform,
+                                   Transform endTransform,
+                                   const ShapeB& targetShape,
+                                   Transform targetTransform)
+{
+
+    const auto areCollidingFunc = [&](const Transform& transformShapeA, const Transform& transformShapeB) -> bool
+    {
+        return areColliding(movingShape, transformShapeA, targetShape, transformShapeB);
+    };
+
+    std::optional<float> collisionFraction = sweepHelper(startTransform,
+                                                         endTransform,
+                                                         targetTransform,
+                                                         areCollidingFunc);
+    if (!collisionFraction)
+        return std::nullopt;
+
+    const Transform deltaTransform = endTransform - startTransform;
+    Transform currentTransform {startTransform.translation + deltaTransform.translation * *collisionFraction,
+                                startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * *collisionFraction};
+    return SweepManifold{*collisionFraction, collide(movingShape, currentTransform, targetShape, targetTransform)};
+}
+
+template <IsShape ShapeA, IsShape ShapeB>
+std::optional<SweepManifold> sweep(const ShapeA& movingShape1,
+                                   Transform startTransform1,
+                                   Transform endTransform1,
+                                   const ShapeB& movingShape2,
+                                   Transform startTransform2,
+                                   Transform endTransform2)
+{
+    const auto areCollidingFunc = [&](const Transform& transformShapeA, const Transform& transformShapeB) -> bool
+    {
+        return areColliding(movingShape1, transformShapeA, movingShape2, transformShapeB);
+    };
+
+    std::optional<float> collisionFraction = sweepHelper(startTransform1,
+                                                         endTransform1,
+                                                         startTransform2,
+                                                         endTransform2,
+                                                         areCollidingFunc);
+    if (!collisionFraction)
+        return std::nullopt;
+
+    const Transform deltaTransform1 = endTransform1 - startTransform1;
+    const Transform deltaTransform2 = endTransform2 - startTransform2;
+
+    Transform targetTransform1 {startTransform1.translation + deltaTransform1.translation * *collisionFraction,
+                                startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * *collisionFraction};
+    Transform targetTransform2 {startTransform2.translation + deltaTransform2.translation * *collisionFraction,
+                                startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * *collisionFraction};
+
+    return SweepManifold{*collisionFraction, collide(movingShape1, targetTransform1, movingShape2, targetTransform2)};
 }
 
 } // namespace c2d

@@ -60,7 +60,7 @@ public:
     using const_iterator = LeafConstIterator;
     using value_type = BVHNode<IdType>;
     
-    const float fatAABBMargin = 3.0f;
+    const float fatAABBMargin = 0.0f;
 
     DynamicBVH(float fatAABBMargin = 0.0f);
 
@@ -90,7 +90,13 @@ public:
 
     // AABB queries
     void query(AABB queryAABB, std::set<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
-    std::vector<std::set<IdType>> batchQuery(const std::vector<AABB>& queries, size_t numThreads, BitMaskType maskBits = ~0ull) const;
+    std::vector<std::set<IdType>> batchQuery(const std::vector<AABB>& queries,
+                                             size_t numThreads,
+                                             BitMaskType maskBits = ~0ull) const;
+    void sweepQuery(AABB startAABB, AABB endAABB, std::set<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
+    std::vector<std::set<IdType>> batchSweepQuery(const std::vector<std::pair<AABB, AABB>>& queries,
+                                                  size_t numThreads,
+                                                  BitMaskType maskBits = ~0ull) const;
     void findAllCollisions(std::set<std::pair<IdType, IdType>>& collisions) const;
 
     // Finite raycast queries

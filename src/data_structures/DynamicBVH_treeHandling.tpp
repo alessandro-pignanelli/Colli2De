@@ -9,8 +9,7 @@ namespace c2d
 {
 
 template<typename IdType>
-DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin)
-    : fatAABBMargin(fatAABBMargin)
+DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin) : fatAABBMargin(fatAABBMargin)
 {
     allocateNodes(initialCapacity);
 }

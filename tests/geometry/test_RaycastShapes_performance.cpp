@@ -101,7 +101,7 @@ TEST_CASE("Raycast performance: Capsule", "[Raycast][Benchmark][Capsule]")
         return total;
     });
 
-    BENCHMARK_FUNCTION("Raycast 100k capsules", 30ms, [&]()
+    BENCHMARK_FUNCTION("Raycast 100k capsules", 10ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)

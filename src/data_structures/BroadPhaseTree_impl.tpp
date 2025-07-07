@@ -53,6 +53,9 @@ void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
         auto& region = regions.at(cell);
         region.proxies.erase(handle);
         region.bvh.destroyProxy(bvhHandle);
+
+        if (region.proxies.empty())
+            regions.erase(cell);
     }
     
     proxy.bvhHandles.clear();
@@ -64,6 +67,12 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 {
     assert(isValidHandle(handle));
     Proxy& proxy = proxies.at(handle);
+
+    if (proxy.aabb.contains(aabb))
+        return;
+    
+    const Vec2 delta = (aabb - proxy.aabb) * 2.2f; // Fat AABB margin
+    aabb = aabb.fattened(delta);
 
     const int32_t oldMinX = int32_t(proxy.aabb.min.x) / cellSize;
     const int32_t oldMinY = int32_t(proxy.aabb.min.y) / cellSize;
@@ -108,6 +117,9 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
         assert(bvhHandleInRegion != proxy.bvhHandles.end());
         region.bvh.destroyProxy(bvhHandleInRegion->second);
         proxy.bvhHandles.erase(bvhHandleInRegion);
+
+        if (region.proxies.empty())
+            regions.erase(cell);
     };
     const auto moveSameCell = [this, handle, aabb](GridCell cell)
     {
@@ -158,22 +170,88 @@ std::set<IdType> BroadPhaseTree<IdType>::query(AABB queryAABB, BitMaskType maskB
 }
 
 template<typename IdType>
-std::vector<std::set<IdType>> BroadPhaseTree<IdType>::batchQuery(const std::vector<AABB>& queries, size_t numThreads, BitMaskType maskBits) const
+std::vector<std::set<IdType>> BroadPhaseTree<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries, size_t numThreads) const
 {
     const size_t n = queries.size();
     std::vector<std::set<IdType>> results(n);
-    std::vector<std::future<void>> futures;
 
-    numThreads = std::min(numThreads, n / 5 + 1); // Ensure at least one thread per 5 queries
+    constexpr size_t minQueriesPerThread = 5;
+    numThreads = std::min(numThreads, (n - minQueriesPerThread) / minQueriesPerThread + 1);
+    if (numThreads == 1)
+    {
+        for (size_t i = 0; i < n; ++i)
+            results[i] = query(queries[i].first, queries[i].second);
+        return results;
+    }
+
     const size_t chunk = (n + numThreads - 1) / numThreads;
+    std::vector<std::future<void>> futures;
 
     for (size_t t = 0; t < numThreads; ++t) {
         const size_t begin = t * chunk;
         const size_t end = std::min(n, begin + chunk);
 
-        futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end, maskBits]() {
+        futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end]() {
             for (size_t i = begin; i < end; ++i)
-                results[i] = this->query(queries[i], maskBits);
+                results[i] = this->query(queries[i].first, queries[i].second);
+        }));
+    }
+
+    for (auto& f : futures)
+        f.get();
+
+    return results;
+}
+
+
+template<typename IdType>
+std::set<IdType> BroadPhaseTree<IdType>::sweepQuery(AABB startAABB, AABB endAABB, BitMaskType maskBits) const
+{
+    std::set<IdType> intersections;
+
+    AABB combinedAABB = AABB::combine(startAABB, endAABB);
+
+    forEachCell(combinedAABB, cellSize, [&](GridCell cell)
+    {
+        const auto regionIt = regions.find(cell);
+        if (regionIt == regions.end())
+            return; // No region here
+
+        const auto& region = regionIt->second;
+        region.bvh.sweepQuery(startAABB, endAABB, intersections, maskBits);
+    });
+
+    return intersections;
+}
+
+template<typename IdType>
+std::vector<std::set<IdType>> BroadPhaseTree<IdType>::batchSweepQuery(
+    const std::vector<std::tuple<AABB, AABB, BitMaskType>>& queries,
+    size_t numThreads
+) const
+{
+    const size_t n = queries.size();
+    std::vector<std::set<IdType>> results(n);
+
+    constexpr size_t minQueriesPerThread = 2;
+    numThreads = std::min(numThreads, (n - minQueriesPerThread) / minQueriesPerThread + 1);
+    if (numThreads == 1)
+    {
+        for (size_t i = 0; i < n; ++i)
+            results[i] = sweepQuery(std::get<0>(queries[i]), std::get<1>(queries[i]), std::get<2>(queries[i]));
+        return results;
+    }
+
+    const size_t chunk = (n + numThreads - 1) / numThreads;
+    std::vector<std::future<void>> futures;
+
+    for (size_t t = 0; t < numThreads; ++t) {
+        const size_t begin = t * chunk;
+        const size_t end = std::min(n, begin + chunk);
+
+        futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end]() {
+            for (size_t i = begin; i < end; ++i)
+                results[i] = this->sweepQuery(std::get<0>(queries[i]), std::get<1>(queries[i]), std::get<2>(queries[i]));
         }));
     }
 

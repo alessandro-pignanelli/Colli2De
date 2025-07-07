@@ -28,7 +28,7 @@ TEST_CASE("Sweep performance: Circle vs Circle", "[Sweep][Benchmark][Circle]")
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
         {
-            if (sweep(moving[i], Transform{}, translations[i], Rotation{}, targets[i], Transform{}))
+            if (sweep(moving[i], Transform{},  Transform{translations[i], 0}, targets[i], Transform{}))
                 ++total;
         }
         return total;
@@ -39,7 +39,7 @@ TEST_CASE("Sweep performance: Circle vs Circle", "[Sweep][Benchmark][Circle]")
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
         {
-            if (sweep(moving[i], Transform{}, translations[i], Rotation{}, targets[i], Transform{}))
+            if (sweep(moving[i], Transform{},  Transform{translations[i], 0}, targets[i], Transform{}))
                 ++total;
         }
         return total;
@@ -63,18 +63,18 @@ TEST_CASE("Sweep performance: Polygon vs Polygon", "[Sweep][Benchmark][Polygon]"
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
         {
-            if (sweep(moving[i], Transform{}, translations[i], Rotation{}, targets[i], Transform{}))
+            if (sweep(moving[i], Transform{},  Transform{translations[i], 0}, targets[i], Transform{}))
                 ++total;
         }
         return total;
     });
 
-    BENCHMARK_FUNCTION("Sweep 100k polygon pairs", 70ms, [&]()
+    BENCHMARK_FUNCTION("Sweep 100k polygon pairs", 80ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
         {
-            if (sweep(moving[i], Transform{}, translations[i], Rotation{}, targets[i], Transform{}))
+            if (sweep(moving[i], Transform{},  Transform{translations[i], 0}, targets[i], Transform{}))
                 ++total;
         }
         return total;

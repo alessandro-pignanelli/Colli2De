@@ -12,9 +12,6 @@ namespace c2d
 template<typename IdType>
 void DynamicBVH<IdType>::query(AABB queryAABB, std::set<IdType>& intersections, BitMaskType maskBits) const
 {
-    if (rootIndex == INVALID_NODE_INDEX)
-        return;
-
     std::vector<NodeIndex> stack;
     stack.push_back(rootIndex);
 
@@ -50,18 +47,68 @@ std::vector<std::set<IdType>> DynamicBVH<IdType>::batchQuery(const std::vector<A
 {
     const size_t n = queries.size();
     std::vector<std::set<IdType>> results(n);
-    std::vector<std::future<void>> futures;
-
-    numThreads = std::min(numThreads, n / 5 + 1); // Ensure at least one thread per 5 queries
+    
+    constexpr size_t minQueriesPerThread = 5;
+    numThreads = std::min(numThreads, (n - minQueriesPerThread) / minQueriesPerThread + 1);
     const size_t chunk = (n + numThreads - 1) / numThreads;
 
-    for (size_t t = 0; t < numThreads; ++t) {
+    std::vector<std::future<void>> futures;
+    for (size_t t = 0; t < numThreads; ++t)
+    {
         const size_t begin = t * chunk;
         const size_t end = std::min(n, begin + chunk);
 
         futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end, maskBits]() {
             for (size_t i = begin; i < end; ++i)
                 this->query(queries[i], results[i], maskBits);
+        }));
+    }
+
+    for (auto& f : futures)
+        f.get();
+
+    return results;
+}
+
+template<typename IdType>
+void DynamicBVH<IdType>::sweepQuery(AABB startAABB, AABB endAABB, std::set<IdType>& intersections, BitMaskType maskBits) const
+{
+    const Vec2 deltaAABB = endAABB - startAABB;
+    constexpr int32_t coarseSteps = 8;
+
+    AABB currentAABB;
+    for (int32_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
+    {
+        const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
+
+        currentAABB.min = startAABB.min + deltaAABB * testFraction;
+        currentAABB.max = startAABB.max + deltaAABB * testFraction;
+        
+        query(currentAABB, intersections, maskBits);
+    }
+}
+
+template<typename IdType>
+std::vector<std::set<IdType>> DynamicBVH<IdType>::batchSweepQuery(const std::vector<std::pair<AABB, AABB>>& queries,
+                                                                  size_t numThreads,
+                                                                  BitMaskType maskBits) const
+{
+    const size_t n = queries.size();
+    std::vector<std::set<IdType>> results(n);
+
+    constexpr size_t minQueriesPerThread = 2;
+    numThreads = std::min(numThreads, (n - minQueriesPerThread) / minQueriesPerThread + 1);
+    const size_t chunk = (n + numThreads - 1) / numThreads;
+
+    std::vector<std::future<void>> futures;
+    for (size_t t = 0; t < numThreads; ++t)
+    {
+        const size_t begin = t * chunk;
+        const size_t end = std::min(n, begin + chunk);
+
+        futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end, maskBits]() {
+            for (size_t i = begin; i < end; ++i)
+                this->sweepQuery(queries[i].first, queries[i].second, results[i], maskBits);
         }));
     }
 

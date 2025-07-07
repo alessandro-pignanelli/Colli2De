@@ -9,43 +9,6 @@
 #include "data_structures/DynamicBVH.hpp"
 #include "geometry/AABB.hpp"
 
-namespace 
-{
-    constexpr int32_t INFINITE_RAY_CELL_SPAN = 50;
-
-    struct GridCell
-    {
-        int32_t x;
-        int32_t y;
-
-        bool operator==(GridCell other) const { return x == other.x && y == other.y; }
-    };
-    struct HashGridCell
-    {
-        size_t operator()(GridCell cell) const noexcept
-        {
-            return std::hash<int32_t>{}(cell.x) ^ (std::hash<int32_t>{}(cell.y) << 1);
-        }
-    };
-    
-    inline GridCell getCellFor(c2d::Vec2 position, int32_t cellSize)
-    {
-        return { int32_t(position.x) / cellSize, int32_t(position.y) / cellSize };
-    }
-
-    inline void forEachCell(c2d::AABB aabb, int32_t cellSize, std::function<void(GridCell)> callback)
-    {
-        const int32_t minX = int32_t(aabb.min.x) / cellSize;
-        const int32_t minY = int32_t(aabb.min.y) / cellSize;
-        const int32_t maxX = int32_t(aabb.max.x) / cellSize;
-        const int32_t maxY = int32_t(aabb.max.y) / cellSize;
-
-        for (int32_t x = minX; x <= maxX; ++x)
-            for (int32_t y = minY; y <= maxY; ++y)
-                callback(GridCell{x, y});
-    }
-}
-
 namespace c2d
 {
 
@@ -53,19 +16,49 @@ template <typename IdType>
 using RaycastInfo = typename DynamicBVH<IdType>::RaycastInfo;
 using BroadPhaseTreeHandle = std::size_t;
 
+constexpr int32_t INFINITE_RAY_CELL_SPAN = 50;
+
+struct GridCell
+{
+    int32_t x;
+    int32_t y;
+
+    bool operator==(GridCell other) const { return x == other.x && y == other.y; }
+};
+struct HashGridCell
+{
+    size_t operator()(GridCell cell) const noexcept
+    {
+        return std::hash<int32_t>{}(cell.x) ^ (std::hash<int32_t>{}(cell.y) << 1);
+    }
+};
+
+namespace
+{
+
+inline GridCell getCellFor(c2d::Vec2 position, int32_t cellSize)
+{
+    return { int32_t(position.x) / cellSize, int32_t(position.y) / cellSize };
+}
+
+inline void forEachCell(c2d::AABB aabb, int32_t cellSize, std::function<void(GridCell)> callback)
+{
+    const int32_t minX = int32_t(aabb.min.x) / cellSize;
+    const int32_t minY = int32_t(aabb.min.y) / cellSize;
+    const int32_t maxX = int32_t(aabb.max.x) / cellSize;
+    const int32_t maxY = int32_t(aabb.max.y) / cellSize;
+
+    for (int32_t x = minX; x <= maxX; ++x)
+        for (int32_t y = minY; y <= maxY; ++y)
+            callback(GridCell{x, y});
+}
+
+} // namespace
+
 template<typename IdType>
 class BroadPhaseTree
 {
 public:
-    struct Proxy
-    {
-        std::unordered_map<GridCell, NodeIndex, HashGridCell> bvhHandles;
-        IdType entityId;
-        AABB aabb;
-        BitMaskType categoryBits;           // For collision filtering
-        BitMaskType maskBits;               // For collision filtering
-    };
-
     BroadPhaseTree(int32_t cellSize = 64) : cellSize(cellSize)
     {
         proxies.reserve(32);
@@ -78,7 +71,9 @@ public:
 
     // AABB queries
     std::set<IdType> query(AABB queryAABB, BitMaskType maskBits = ~0ull) const;
-    std::vector<std::set<IdType>> batchQuery(const std::vector<AABB>& queries, size_t numThreads, BitMaskType maskBits = ~0ull) const;
+    std::vector<std::set<IdType>> batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries, size_t numThreads) const;
+    std::set<IdType> sweepQuery(AABB startAABB, AABB endAABB, BitMaskType maskBits = ~0ull) const;
+    std::vector<std::set<IdType>> batchSweepQuery(const std::vector<std::tuple<AABB, AABB, BitMaskType>>& queries, size_t numThreads) const;
     std::set<std::pair<IdType, IdType>> findAllCollisions() const;
 
     // Raycast queries
@@ -95,6 +90,15 @@ public:
 private:
     bool isValidHandle(BroadPhaseTreeHandle handle) const;
 
+    struct Proxy
+    {
+        std::unordered_map<GridCell, NodeIndex, HashGridCell> bvhHandles;
+        IdType entityId;
+        AABB aabb;
+        BitMaskType categoryBits;           // For collision filtering
+        BitMaskType maskBits;               // For collision filtering
+    };
+    
     struct Region
     {
         DynamicBVH<IdType> bvh;

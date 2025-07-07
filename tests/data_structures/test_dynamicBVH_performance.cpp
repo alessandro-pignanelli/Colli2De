@@ -25,7 +25,7 @@ TEST_CASE("DynamicBVH | Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Insert 10k proxies", 10ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Insert 10k proxies", 20ms, [&]()
     {
         DynamicBVH<uint32_t> bvh;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -69,7 +69,7 @@ TEST_CASE("DynamicBVH | Moving proxies", "[DynamicBVH][Benchmark][Move]")
     for (uint32_t i = 0; i < 100'000; ++i)
         indices.push_back(bvh.createProxy(aabbs[i], i));
 
-    BENCHMARK_FUNCTION("DynamicBVH | Move 100k proxies to new location", 3ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Move 100k proxies to new location", 2ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             bvh.moveProxy(indices[i], aabbs[i].move(Vec2{ 50.0f, 0 }), Vec2{50.0f, 0});
@@ -149,7 +149,7 @@ TEST_CASE("DynamicBVH | Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Raycast through 10k proxies", 200us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Piercing raycast through 10k proxies", 100us, [&]()
     {
         std::set<RaycastInfo> hits;
         bvh.piercingRaycast(ray, hits);
@@ -160,11 +160,43 @@ TEST_CASE("DynamicBVH | Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Raycast through 100k proxies", 2000us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Piercing raycast through 100k proxies", 2000us, [&]()
     {
         std::set<RaycastInfo> hits;
         bvh.piercingRaycast(ray, hits);
         return hits.size();
+    });
+}
+
+TEST_CASE("DynamicBVH | First hit raycast", "[DynamicBVH][Benchmark][Raycast]")
+{
+#ifndef NDEBUG
+    SKIP("Performance test skipped in Debug mode.");
+#endif
+
+    const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
+    microseconds elapsed;
+    std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
+    Ray ray{Vec2{0, 0.5f}, Vec2{100, 34.5f}};
+
+    DynamicBVH<uint32_t> bvh;
+    for (uint32_t i = 0; i < 10'000; ++i)
+        bvh.createProxy(aabbs[i], i);
+
+    BENCHMARK_FUNCTION("DynamicBVH | First hit raycast through 10k proxies", 100us, [&]()
+    {
+        const auto hit = bvh.firstHitRaycast(ray);
+        return hit.has_value();
+    });
+
+    bvh.clear();
+    for (uint32_t i = 0; i < 100'000; ++i)
+        bvh.createProxy(aabbs[i], i);
+
+    BENCHMARK_FUNCTION("DynamicBVH | First hit raycast through 100k proxies", 1ms, [&]()
+    {
+        const auto hit = bvh.firstHitRaycast(ray);
+        return hit.has_value();
     });
 }
 

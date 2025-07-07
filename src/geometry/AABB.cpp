@@ -197,6 +197,24 @@ AABB AABB::fattened(float margin, Vec2 displacement) const
     return result;
 }
 
+AABB AABB::fattened(Vec2 displacement) const
+{
+    // Grow min by negative displacement and margin
+    AABB result = *this;
+
+    if (displacement.x < 0.0f)
+        result.min.x += displacement.x;
+    else
+        result.max.x += displacement.x;
+
+    if (displacement.y < 0.0f)
+        result.min.y += displacement.y;
+    else
+        result.max.y += displacement.y;
+    
+    return result;
+}
+
 AABB AABB::move(Vec2 direction) const
 {
     return AABB
@@ -230,6 +248,49 @@ float AABB::perimeter() const
     const float wx = max.x - min.x;
     const float wy = max.y - min.y;
     return 2.0f * (wx + wy);
+}
+
+std::string AABB::toString() const
+{
+    return std::format("AABB({}, {})", min, max);
+}
+
+AABB AABB::operator+(Vec2 offset) const
+{
+    return AABB
+    {
+        Vec2{ min.x + offset.x, min.y + offset.y },
+        Vec2{ max.x + offset.x, max.y + offset.y }
+    };
+}
+AABB AABB::operator-(Vec2 offset) const
+{
+    return AABB
+    {
+        Vec2{ min.x - offset.x, min.y - offset.y },
+        Vec2{ max.x - offset.x, max.y - offset.y }
+    };
+}
+AABB& AABB::operator+=(Vec2 offset)
+{
+    min += offset;
+    max += offset;
+    return *this;
+}
+AABB& AABB::operator-=(Vec2 offset)
+{
+    min -= offset;
+    max -= offset;
+    return *this;
+}
+
+Vec2 AABB::operator+(AABB other) const
+{
+    return Vec2{ min.x + other.min.x, min.y + other.min.y };
+}
+Vec2 AABB::operator-(AABB other) const
+{
+    return Vec2{ min.x - other.min.x, min.y - other.min.y };
 }
 
 } // namespace c2d

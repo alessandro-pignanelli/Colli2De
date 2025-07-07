@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cassert>
+#include <variant>
 
 #include "colli2de/Vec2.hpp"
 #include "colli2de/Constants.hpp"
@@ -20,6 +21,19 @@ enum class ShapeType : uint8_t
     Polygon
 };
 
+struct Circle;
+struct Capsule;
+struct Segment;
+struct Polygon;
+
+template <typename ShapeType>
+concept IsShape = std::is_same_v<ShapeType, Circle> ||
+                  std::is_same_v<ShapeType, Capsule> ||
+                  std::is_same_v<ShapeType, Segment> ||
+                  std::is_same_v<ShapeType, Polygon>;
+                  
+using ShapeVariant = std::variant<Circle, Capsule, Segment, Polygon>;
+
 struct Circle
 {
     Vec2 center{};   // Local-space center
@@ -31,12 +45,6 @@ struct Circle
     constexpr ShapeType getType() const
     {
         return ShapeType::Circle;
-    }
-
-    constexpr AABB aabb() const
-    {
-        const auto halfSize = Vec2{radius, radius};
-        return AABB{center - halfSize, center + halfSize};
     }
 };
 
@@ -57,16 +65,6 @@ struct Capsule
     {
         return ShapeType::Capsule;
     }
-
-    constexpr AABB aabb() const
-    {
-        const auto halfSize = Vec2{radius, radius};
-        const auto minX = std::min(center1.x, center2.x) - radius;
-        const auto maxX = std::max(center1.x, center2.x) + radius;
-        const auto minY = std::min(center1.y, center2.y) - radius;
-        const auto maxY = std::max(center1.y, center2.y) + radius;
-        return AABB{Vec2{minX, minY}, Vec2{maxX, maxY}};
-    }
 };
 
 
@@ -82,15 +80,6 @@ struct Segment
     constexpr ShapeType getType() const
     {
         return ShapeType::Segment;
-    }
-
-    constexpr AABB aabb() const
-    {
-        const auto minX = std::min(start.x, end.x);
-        const auto maxX = std::max(start.x, end.x);
-        const auto minY = std::min(start.y, end.y);
-        const auto maxY = std::max(start.y, end.y);
-        return AABB{Vec2{minX, minY}, Vec2{maxX, maxY}};
     }
 };
 
@@ -116,18 +105,6 @@ struct Polygon
     constexpr ShapeType getType() const
     {
         return ShapeType::Polygon;
-    }
-
-    constexpr AABB aabb() const
-    {
-        Vec2 min = vertices[0];
-        Vec2 max = vertices[0];
-        for (uint8_t i = 1; i < count; ++i)
-        {
-            min = std::min(min, vertices[i]);
-            max = std::max(max, vertices[i]);
-        }
-        return AABB{min - Vec2{radius, radius}, max + Vec2{radius, radius}};
     }
 };
 

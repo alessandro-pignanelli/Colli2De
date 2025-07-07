@@ -1,6 +1,8 @@
 #pragma once
 
+#include <format>
 #include <optional>
+#include <string>
 
 #include "colli2de/Ray.hpp"
 #include "colli2de/Vec2.hpp"
@@ -32,10 +34,21 @@ struct AABB
     std::optional<std::pair<float, float>> intersects(InfiniteRay ray) const;
 
     AABB fattened(float margin) const;
+    AABB fattened(Vec2 displacement) const;
     AABB fattened(float margin, Vec2 displacement) const;
     AABB move(Vec2 direction) const;
     AABB expandToInclude(Vec2 point);
     float perimeter() const;
+
+    std::string toString() const;
+
+    AABB operator+(Vec2 offset) const;
+    AABB operator-(Vec2 offset) const;
+    AABB& operator+=(Vec2 offset);
+    AABB& operator-=(Vec2 offset);
+
+    Vec2 operator+(AABB other) const;
+    Vec2 operator-(AABB other) const;
 
     bool operator==(const AABB& other) const
     {
@@ -45,4 +58,15 @@ struct AABB
 
 static_assert(std::is_trivially_copyable_v<AABB>, "AABB must be trivially copyable");
 
-}
+} // namespace c2d
+
+// Specialization for std::formatter to allow formatted output of AABB
+template<>
+struct std::formatter<c2d::AABB> : std::formatter<std::string>
+{
+    template<typename FormatContext>
+    auto format(c2d::AABB aabb, FormatContext& ctx) const
+    {
+        return std::formatter<std::string>::format(aabb.toString(), ctx);
+    }
+};

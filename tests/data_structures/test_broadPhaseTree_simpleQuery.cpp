@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <colli2de/Ray.hpp>
 #include <cstdint>
+#include <data_structures/DynamicBVH.hpp>
 #include <set>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -523,13 +524,15 @@ TEST_CASE("BroadPhaseTree batchQuery with multiple threads", "[BroadPhaseTree][B
     for (uint32_t i = 0; i < 1000; ++i)
         tree.addProxy(i, {Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}});
 
-    std::vector<AABB> queries;
+    std::vector<std::pair<AABB, BitMaskType>> queries;
     std::vector<std::set<uint32_t>> expectedResults;
     for (uint32_t i = 0; i < 20000; ++i)
     {
-        queries.push_back({Vec2{float(i * 10), float(i * 10)}, Vec2{float((i + 1) * 10), float((i + 1) * 10)}});
+        queries.emplace_back(AABB{Vec2{float(i * 10), float(i * 10)},
+                                        Vec2{float((i + 1) * 10), float((i + 1) * 10)}},
+                             ~0ull);
         std::set<uint32_t> hits;
-        hits = tree.query(queries.back());
+        hits = tree.query(queries.back().first, queries.back().second);
         expectedResults.push_back(std::move(hits));
     }
 

@@ -1,7 +1,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "geometry/ShapesComputations.hpp"
+#include "geometry/ShapesUtils.hpp"
 #include "colli2de/Shapes.hpp"
 
 using namespace c2d;
