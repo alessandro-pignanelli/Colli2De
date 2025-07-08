@@ -24,7 +24,7 @@ TEST_CASE("Registry | Bulk insertion", "[Registry][Benchmark][Insert]")
     for(size_t i = 0; i < circles.size(); ++i)
         transforms.push_back(Transform(circles[i].center));
 
-    BENCHMARK_FUNCTION("Registry | Insert 10k entities", 40ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Insert 10k entities and shapes", 30ms, [&]()
     {
         Registry<uint32_t> reg;
         for(uint32_t i = 0; i < 10'000; ++i)
@@ -32,10 +32,10 @@ TEST_CASE("Registry | Bulk insertion", "[Registry][Benchmark][Insert]")
             reg.createEntity(i, BodyType::Dynamic, transforms[i]);
             reg.addShape(i, circles[i]);
         }
-        return reg.getCollidingPairs().size();
+        return reg.size();
     });
 
-    BENCHMARK_FUNCTION("Registry | Insert 100k entities", 300ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Insert 100k entities and shapes", 300ms, [&]()
     {
         Registry<uint32_t> reg;
         for(uint32_t i = 0; i < 100'000; ++i)
@@ -43,7 +43,7 @@ TEST_CASE("Registry | Bulk insertion", "[Registry][Benchmark][Insert]")
             reg.createEntity(i, BodyType::Dynamic, transforms[i]);
             reg.addShape(i, circles[i]);
         }
-        return reg.getCollidingPairs().size();
+        return reg.size();
     });
 }
 
@@ -54,8 +54,8 @@ TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
 #endif
 
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
-    std::vector<Circle> circles = generateRandomCircles(10'000, -50.0f, 50.0f, 1.0f, seed);
-    std::vector<Vec2> translations = generateRandomTranslations(10'000, -1.0f, 1.0f, seed + 1);
+    std::vector<Circle> circles = generateRandomCircles(100'000, -200.0f, 200.0f, 1.0f, seed);
+    std::vector<Vec2> translations = generateRandomTranslations(100'000, -4.0f, 4.0f, seed + 1);
 
     Registry<uint32_t> reg;
     for(uint32_t i = 0; i < 10'000; ++i)
@@ -64,11 +64,41 @@ TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
         reg.addShape(i, circles[i]);
     }
 
-    BENCHMARK_FUNCTION("Registry | Move 10k entities", 2ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Move 10k entities", 10ms, [&]()
     {
         for(uint32_t i = 0; i < 10'000; ++i)
             reg.moveEntity(i, Transform(translations[i]));
-        return reg.getCollidingPairs().size();
+        return reg.size();
+    }, [&]()
+    {
+        reg.clear();
+        for (size_t i = 0; i < 10'000; ++i)
+        {
+            reg.createEntity(i, BodyType::Dynamic, Transform(circles[i].center));
+            reg.addShape(i, circles[i]);
+        }
+    });
+
+    reg.clear();
+    for(uint32_t i = 0; i < 100'000; ++i)
+    {
+        reg.createEntity(i, BodyType::Dynamic, Transform(circles[i].center));
+        reg.addShape(i, circles[i]);
+    }
+
+    BENCHMARK_FUNCTION("Registry | Move 100k entities", 130ms, [&]()
+    {
+        for(uint32_t i = 0; i < 100'000; ++i)
+            reg.moveEntity(i, Transform(translations[i]));
+        return reg.size();
+    }, [&]()
+    {
+        reg.clear();
+        for (size_t i = 0; i < 100'000; ++i)
+        {
+            reg.createEntity(i, BodyType::Dynamic, Transform(circles[i].center));
+            reg.addShape(i, circles[i]);
+        }
     });
 }
 
@@ -79,7 +109,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Benchmark][Query]")
 #endif
 
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
-    std::vector<Circle> circles = generateRandomCircles(10'000, -50.0f, 50.0f, 1.0f, seed);
+    std::vector<Circle> circles = generateRandomCircles(10'000, -200.0f, 200.0f, 1.0f, seed);
     Registry<uint32_t> reg;
     for(uint32_t i = 0; i < 10'000; ++i)
     {

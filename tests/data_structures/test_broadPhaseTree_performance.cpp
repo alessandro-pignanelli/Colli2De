@@ -50,30 +50,37 @@ TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]"
 
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
-    std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
+    std::vector<AABB> aabbs = generateRandomAABBs(100'000, -100.0f, 100.0f, 2.0f, seed);
 
     BroadPhaseTree<uint32_t> tree;
     std::vector<BroadPhaseTreeHandle> indices;
-    for (uint32_t i = 0; i < 10'000; ++i)
-        indices.push_back(tree.addProxy(i, aabbs[i]));
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Move 10k proxies to new location", 500us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Move 10k proxies to new location", 30ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             tree.moveProxy(indices[i], aabbs[i].move(Vec2{50.0f, 0}));
         return tree.size();
+    }, [&]()
+    {
+        tree.clear();
+        indices.clear();
+        for (size_t i = 0; i < 10'000; ++i)
+            indices.push_back(tree.addProxy(i, aabbs[i]));
     });
 
     BroadPhaseTree<uint32_t> treeLarge;
-    indices.clear();
-    for (uint32_t i = 0; i < 100'000; ++i)
-        indices.push_back(treeLarge.addProxy(i, aabbs[i]));
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Move 100k proxies to new location", 5ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Move 100k proxies to new location", 400ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             treeLarge.moveProxy(indices[i], aabbs[i].move(Vec2{50.0f, 0}));
         return treeLarge.size();
+    }, [&]()
+    {
+        treeLarge.clear();
+        indices.clear();
+        for (size_t i = 0; i < 100'000; ++i)
+            indices.push_back(treeLarge.addProxy(i, aabbs[i]));
     });
 }
 

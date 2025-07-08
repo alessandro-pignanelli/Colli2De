@@ -27,12 +27,12 @@ test/
 The most important directories to get some context are:
 - `box2d_reference/`: Contains the reference files from the `Box2D` library that were used to implement the collision detection algorithms in this library. Always refer to these files when implementing new features or fixing bugs related to collision detection.
 - `include/colli2de/`: Contains the public API headers of the library.
+- `include/colli2de/Registry.hpp`: Contains the implementation of the `Registry` class, which is the main entry point for the library. It manages entities and shapes, and provides methods for collision detection and ray casting.
 - `src/collision/Collision.cpp`: Contains the implementation of the collision detection algorithms.
+- `src/geometry/Shapes.cpp`: Contains the implementation of the geometric shapes used in the library.
 - `src/collision/Manifold.hpp`: Contains the implementation of the manifold data structure used in collision detection.
 - `src/data_structures/DynamicBVH.hpp`: Contains the implementation of the dynamic bounding volume hierarchy (BVH) data structure.
 - `src/data_structures/BroadPhaseTree.hpp`: Tree that wraps many dynamic BVH and use spatial partitioning to efficiently manage the shapes in the registry.
-- `src/data_structures/Registry.hpp`: Contains the implementation of the `Registry` class, which is the main entry point for the library. It manages the shapes and provides methods for collision detection.
-- `src/geometry/Shapes.cpp`: Contains the implementation of the geometric shapes used in the library.
 
 # Coding Conventions for Agents
 
@@ -59,12 +59,13 @@ To run tests, run the following command:
 ./test.sh --cmake -b -r "collision" "~[Benchmark]"
 ```
 
-Make sure to always run the script with the `-r` option, or the build will fail.
+Tests are created using the `Catch2` framework. When creating new tests, make sure to follow the conventions of the existing tests.
+
+To execute benchmarks, make sure to always run the script with the `-r` option, or they will be skipped.
 
 The tag "[Benchmark]" is used to mark performance tests. They might take a long time to run, so if you didn't edit them, it's better to exclude them from the majority of the test runs.
-
-Tests are created using the `Catch2` framework. When creating new tests, make sure to follow the conventions of the existing tests.
+If you run them, consider that they might fail because target times were adjusted based on the performance of my machine. So ignore failures in the performance tests, just use them as a way to compare the performance of different implementations or configurations.
 
 If any performance test is ran, a table containing the results of all the performance tests will be generated in the `test_data/` directory and printed in the console. The file will be named `benchmarks--<date>--<time>.md`.
 
-Before committing, always run `./test.sh --cmake -b -r` without any filter, to ensure all tests pass.
+Before committing, always run tests without any filter, to ensure all unit tests pass.

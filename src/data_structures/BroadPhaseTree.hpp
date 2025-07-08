@@ -84,6 +84,7 @@ public:
 
     // For debugging/statistics
     std::size_t size() const { return proxies.size() - freeList.size(); }
+    void clear();
 
     // Optionally, support spatial partitioning (e.g. grid or region BVHs)
     // Each grid cell/region can have its own BVH

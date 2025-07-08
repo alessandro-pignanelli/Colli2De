@@ -40,11 +40,11 @@ public:
     };
 
     void createEntity(EntityId id, BodyType type, const Transform& transform = Transform{});
+    void removeEntity(EntityId id);
 
     template <IsShape Shape>
     ShapeId addShape(EntityId entityId, const Shape& shape, uint64_t categoryBits = 1, uint64_t maskBits = ~0ull);
-
-    void removeEntity(EntityId id);
+    void removeShape(ShapeId shapeId);
 
     void teleportEntity(EntityId id, const Transform& transform);
     void moveEntity(EntityId id, const Transform& delta);
@@ -57,6 +57,9 @@ public:
     std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> firstHitRayCast(InfiniteRay ray, BitMaskType maskBits = ~0ull);
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> rayCast(Ray ray, BitMaskType maskBits = ~0ull);
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> rayCast(InfiniteRay ray, BitMaskType maskBits = ~0ull);
+
+    size_t size() const;
+    void clear();
 
 private:
 
@@ -151,6 +154,27 @@ ShapeId Registry<EntityId>::addShape(EntityId entityId, const Shape& shape, uint
     entity.shapes.push_back(instance);
 
     return shapeId;
+}
+
+template<typename EntityId>
+void Registry<EntityId>::removeShape(ShapeId shapeId)
+{
+    assert(shapeEntity.size() > shapeId && "Shape ID out of bounds");
+    const EntityId entityId = shapeEntity.at(shapeId).first;
+    EntityInfo& entity = entities.at(entityId);
+
+    auto it = std::find_if(entity.shapes.begin(), entity.shapes.end(),
+                           [shapeId](const ShapeInstance& shape) { return shape.id == shapeId; });
+    assert(it != entity.shapes.end() && "Shape with this ID does not exist in the entity");
+
+    if (entity.type != BodyType::Bullet)
+    {
+        auto& tree = treeFor(entity.type);
+        tree.removeProxy(it->treeHandle);
+    }
+
+    freeShapeIds.push_back(shapeId);
+    entity.shapes.erase(it);
 }
 
 template<typename EntityId>
@@ -730,6 +754,24 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(I
     // TODO: Bullets
 
     return hits;
+}
+
+template<typename EntityId>
+size_t Registry<EntityId>::size() const
+{
+    return entities.size();
+}
+
+template<typename EntityId>
+void Registry<EntityId>::clear()
+{
+    entities.clear();
+    shapeEntity.clear();
+    freeShapeIds.clear();
+    treeStatic.clear();
+    treeDynamic.clear();
+    bulletPreviousTransforms.clear();
+    totalDynamicShapes = 0;
 }
 
 } // namespace c2d

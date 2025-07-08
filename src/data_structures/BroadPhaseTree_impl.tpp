@@ -417,4 +417,13 @@ bool BroadPhaseTree<IdType>::isValidHandle(BroadPhaseTreeHandle handle) const
     return handle >= 0 && static_cast<size_t>(handle) < proxies.size();
 }
 
+template<typename IdType>
+void BroadPhaseTree<IdType>::clear()
+{
+    proxies.clear();
+    freeList.clear();
+    regions.clear();
+    regions.reserve(32);
+}
+
 } // namespace c2d
