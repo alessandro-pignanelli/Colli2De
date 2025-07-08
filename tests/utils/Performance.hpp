@@ -15,12 +15,13 @@ using namespace std::literals::chrono_literals;
 using namespace Catch;
 
 #ifdef NDEBUG
-
-#define BENCHMARK_FUNCTION(name, threshold, func) \
+    
+#define __BENCHMARK_FUNCTION(name, threshold, func, reset, ...) \
 { \
     std::vector<microseconds> elapsedTimes; \
     BENCHMARK(name) \
     { \
+        (reset)(); \
         const auto start = high_resolution_clock::now(); \
         const auto result = func(); \
         const auto end = high_resolution_clock::now(); \
@@ -35,8 +36,9 @@ using namespace Catch;
 
 #else
 
-#define BENCHMARK_FUNCTION(name, threshold, func) \
+#define __BENCHMARK_FUNCTION(name, threshold, func, reset, ...) \
 { \
+    (reset)(); \
     const auto start = high_resolution_clock::now(); \
     const auto result = (func)(); \
     const auto end = high_resolution_clock::now(); \
@@ -45,6 +47,8 @@ using namespace Catch;
 }
 
 #endif
+
+#define BENCHMARK_FUNCTION(...) __BENCHMARK_FUNCTION(__VA_ARGS__, [](){})
 
 struct BenchmarkResult
 {
@@ -61,7 +65,7 @@ struct BenchmarkResult
         if (!elapsed.empty())
         {
             const size_t size = elapsed.size();
-            const size_t exclude = 1;
+            const size_t exclude = 0;
             const auto begin = elapsed.begin() + exclude;
             const auto end = elapsed.end() - exclude;
             const size_t newSize = size - 2 * exclude;

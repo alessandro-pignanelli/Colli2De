@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cmath>
-#include <print>
 #include <vector>
 
 #include "collision/Collision.hpp"

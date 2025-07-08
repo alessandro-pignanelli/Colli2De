@@ -57,11 +57,17 @@ TEST_CASE("DynamicBVH | Moving proxies", "[DynamicBVH][Benchmark][Move]")
     for (uint32_t i = 0; i < 10'000; ++i)
         indices.push_back(bvh.createProxy(aabbs[i], i));
 
-    BENCHMARK_FUNCTION("DynamicBVH | Move 10k proxies to new location", 300us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Move 10k proxies to new location", 3ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             bvh.moveProxy(indices[i], aabbs[i].move(Vec2{ 50.0f, 0 }), Vec2{50.0f, 0});
         return bvh.size();
+    }, [&]()
+    {
+        bvh.clear();
+        indices.clear();
+        for (size_t i = 0; i < 10'000; ++i)
+            indices.push_back(bvh.createProxy(aabbs[i], i));
     });
 
     bvh.clear();
@@ -69,11 +75,17 @@ TEST_CASE("DynamicBVH | Moving proxies", "[DynamicBVH][Benchmark][Move]")
     for (uint32_t i = 0; i < 100'000; ++i)
         indices.push_back(bvh.createProxy(aabbs[i], i));
 
-    BENCHMARK_FUNCTION("DynamicBVH | Move 100k proxies to new location", 2ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Move 100k proxies to new location", 30ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             bvh.moveProxy(indices[i], aabbs[i].move(Vec2{ 50.0f, 0 }), Vec2{50.0f, 0});
         return bvh.size();
+    }, [&]()
+    {
+        bvh.clear();
+        indices.clear();
+        for (size_t i = 0; i < 100'000; ++i)
+            indices.push_back(bvh.createProxy(aabbs[i], i));
     });
 }
 
