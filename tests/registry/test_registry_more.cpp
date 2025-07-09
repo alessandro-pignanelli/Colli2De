@@ -110,9 +110,17 @@ TEST_CASE("Registry ray casting", "[Registry]")
         auto hits = registry.rayCast(ray, 1);
         REQUIRE(hits.size() == 1);
         CHECK(hits.begin()->id.first == 1);
+        CHECK(hits.begin()->entry.x == Approx(-1.0f));
+        CHECK(hits.begin()->exit.x  == Approx(1.0f));
+        CHECK(hits.begin()->entryTime == Approx(( -1.0f - (-2.0f) ) / 7.0f));
+        CHECK(hits.begin()->exitTime  == Approx(( 1.0f - (-2.0f) ) / 7.0f));
         auto hit = registry.firstHitRayCast(ray, 2);
         REQUIRE(hit.has_value());
         CHECK(hit->id.first == 2);
+        CHECK(hit->entry.x == Approx(3.0f));
+        CHECK(hit->exit.x  == Approx(5.0f));
+        CHECK(hit->entryTime == Approx(( 3.0f - (-2.0f) ) / 7.0f));
+        CHECK(hit->exitTime  == Approx(( 5.0f - (-2.0f) ) / 7.0f));
     }
 
     SECTION("Infinite ray hits both")
@@ -127,10 +135,22 @@ TEST_CASE("Registry ray casting", "[Registry]")
         REQUIRE(hits.size() == 2);
         auto first = hits.begin();
         CHECK(first->id.first == 1);
+        CHECK(first->entry.x == Approx(-1.0f));
+        CHECK(first->exit.x  == Approx(1.0f));
+        CHECK(first->entryTime == Approx(0.0f));
+        CHECK(first->exitTime  == Approx(2.0f));
         CHECK(std::next(first)->id.first == 2);
+        CHECK(std::next(first)->entry.x == Approx(3.0f));
+        CHECK(std::next(first)->exit.x  == Approx(5.0f));
+        CHECK(std::next(first)->entryTime == Approx(4.0f));
+        CHECK(std::next(first)->exitTime  == Approx(6.0f));
         auto hit = registry.firstHitRayCast(ray);
         REQUIRE(hit.has_value());
         CHECK(hit->id.first == 1);
+        CHECK(hit->entry.x == Approx(-1.0f));
+        CHECK(hit->exit.x  == Approx(1.0f));
+        CHECK(hit->entryTime == Approx(0.0f));
+        CHECK(hit->exitTime  == Approx(2.0f));
     }
 }
 
