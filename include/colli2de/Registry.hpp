@@ -95,6 +95,8 @@ private:
     void narrowPhaseCollisions(const std::vector<ShapeId>& shapesQueried,
                                const std::vector<std::set<ShapeId>>& collisions,
                                std::vector<EntityCollision>& outCollisionsInfo);
+    void narrowPhaseCollisionsPairs(const std::set<std::pair<ShapeId, ShapeId>>& pairs,
+                                    std::vector<EntityCollision>& outCollisionsInfo);
 };
 
 template<typename EntityId>
@@ -429,26 +431,58 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
 
     std::vector<EntityCollision> collisionsInfo;
 
-    auto collisionsStatic = treeStatic.batchQuery(queries, std::thread::hardware_concurrency());
+    const auto collisionsStatic = treeStatic.batchQuery(queries, std::thread::hardware_concurrency());
     assert(collisionsStatic.size() == queries.size() && "Batch query results size mismatch for static shapes");
 
-    auto collisionsDynamic = treeDynamic.batchQuery(queries, std::thread::hardware_concurrency());
-    assert(collisionsDynamic.size() == queries.size() && "Batch query results size mismatch for dynamic shapes");
+    const auto dynamicPairs = treeDynamic.findAllCollisions();
 
-    auto collisionsBulletsStatic = treeStatic.batchSweepQuery(sweepQueries, std::thread::hardware_concurrency());
+    const auto collisionsBulletsStatic = treeStatic.batchSweepQuery(sweepQueries, std::thread::hardware_concurrency());
     assert(collisionsBulletsStatic.size() == sweepQueries.size() && "Batch sweep query results size mismatch for static bullets");
 
-    auto collisionsBulletsDynamic = treeDynamic.batchSweepQuery(sweepQueries, std::thread::hardware_concurrency());
+    const auto collisionsBulletsDynamic = treeDynamic.batchSweepQuery(sweepQueries, std::thread::hardware_concurrency());
     assert(collisionsBulletsDynamic.size() == sweepQueries.size() && "Batch sweep query results size mismatch for dynamic bullets");
 
-    collisionsInfo.reserve(collisionsStatic.size() + collisionsDynamic.size() +
+    collisionsInfo.reserve(collisionsStatic.size() + dynamicPairs.size() +
                            collisionsBulletsStatic.size() + collisionsBulletsDynamic.size());
     narrowPhaseCollisions(shapesQueried, collisionsStatic, collisionsInfo);
-    narrowPhaseCollisions(shapesQueried, collisionsDynamic, collisionsInfo);
+    narrowPhaseCollisionsPairs(dynamicPairs, collisionsInfo);
     narrowPhaseCollisions(shapesSweepQueried, collisionsBulletsStatic, collisionsInfo);
     narrowPhaseCollisions(shapesSweepQueried, collisionsBulletsDynamic, collisionsInfo);
 
     return collisionsInfo;
+}
+
+template<typename EntityId>
+void Registry<EntityId>::narrowPhaseCollisionsPairs(
+    const std::set<std::pair<ShapeId, ShapeId>>& pairs,
+    std::vector<EntityCollision>& outCollisionsInfo)
+{
+    for (const auto& [shapeAId, shapeBId] : pairs)
+    {
+        const auto [entityAId, shapeAIndex] = shapeEntity[shapeAId];
+        const auto [entityBId, shapeBIndex] = shapeEntity[shapeBId];
+        const auto& entityA = entities.at(entityAId);
+        const auto& entityB = entities.at(entityBId);
+        const auto& shapeA = entityA.shapes[shapeAIndex].shape;
+        const auto& shapeB = entityB.shapes[shapeBIndex].shape;
+
+        const Manifold manifold = std::visit(
+            [&](const auto& concreteA, const auto& concreteB)
+            {
+                return c2d::collide(concreteA, entityA.transform, concreteB, entityB.transform);
+            },
+            shapeA,
+            shapeB);
+
+        if (!manifold.isColliding())
+            continue;
+
+        outCollisionsInfo.emplace_back(EntityCollision{entityAId,
+                                                        entityBId,
+                                                        shapeAId,
+                                                        shapeBId,
+                                                        std::move(manifold)});
+    }
 }
 
 template<typename EntityId>

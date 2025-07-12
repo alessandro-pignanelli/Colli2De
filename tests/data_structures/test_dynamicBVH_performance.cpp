@@ -212,7 +212,7 @@ TEST_CASE("DynamicBVH | First hit raycast", "[DynamicBVH][Benchmark][Raycast]")
     });
 }
 
-TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)", "[DynamicBVH][BroadPhaseCollisions][Benchmark]")
+TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)", "[DynamicBVH][BroadPhaseCollisions][AllPairs][Benchmark]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -228,7 +228,7 @@ TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)", "[
 
     std::set<std::pair<uint32_t, uint32_t>> pairs;
 
-    BENCHMARK_FUNCTION("DynamicBVH | Find all overlapping pairs among 1k proxies", 100us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Find all colliding pairs among 1k proxies", 100us, [&]()
     {
         pairs.clear();
         bvh.findAllCollisions(pairs);
@@ -239,7 +239,7 @@ TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)", "[
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Find all overlapping pairs among 10k proxies", 5ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Find all colliding pairs among 10k proxies", 5ms, [&]()
     {
         pairs.clear();
         bvh.findAllCollisions(pairs);
@@ -250,7 +250,7 @@ TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)", "[
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Find all overlapping pairs among 100k proxies", 150ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Find all colliding pairs among 100k proxies", 150ms, [&]()
     {
         pairs.clear();
         bvh.findAllCollisions(pairs);

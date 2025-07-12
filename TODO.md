@@ -1,6 +1,7 @@
 - Fast rebuild: construct BVH from a full set in one pass (useful for static scenes or resets).
 - Static BVH mode (can be built with sweep SAH for optimality)
 - Unit / visual test support
+- Implement `getCollidingPairs` between two trees, instead of looping through all entities of one tree.
 - Static BVH class
     - Use SAH to construct a shallower, higher-quality tree
     - Store data in a flat array instead of pointers for fast access

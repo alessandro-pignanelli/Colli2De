@@ -171,7 +171,7 @@ TEST_CASE("BroadPhaseTree | Piercing raycast", "[BroadPhaseTree][Benchmark][Rayc
     });
 }
 
-TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)", "[BroadPhaseTree][BroadPhaseCollisions][Benchmark]")
+TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)", "[BroadPhaseTree][BroadPhaseCollisions][AllPairs][Benchmark]")
 {
 #ifndef NDEBUG
     SKIP("Performance test skipped in Debug mode.");
@@ -187,7 +187,7 @@ TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)"
 
     std::set<std::pair<uint32_t, uint32_t>> pairs;
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Find all overlapping pairs among 1k proxies", 50us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 1k proxies", 50us, [&]()
     {
         pairs = tree.findAllCollisions();
         return pairs.size();
@@ -197,7 +197,7 @@ TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)"
     for (uint32_t i = 0; i < 10'000; ++i)
         treePairs10k.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Find all overlapping pairs among 10k proxies", 5ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 10k proxies", 5ms, [&]()
     {
         pairs = treePairs10k.findAllCollisions();
         return pairs.size();
@@ -207,7 +207,7 @@ TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)"
     for (uint32_t i = 0; i < 100'000; ++i)
         treePairs100k.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Find all overlapping pairs among 100k proxies", 130ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 100k proxies", 130ms, [&]()
     {
         pairs = treePairs100k.findAllCollisions();
         return pairs.size();
