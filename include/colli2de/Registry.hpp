@@ -47,8 +47,9 @@ public:
     void removeShape(ShapeId shapeId);
 
     void teleportEntity(EntityId id, const Transform& transform);
+    void teleportEntity(EntityId id, Vec2 translation);
     void moveEntity(EntityId id, const Transform& delta);
-    void translateEntity(EntityId id, const Vec2& translation);
+    void moveEntity(EntityId id, Vec2 deltaTranslation);
 
     std::vector<EntityCollision> getCollidingPairs();
     std::vector<EntityCollision> getCollisions(EntityId id);
@@ -236,6 +237,34 @@ void Registry<EntityId>::teleportEntity(EntityId id, const Transform& transform)
 }
 
 template<typename EntityId>
+void Registry<EntityId>::teleportEntity(EntityId id, Vec2 translation)
+{
+    assert(entities.find(id) != entities.end());
+    EntityInfo& entity = entities.at(id);
+    
+    if (entity.type == BodyType::Bullet)
+    {
+        bulletPreviousTransforms[id] = entity.transform;
+        entity.transform.translation = translation;
+    }
+    else
+    {
+        const auto deltaTranslation = translation - entity.transform.translation;
+        entity.transform.translation = translation;
+        auto& tree = treeFor(entity.type);
+
+        for (auto& shape : entity.shapes)
+        {
+            std::visit([&](const auto& concreteShape)
+            {
+                shape.aabb.translate(deltaTranslation);
+                tree.moveProxy(shape.treeHandle, shape.aabb);
+            }, shape.shape);
+        }
+    }
+}
+
+template<typename EntityId>
 void Registry<EntityId>::moveEntity(EntityId id, const Transform& delta)
 {
     assert(entities.find(id) != entities.end());
@@ -263,7 +292,7 @@ void Registry<EntityId>::moveEntity(EntityId id, const Transform& delta)
 }
 
 template<typename EntityId>
-void Registry<EntityId>::translateEntity(EntityId id, const Vec2& translation)
+void Registry<EntityId>::moveEntity(EntityId id, Vec2 deltaTranslation)
 {
     assert(entities.find(id) != entities.end());
     EntityInfo& entity = entities.at(id);
@@ -271,18 +300,18 @@ void Registry<EntityId>::translateEntity(EntityId id, const Vec2& translation)
     if (entity.type == BodyType::Bullet)
     {
         bulletPreviousTransforms[id] = entity.transform;
-        entity.transform.translation += translation;
+        entity.transform.translation += deltaTranslation;
     }
     else
     {
-        entity.transform.translation += translation;
+        entity.transform.translation += deltaTranslation;
 
         auto& tree = treeFor(entity.type);
         for (auto& shape : entity.shapes)
         {
             std::visit([&](const auto& concreteShape)
             {
-                shape.aabb.translate(translation);
+                shape.aabb.translate(deltaTranslation);
                 tree.moveProxy(shape.treeHandle, shape.aabb);
             }, shape.shape);
         }

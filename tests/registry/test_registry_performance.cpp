@@ -109,7 +109,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Benchmark][Query]")
 #endif
 
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
-    std::vector<Circle> circles = generateRandomCircles(10'000, -200.0f, 200.0f, 1.0f, seed);
+    std::vector<Circle> circles = generateRandomCircles(10'000, -1920.0f, 3840.0f, 1.0f, seed);
     Registry<uint32_t> reg;
     for(uint32_t i = 0; i < 10'000; ++i)
     {
@@ -118,6 +118,18 @@ TEST_CASE("Registry | Collision query", "[Registry][Benchmark][Query]")
     }
 
     BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k entities", 15ms, [&]()
+    {
+        return reg.getCollidingPairs().size();
+    });
+
+    reg.clear();
+    for(uint32_t i = 0; i < 100'000; ++i)
+    {
+        reg.createEntity(i, BodyType::Dynamic, Transform(circles[i % 10'000].center));
+        reg.addShape(i, circles[i % 10'000]);
+    }
+
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 400ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });
