@@ -70,6 +70,9 @@ TEST_CASE("Circle vs Circle collision", "[collision][circle]")
         REQUIRE(m.pointCount == 1);
         CHECK(std::abs(m.normal.x) == Approx(1.0f).margin(0.001f));
         CHECK(m.normal.y == Approx(0.0f).margin(0.001f));
+        CHECK(m.points[0].point == Vec2{1.0f, 0.0f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
         CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
@@ -80,6 +83,10 @@ TEST_CASE("Circle vs Circle collision", "[collision][circle]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.normal.x == Approx(0.0f).margin(0.001f));
         CHECK(m.normal.y == Approx(1.0f).margin(0.001f));
+        CHECK(m.points[0].point == Vec2{0.0f, 1.0f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Overlapping")
@@ -87,7 +94,11 @@ TEST_CASE("Circle vs Circle collision", "[collision][circle]")
         Circle circleB{Vec2{1.5f, 0.0f}, 1.0f};
         Manifold m = collideSymmetric(circleA, t, circleB, t);
         REQUIRE(m.pointCount == 1);
-        CHECK(m.points[0].separation < 0.0f);
+        CHECK(m.points[0].point.x == Approx(0.75f).margin(0.001f));
+        CHECK(m.points[0].point.y == Approx(0.0f).margin(0.001f));
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(-0.5f).margin(0.001f));
     }
 
     SECTION("Rotated centers")
@@ -103,6 +114,8 @@ TEST_CASE("Circle vs Circle collision", "[collision][circle]")
         CHECK(manifold.points[0].point.x == Approx(std::cos(0.5f) + 1.0f).margin(0.001f));
         CHECK(manifold.points[0].point.y == Approx(std::sin(0.5f)).margin(0.001f));
         CHECK(manifold.points[0].separation == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].anchorA == transformA.toLocal(manifold.points[0].point));
+        CHECK(manifold.points[0].anchorB == transformB.toLocal(manifold.points[0].point));
     }
 }
 
@@ -125,6 +138,10 @@ TEST_CASE("Capsule vs Circle collision", "[collision][capsule][circle]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.normal.x == Approx(0.0f).margin(0.001f));
         CHECK(m.normal.y == Approx(1.0f).margin(0.001f));
+        CHECK(m.points[0].point == Vec2{0.0f, 0.5f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Tangent on capsule end")
@@ -134,6 +151,10 @@ TEST_CASE("Capsule vs Circle collision", "[collision][capsule][circle]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.normal.x == Approx(0.0f).margin(0.001f));
         CHECK(m.normal.y == Approx(-1.0f).margin(0.001f));
+        CHECK(m.points[0].point == Vec2{-1.0f, -0.5f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Deep overlap")
@@ -141,6 +162,8 @@ TEST_CASE("Capsule vs Circle collision", "[collision][capsule][circle]")
         Circle circle{Vec2{0.0f, 0.0f}, 0.8f};
         Manifold m = collideSymmetric(capsule, t, circle, t);
         REQUIRE(m.pointCount == 1);
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
         CHECK(m.points[0].separation < -0.5f);
     }
 
@@ -158,6 +181,8 @@ TEST_CASE("Capsule vs Circle collision", "[collision][capsule][circle]")
         CHECK(manifold.points[0].point.x == Approx(0.608943f).margin(0.001f));
         CHECK(manifold.points[0].point.y == Approx(0.640503f).margin(0.001f));
         CHECK(manifold.points[0].separation == Approx(-0.459698f).margin(0.001f));
+        CHECK(manifold.points[0].anchorA == transformA.toLocal(manifold.points[0].point));
+        CHECK(manifold.points[0].anchorB == transformB.toLocal(manifold.points[0].point));
     }
 }
 
@@ -180,6 +205,10 @@ TEST_CASE("Capsule vs Capsule collision", "[collision][capsule]")
         REQUIRE(m.pointCount == 1);
         CHECK(std::abs(m.normal.x) == Approx(1.0f).margin(0.001f));
         CHECK(m.normal.y == Approx(0.0f).margin(0.001f));
+        CHECK(m.points[0].point == Vec2{1.5f, 0.0f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Tangent end to end")
@@ -189,6 +218,10 @@ TEST_CASE("Capsule vs Capsule collision", "[collision][capsule]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.normal.x == Approx(0.0f).margin(0.001f));
         CHECK(m.normal.y == Approx(1.0f).margin(0.001f));
+        CHECK(m.points[0].point == Vec2{0.0f, 0.5f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Cross overlap")
@@ -211,6 +244,8 @@ TEST_CASE("Capsule vs Capsule collision", "[collision][capsule]")
         CHECK(manifold.points[0].point.x == Approx(0.0f).margin(0.001f));
         CHECK(manifold.points[0].point.y == Approx(0.0f).margin(0.001f));
         CHECK(manifold.points[0].separation == Approx(-1.0f).margin(0.001f));
+        CHECK(manifold.points[0].anchorA == transformA.toLocal(manifold.points[0].point));
+        CHECK(manifold.points[0].anchorB == transformB.toLocal(manifold.points[0].point));
     }
 }
 
@@ -232,6 +267,9 @@ TEST_CASE("Segment vs Segment collision", "[collision][segment]")
         Manifold m = collideSymmetric(segA, t, segB, t);
         REQUIRE(m.pointCount == 1);
         CHECK(m.points[0].point == Vec2{1.0f, 0.0f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Crossing")
@@ -239,7 +277,9 @@ TEST_CASE("Segment vs Segment collision", "[collision][segment]")
         Segment segB{Vec2{0.0f, -1.0f}, Vec2{0.0f, 1.0f}};
         Manifold m = collideSymmetric(segA, t, segB, t);
         REQUIRE(m.pointCount == 1);
-        CHECK(m.points[0].point == Vec2{0.0f, 0.0f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Overlapping")
@@ -247,6 +287,8 @@ TEST_CASE("Segment vs Segment collision", "[collision][segment]")
         Segment segB{Vec2{-0.5f, 0.0f}, Vec2{0.5f, 0.0f}};
         Manifold m = collideSymmetric(segA, t, segB, t);
         REQUIRE(m.pointCount == 1);
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
         CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
@@ -263,6 +305,8 @@ TEST_CASE("Segment vs Segment collision", "[collision][segment]")
         CHECK(manifold.points[0].point.x == Approx(0.0f).margin(0.001f));
         CHECK(manifold.points[0].point.y == Approx(0.0f).margin(0.001f));
         CHECK(manifold.points[0].separation == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].anchorA == transformA.toLocal(manifold.points[0].point));
+        CHECK(manifold.points[0].anchorB == transformB.toLocal(manifold.points[0].point));
     }
 }
 
@@ -285,6 +329,10 @@ TEST_CASE("Circle vs Polygon collision", "[collision][circle][polygon]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.normal.x == Approx(0.0f).margin(0.001f));
         CHECK(m.normal.y == Approx(1.0f).margin(0.001f));
+        CHECK(m.points[0].point == Vec2{0.0f, 1.0f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Tangent on right")
@@ -294,6 +342,10 @@ TEST_CASE("Circle vs Polygon collision", "[collision][circle][polygon]")
         REQUIRE(m.pointCount == 1);
         CHECK(std::abs(m.normal.x) == Approx(1.0f).margin(0.001f));
         CHECK(m.normal.y == Approx(0.0f).margin(0.001f));
+        CHECK(m.points[0].point == Vec2{1.0f, 0.0f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Inside polygon")
@@ -317,6 +369,8 @@ TEST_CASE("Circle vs Polygon collision", "[collision][circle][polygon]")
         CHECK(manifold.points[0].point.x == Approx(1.067317f).margin(0.001f));
         CHECK(manifold.points[0].point.y == Approx(0.674784f).margin(0.001f));
         CHECK(manifold.points[0].separation == Approx(-0.544664f).margin(0.001f));
+        CHECK(manifold.points[0].anchorA == transform.toLocal(manifold.points[0].point));
+        CHECK(manifold.points[0].anchorB == transform.toLocal(manifold.points[0].point));
     }
 }
 
@@ -339,6 +393,10 @@ TEST_CASE("Circle vs Segment collision", "[collision][circle][segment]")
         REQUIRE(m.pointCount == 1);
         CHECK(m.normal.x == Approx(0.0f).margin(0.001f));
         CHECK(m.normal.y == Approx(-1.0f).margin(0.001f));
+        CHECK(m.points[0].point == Vec2{0.0f, 0.0f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].separation == Approx(0.0f).margin(0.001f));
     }
 
     SECTION("Tangent at endpoint")
@@ -346,6 +404,9 @@ TEST_CASE("Circle vs Segment collision", "[collision][circle][segment]")
         Circle circle{Vec2{1.5f, 0.0f}, 0.5f};
         Manifold m = collideSymmetric(circle, t, seg, t);
         REQUIRE(m.pointCount == 1);
+        CHECK(m.points[0].point == Vec2{1.0f, 0.0f});
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
         CHECK(m.points[0].separation == Approx(0.0f).margin(0.01f));
     }
 
@@ -354,6 +415,8 @@ TEST_CASE("Circle vs Segment collision", "[collision][circle][segment]")
         Circle circle{Vec2{0.0f, 0.0f}, 0.75f};
         Manifold m = collideSymmetric(circle, t, seg, t);
         REQUIRE(m.pointCount == 1);
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
         CHECK(m.points[0].separation < 0.0f);
     }
 
@@ -370,6 +433,8 @@ TEST_CASE("Circle vs Segment collision", "[collision][circle][segment]")
         CHECK(manifold.points[0].point.x == Approx(0.0f).margin(0.001f));
         CHECK(manifold.points[0].point.y == Approx(0.0f).margin(0.001f));
         CHECK(manifold.points[0].separation == Approx(0.0f).margin(0.001f));
+        CHECK(manifold.points[0].anchorA == transform.toLocal(manifold.points[0].point));
+        CHECK(manifold.points[0].anchorB == transform.toLocal(manifold.points[0].point));
     }
 }
 
@@ -452,6 +517,8 @@ TEST_CASE("Capsule vs Segment collision", "[collision][capsule][segment]")
         Segment seg{Vec2{0.0f, -2.0f}, Vec2{0.0f, 2.0f}};
         Manifold m = collideSymmetric(cap, t, seg, t);
         REQUIRE(m.pointCount == 1);
+        CHECK(m.points[0].anchorA == t.toLocal(m.points[0].point));
+        CHECK(m.points[0].anchorB == t.toLocal(m.points[0].point));
         CHECK(m.points[0].separation < 0.0f);
     }
 
@@ -467,6 +534,8 @@ TEST_CASE("Capsule vs Segment collision", "[collision][capsule][segment]")
         CHECK(manifold.points[0].point.x == Approx(-0.718912f).margin(0.001f));
         CHECK(manifold.points[0].point.y == Approx(-0.247404f).margin(0.001f));
         CHECK(manifold.points[0].separation == Approx(-0.5f).margin(0.001f));
+        CHECK(manifold.points[0].anchorA == transform.toLocal(manifold.points[0].point));
+        CHECK(manifold.points[0].anchorB == transform.toLocal(manifold.points[0].point));
     }
 }
 
@@ -579,5 +648,9 @@ TEST_CASE("Polygon vs Polygon collision", "[collision][polygon]")
         CHECK(manifold.points[1].point.y == Approx(-0.716316f).margin(0.001f));
         CHECK(manifold.points[0].separation == Approx(-1.537806f).margin(0.001f));
         CHECK(manifold.points[1].separation == Approx(-1.537806f).margin(0.001f));
+        CHECK(manifold.points[0].anchorA == manifold.points[0].point);
+        CHECK(manifold.points[0].anchorB == manifold.points[0].point);
+        CHECK(manifold.points[1].anchorA == manifold.points[1].point);
+        CHECK(manifold.points[1].anchorB == manifold.points[1].point);
     }
 }

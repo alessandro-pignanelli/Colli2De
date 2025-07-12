@@ -41,10 +41,22 @@ TEST_CASE("DynamicBVH | raycastFirstHit detects grazing rays", "[DynamicBVH][Adv
     auto hit1 = bvh.firstHitRaycast(ray1);
     REQUIRE(hit1.has_value());
     REQUIRE(hit1->id == 1);
+    CHECK(hit1->entry.x == Approx(2.0f));
+    CHECK(hit1->entry.y == Approx(2.0f));
+    CHECK(hit1->exit.x == Approx(2.0f));
+    CHECK(hit1->exit.y == Approx(2.0f));
+    CHECK(hit1->entryTime == Approx(1.0f));
+    CHECK(hit1->exitTime == Approx(1.0f));
 
     // Ray along the bottom edge
     Ray ray2{Vec2{2,2}, Vec2{4,2}};
     auto hit2 = bvh.firstHitRaycast(ray2);
     REQUIRE(hit2.has_value());
     REQUIRE(hit2->id == 1);
+    CHECK(hit2->entry.x == Approx(2.0f));
+    CHECK(hit2->entry.y == Approx(2.0f));
+    CHECK(hit2->exit.x == Approx(4.0f));
+    CHECK(hit2->exit.y == Approx(2.0f));
+    CHECK(hit2->entryTime == Approx(0.0f).margin(0.001f));
+    CHECK(hit2->exitTime == Approx(1.0f));
 }

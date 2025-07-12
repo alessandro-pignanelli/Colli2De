@@ -130,6 +130,12 @@ TEST_CASE("DynamicBVH | firstHitRaycast finds the nearest hit", "[DynamicBVH][Fi
         auto firstId = bvh.firstHitRaycast(ray);
         REQUIRE(firstId);
         CHECK(firstId->id == 1);
+        CHECK(firstId->entry.x == Approx(0.0f));
+        CHECK(firstId->exit.x == Approx(1.0f));
+        CHECK(firstId->entry.y == Approx(0.5f));
+        CHECK(firstId->exit.y == Approx(0.5f));
+        CHECK(firstId->entryTime == Approx((0.0f - (-1.0f)) / 7.0f));
+        CHECK(firstId->exitTime == Approx((1.0f - (-1.0f)) / 7.0f));
     }
 
     SECTION("DynamicBVH | Mask for category 2 (only hits id 3)")
@@ -138,6 +144,12 @@ TEST_CASE("DynamicBVH | firstHitRaycast finds the nearest hit", "[DynamicBVH][Fi
         auto firstId = bvh.firstHitRaycast(ray, mask);
         REQUIRE(firstId);
         CHECK(firstId->id == 3);
+        CHECK(firstId->entry.x == Approx(4.0f));
+        CHECK(firstId->exit.x == Approx(5.0f));
+        CHECK(firstId->entry.y == Approx(0.5f));
+        CHECK(firstId->exit.y == Approx(0.5f));
+        CHECK(firstId->entryTime == Approx((4.0f - (-1.0f)) / 7.0f));
+        CHECK(firstId->exitTime == Approx((5.0f - (-1.0f)) / 7.0f));
     }
 
     SECTION("DynamicBVH | Mask for category 1 (only hits id 2)")
@@ -146,6 +158,12 @@ TEST_CASE("DynamicBVH | firstHitRaycast finds the nearest hit", "[DynamicBVH][Fi
         auto firstId = bvh.firstHitRaycast(ray, mask);
         REQUIRE(firstId);
         CHECK(firstId->id == 2);
+        CHECK(firstId->entry.x == Approx(2.0f));
+        CHECK(firstId->exit.x == Approx(3.0f));
+        CHECK(firstId->entry.y == Approx(0.5f));
+        CHECK(firstId->exit.y == Approx(0.5f));
+        CHECK(firstId->entryTime == Approx((2.0f - (-1.0f)) / 7.0f));
+        CHECK(firstId->exitTime == Approx((3.0f - (-1.0f)) / 7.0f));
     }
 
     SECTION("DynamicBVH | Mask for category 8 (no matches)")
@@ -215,6 +233,12 @@ TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest 
         auto hit = bvh.firstHitRaycast(ray);
         REQUIRE(hit);
         CHECK(hit->id == 101);
+        CHECK(hit->entry.x == Approx(1.0f));
+        CHECK(hit->exit.x  == Approx(2.0f));
+        CHECK(hit->entry.y == Approx(1.5f));
+        CHECK(hit->exit.y  == Approx(1.5f));
+        CHECK(hit->entryTime == Approx(1.0f / 5.0f));
+        CHECK(hit->exitTime  == Approx(2.0f / 5.0f));
     }
 
     SECTION("DynamicBVH | Mask for category 2 (id 103)")
@@ -223,6 +247,12 @@ TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest 
         auto hit = bvh.firstHitRaycast(ray, mask);
         REQUIRE(hit);
         CHECK(hit->id == 103);
+        CHECK(hit->entry.x == Approx(5.0f));
+        CHECK(hit->exit.x  == Approx(5.0f));
+        CHECK(hit->entry.y == Approx(1.5f));
+        CHECK(hit->exit.y  == Approx(1.5f));
+        CHECK(hit->entryTime == Approx(1.0f));
+        CHECK(hit->exitTime  == Approx(1.0f));
     }
 
     SECTION("DynamicBVH | Mask for category 1 (id 102)")
@@ -231,6 +261,12 @@ TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest 
         auto hit = bvh.firstHitRaycast(ray, mask);
         REQUIRE(hit);
         CHECK(hit->id == 102);
+        CHECK(hit->entry.x == Approx(3.0f));
+        CHECK(hit->exit.x  == Approx(4.0f));
+        CHECK(hit->entry.y == Approx(1.5f));
+        CHECK(hit->exit.y  == Approx(1.5f));
+        CHECK(hit->entryTime == Approx(3.0f / 5.0f));
+        CHECK(hit->exitTime  == Approx(4.0f / 5.0f));
     }
 }
 
