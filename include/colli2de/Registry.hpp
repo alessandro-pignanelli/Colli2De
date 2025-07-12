@@ -48,6 +48,7 @@ public:
 
     void teleportEntity(EntityId id, const Transform& transform);
     void moveEntity(EntityId id, const Transform& delta);
+    void translateEntity(EntityId id, const Vec2& translation);
 
     std::vector<EntityCollision> getCollidingPairs();
     std::vector<EntityCollision> getCollisions(EntityId id);
@@ -262,6 +263,33 @@ void Registry<EntityId>::moveEntity(EntityId id, const Transform& delta)
 }
 
 template<typename EntityId>
+void Registry<EntityId>::translateEntity(EntityId id, const Vec2& translation)
+{
+    assert(entities.find(id) != entities.end());
+    EntityInfo& entity = entities.at(id);
+    
+    if (entity.type == BodyType::Bullet)
+    {
+        bulletPreviousTransforms[id] = entity.transform;
+        entity.transform.translation += translation;
+    }
+    else
+    {
+        entity.transform.translation += translation;
+
+        auto& tree = treeFor(entity.type);
+        for (auto& shape : entity.shapes)
+        {
+            std::visit([&](const auto& concreteShape)
+            {
+                shape.aabb.translate(translation);
+                tree.moveProxy(shape.treeHandle, shape.aabb);
+            }, shape.shape);
+        }
+    }
+}
+
+template<typename EntityId>
 void Registry<EntityId>::narrowPhaseCollisions(const std::vector<ShapeId>& shapesQueried,
                                                const std::vector<std::set<ShapeId>>& collisions,
                                                std::vector<EntityCollision>& outCollisionsInfo)
@@ -363,7 +391,7 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
             const auto deltaTransform = previousTransform - currentTransform;
             for (const auto& shape : entity.shapes)
             {
-                const auto previousAABB = shape.aabb.move(deltaTransform.translation);
+                const auto previousAABB = shape.aabb.translated(deltaTransform.translation);
                 sweepQueries.emplace_back(shape.aabb, previousAABB, shape.maskBits);
                 shapesSweepQueried.push_back(shape.id);
             }
@@ -414,7 +442,7 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
 
         for (const auto& shape : entity.shapes)
         {
-            const auto previousAABB = shape.aabb.move(deltaTransform.translation);
+            const auto previousAABB = shape.aabb.translated(deltaTransform.translation);
             sweepQueries.emplace_back(shape.aabb, previousAABB, shape.maskBits);
             shapesSweepQueried.push_back(shape.id);
         }

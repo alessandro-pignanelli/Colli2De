@@ -170,6 +170,47 @@ std::optional<std::pair<float, float>> AABB::intersects(InfiniteRay ray) const
     return std::make_pair(intersectionTimeMin, intersectionTimeMax);
 }
 
+void AABB::fatten(float margin)
+{
+    min.x -= margin;
+    min.y -= margin;
+    max.x += margin;
+    max.y += margin;
+}
+
+void AABB::fatten(Vec2 displacement)
+{
+    // Grow min by negative displacement
+    if (displacement.x < 0.0f)
+        min.x += displacement.x;
+    else
+        max.x += displacement.x;
+
+    if (displacement.y < 0.0f)
+        min.y += displacement.y;
+    else
+        max.y += displacement.y;
+}
+
+void AABB::fatten(float margin, Vec2 displacement)
+{
+    // Grow min by negative displacement and margin
+    min.x -= margin;
+    min.y -= margin;
+    max.x += margin;
+    max.y += margin;
+
+    if (displacement.x < 0.0f)
+        min.x += displacement.x;
+    else
+        max.x += displacement.x;
+
+    if (displacement.y < 0.0f)
+        min.y += displacement.y;
+    else
+        max.y += displacement.y;
+}
+
 AABB AABB::fattened(float margin) const
 {
     return AABB
@@ -215,7 +256,13 @@ AABB AABB::fattened(Vec2 displacement) const
     return result;
 }
 
-AABB AABB::move(Vec2 direction) const
+void AABB::translate(Vec2 direction)
+{
+    min += direction;
+    max += direction;
+}
+
+AABB AABB::translated(Vec2 direction) const
 {
     return AABB
     {
@@ -224,7 +271,15 @@ AABB AABB::move(Vec2 direction) const
     };
 }
 
-AABB AABB::expandToInclude(Vec2 point)
+void AABB::expandToInclude(Vec2 point)
+{
+    min.x = std::min(min.x, point.x);
+    min.y = std::min(min.y, point.y);
+    max.x = std::max(max.x, point.x);
+    max.y = std::max(max.y, point.y);
+}
+
+AABB AABB::expandedToInclude(Vec2 point) const
 {
     return AABB
     {

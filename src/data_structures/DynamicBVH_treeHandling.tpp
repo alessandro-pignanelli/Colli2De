@@ -5,6 +5,11 @@
 #include <ranges>
 #include <stack>
 
+namespace
+{
+    constexpr float displacementFactor = 2.2f; // Factor to adjust the displacement for fattening AABBs
+}
+
 namespace c2d
 {
 
@@ -118,7 +123,7 @@ void DynamicBVH<IdType>::clear()
 }
 
 template<typename IdType>
-bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB, Vec2 displacement)
+bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB)
 {
     // If the current fattened AABB contains the new AABB, no need to update the tree
     if (nodes[nodeIndex].aabb.contains(newAABB))
@@ -126,6 +131,8 @@ bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB, Vec2 displ
 
     // Update the leaf AABB in place and propagate the change up the tree.
     // This avoids expensive remove/insert operations for large displacements.
+    const Vec2 displacement = Vec2((newAABB.min.x - nodes[nodeIndex].aabb.min.x) * displacementFactor,
+                                   (newAABB.min.y - nodes[nodeIndex].aabb.min.y) * displacementFactor);
     const AABB fatAabb = newAABB.fattened(fatAABBMargin, displacement);
     nodes[nodeIndex].aabb = fatAabb;
 

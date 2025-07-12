@@ -70,9 +70,6 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 
     if (proxy.aabb.contains(aabb))
         return;
-    
-    const Vec2 delta = (aabb - proxy.aabb) * 2.2f; // Fat AABB margin
-    aabb = aabb.fattened(delta);
 
     const int32_t oldMinX = int32_t(proxy.aabb.min.x) / cellSize;
     const int32_t oldMinY = int32_t(proxy.aabb.min.y) / cellSize;
@@ -90,7 +87,7 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
     if (isSameCellRange)
     {
         for (const auto& [cell, bvhHandle] : proxy.bvhHandles)
-            regions[cell].bvh.moveProxy(bvhHandle, aabb);
+            regions.at(cell).bvh.moveProxy(bvhHandle, aabb);
         return;
     }
 

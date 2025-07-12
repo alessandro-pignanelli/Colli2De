@@ -33,11 +33,20 @@ struct AABB
     std::optional<std::pair<float, float>> intersects(Ray ray) const;
     std::optional<std::pair<float, float>> intersects(InfiniteRay ray) const;
 
+    void fatten(float margin);
+    void fatten(Vec2 displacement);
+    void fatten(float margin, Vec2 displacement);
+
     AABB fattened(float margin) const;
     AABB fattened(Vec2 displacement) const;
     AABB fattened(float margin, Vec2 displacement) const;
-    AABB move(Vec2 direction) const;
-    AABB expandToInclude(Vec2 point);
+
+    void translate(Vec2 direction);
+    AABB translated(Vec2 direction) const;
+
+    void expandToInclude(Vec2 point);
+    AABB expandedToInclude(Vec2 point) const;
+    
     float perimeter() const;
 
     std::string toString() const;

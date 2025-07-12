@@ -25,7 +25,7 @@ TEST_CASE("DynamicBVH | Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Insert 10k proxies", 20ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Insert 10k proxies", 15ms, [&]()
     {
         DynamicBVH<uint32_t> bvh;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -60,7 +60,7 @@ TEST_CASE("DynamicBVH | Moving proxies", "[DynamicBVH][Benchmark][Move]")
     BENCHMARK_FUNCTION("DynamicBVH | Move 10k proxies to new location", 3ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
-            bvh.moveProxy(indices[i], aabbs[i].move(Vec2{ 50.0f, 0 }), Vec2{50.0f, 0});
+            bvh.moveProxy(indices[i], aabbs[i].translated(Vec2{ 50.0f, 0 }));
         return bvh.size();
     }, [&]()
     {
@@ -78,7 +78,7 @@ TEST_CASE("DynamicBVH | Moving proxies", "[DynamicBVH][Benchmark][Move]")
     BENCHMARK_FUNCTION("DynamicBVH | Move 100k proxies to new location", 30ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
-            bvh.moveProxy(indices[i], aabbs[i].move(Vec2{ 50.0f, 0 }), Vec2{50.0f, 0});
+            bvh.moveProxy(indices[i], aabbs[i].translated(Vec2{ 50.0f, 0 }));
         return bvh.size();
     }, [&]()
     {

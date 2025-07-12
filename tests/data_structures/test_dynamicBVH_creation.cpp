@@ -259,26 +259,25 @@ TEST_CASE("DynamicBVH | uses fattened AABB for proxies", "[DynamicBVH][Fattened]
 TEST_CASE("DynamicBVH | proxy update skips tree change for small moves", "[DynamicBVH][Fattened][MoveProxy]") 
 {
     const float margin = 3.0f;
-    const Vec2 displacement{ 2.0f, 2.0f };
     DynamicBVH<uint32_t> bvh(margin);
 
     AABB original{ Vec2{0.0f, 0.0f}, Vec2{2.0f, 2.0f} };
     NodeIndex nodeId = bvh.createProxy(original, 42);
 
     // Small move: stays within fattened box
-    AABB smallMove = original.move(Vec2{ margin, margin });
-    bool treeChanged = bvh.moveProxy(nodeId, smallMove, Vec2{10.0f, 10.0f});
+    AABB smallMove = original.translated(Vec2{ margin, margin });
+    bool treeChanged = bvh.moveProxy(nodeId, smallMove);
     CHECK_FALSE(treeChanged);
 
     // Large move: outside fattened box triggers reinsertion
-    AABB largeMove = smallMove.move(Vec2{0.01f, 0.0f });
-    treeChanged = bvh.moveProxy(nodeId, largeMove, displacement);
+    AABB largeMove = smallMove.translated(Vec2{0.01f, 0.0f });
+    treeChanged = bvh.moveProxy(nodeId, largeMove);
     CHECK(treeChanged);
 
     // Confirm that the node's AABB is now fattened in the +X direction
     const auto& node = bvh.getNode(nodeId);
     CHECK(node.aabb.min == largeMove.min - margin);
-    CHECK(node.aabb.max == largeMove.max + margin + displacement);
+    CHECK(node.aabb.max > (largeMove.max + margin + 10.0f)); // Ensure fattening and displacement is applied
 }
 
 TEST_CASE("DynamicBVH | handles moving proxies with remove and reinsert", "[DynamicBVH][Advanced][Move]")
@@ -289,7 +288,7 @@ TEST_CASE("DynamicBVH | handles moving proxies with remove and reinsert", "[Dyna
     NodeIndex idx = bvh.createProxy({Vec2{0,0}, Vec2{1,1}}, 5);
 
     // Move proxy far away (should require removal and reinsertion)
-    bool moved = bvh.moveProxy(idx, {Vec2{10,10}, Vec2{11,11}}, Vec2{10,10});
+    bool moved = bvh.moveProxy(idx, {Vec2{10,10}, Vec2{11,11}});
     REQUIRE(moved);
 
     // Query at old location should NOT find proxy

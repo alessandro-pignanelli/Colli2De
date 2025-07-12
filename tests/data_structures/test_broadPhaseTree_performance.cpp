@@ -55,10 +55,10 @@ TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]"
     BroadPhaseTree<uint32_t> tree;
     std::vector<BroadPhaseTreeHandle> indices;
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Move 10k proxies to new location", 30ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Move 10k proxies to new location", 15ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
-            tree.moveProxy(indices[i], aabbs[i].move(Vec2{50.0f, 0}));
+            tree.moveProxy(indices[i], aabbs[i].translated(Vec2{50.0f, 0}));
         return tree.size();
     }, [&]()
     {
@@ -70,10 +70,10 @@ TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]"
 
     BroadPhaseTree<uint32_t> treeLarge;
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Move 100k proxies to new location", 400ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Move 100k proxies to new location", 200ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
-            treeLarge.moveProxy(indices[i], aabbs[i].move(Vec2{50.0f, 0}));
+            treeLarge.moveProxy(indices[i], aabbs[i].translated(Vec2{50.0f, 0}));
         return treeLarge.size();
     }, [&]()
     {

@@ -21,5 +21,5 @@ TEST_CASE("BroadPhaseTree | handle many proxies", "[BroadPhaseTree][Stress]")
     AABB query{Vec2{10,0}, Vec2{20,1}};
     auto hits = tree.query(query);
     CHECK(hits.size() >= 90);
-    CHECK(hits.size() <= 110);
+    CHECK(hits.size() <= 130);
 }

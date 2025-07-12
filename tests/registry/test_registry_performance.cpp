@@ -117,7 +117,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Benchmark][Query]")
         reg.addShape(i, circles[i]);
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k entities", 20ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k entities", 15ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });

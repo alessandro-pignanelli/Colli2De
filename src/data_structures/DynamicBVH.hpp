@@ -71,7 +71,7 @@ public:
     NodeIndex createProxy(AABB aabb, IdType id, BitMaskType categoryBits = 1, BitMaskType isHittingBits = ~0ull);
     void destroyProxy(NodeIndex leafIndex);
     // Moves the proxy to a new AABB, returns true if the tree structure has changed
-    bool moveProxy(NodeIndex nodeIndex, AABB aabb, Vec2 displacement = Vec2{0.0f, 0.0f});
+    bool moveProxy(NodeIndex nodeIndex, AABB aabb);
 
     void clear();
     uint32_t size() const { return nodeCount; }

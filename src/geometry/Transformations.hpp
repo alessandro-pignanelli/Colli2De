@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cmath>
-#include <utils/methods.hpp>
 
 #include "colli2de/Vec2.hpp"
+#include "utils/methods.hpp"
 
 namespace c2d
 {
