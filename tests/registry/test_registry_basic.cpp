@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "colli2de/Registry.hpp"
+#include <colli2de/Registry.hpp>
 #include "utils/Print.hpp"
 
 using namespace c2d;

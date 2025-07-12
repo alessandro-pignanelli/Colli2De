@@ -6,7 +6,7 @@
 #include <iostream>
 #include <string>
 
-#include "utils/methods.hpp"
+#include <colli2de/internal/utils/methods.hpp>
 
 namespace c2d
 {

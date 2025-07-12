@@ -1,7 +1,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "collision/Collision.hpp"
+#include <colli2de/internal/collision/Collision.hpp>
 
 using namespace c2d;
 using namespace Catch;

@@ -4,8 +4,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
 
-#include "collision/Collision.hpp"
-#include "geometry/Transformations.hpp"
+#include <colli2de/internal/collision/Collision.hpp>
+#include <colli2de/internal/geometry/Transformations.hpp>
 #include "utils/Performance.hpp"
 #include "utils/Random.hpp"
 

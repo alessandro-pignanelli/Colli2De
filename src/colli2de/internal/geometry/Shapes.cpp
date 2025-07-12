@@ -1,4 +1,4 @@
-#include "colli2de/Shapes.hpp"
+#include <colli2de/Shapes.hpp>
 
 namespace c2d
 {

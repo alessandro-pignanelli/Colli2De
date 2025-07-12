@@ -4,26 +4,32 @@ cmake_minimum_required(VERSION 3.16)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# ---- Gather source files (.cpp) ----
 file(GLOB_RECURSE SOURCES
-    ${CMAKE_SOURCE_DIR}/src/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/colli2de/internal/**/*.cpp
 )
 
-file(GLOB_RECURSE API_FILES
-    ${CMAKE_SOURCE_DIR}/include/colli2de/*.hpp
+# ---- Gather internal and public header files ----
+file(GLOB_RECURSE INTERNAL_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/colli2de/internal/**/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/colli2de/internal/**/*.tpp
 )
 
-add_library(colli2de ${SOURCES} ${API_FILES})
+file(GLOB_RECURSE PUBLIC_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/colli2de/public/*.hpp
+)
 
+# ---- Add library ----
+add_library(colli2de ${SOURCES} ${INTERNAL_HEADERS} ${PUBLIC_HEADERS})
+
+# ---- Include directories ----
 target_include_directories(colli2de
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/colli2de/internal
 )
-
 set(CMAKE_DEBUG_POSTFIX "d")
 
 if (MSVC)
@@ -47,39 +53,41 @@ elseif (EMSCRIPTEN)
 elseif (UNIX)
 endif()
 
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "src" FILES ${COLLI2DE_SOURCE_FILES})
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../include" PREFIX "include" FILES ${COLLI2DE_API_FILES})
-
+# ---- Create alias ----
 add_library(colli2de::colli2de ALIAS colli2de)
 
+# ---- Installation ----
+
+# Install public and internal headers to include/colli2de
 install(
-  TARGETS colli2de
-  EXPORT colli2deConfig
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/colli2de
+    DESTINATION include
+    FILES_MATCHING PATTERN "*.hpp" PATTERN "*.tpp"
 )
 
+# Install library
 install(
-  EXPORT colli2deConfig
-  NAMESPACE colli2de::
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/colli2de"
+    TARGETS colli2de
+    EXPORT colli2deConfig
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+# Install CMake config
 install(
-  FILES ${COLLI2DE_API_FILES}
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/colli2de
+    EXPORT colli2deConfig
+    NAMESPACE colli2de::
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/colli2de"
 )
 
 include(CMakePackageConfigHelpers)
-
 write_basic_package_version_file(
-  "${CMAKE_CURRENT_BINARY_DIR}/colli2deConfigVersion.cmake"
-  VERSION ${COLLI2DE_VERSION}
-  COMPATIBILITY SameMajorVersion
+    "${CMAKE_CURRENT_BINARY_DIR}/colli2deConfigVersion.cmake"
+    VERSION ${COLLI2DE_VERSION}
+    COMPATIBILITY SameMajorVersion
 )
-
 install(
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/colli2deConfigVersion.cmake"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/colli2de"
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/colli2deConfigVersion.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/colli2de"
 )

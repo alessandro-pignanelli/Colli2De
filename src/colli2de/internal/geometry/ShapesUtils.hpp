@@ -2,9 +2,9 @@
 
 #include <algorithm>
 
-#include "colli2de/Shapes.hpp"
-#include "geometry/AABB.hpp"
-#include "geometry/Transformations.hpp"
+#include <colli2de/Shapes.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
+#include <colli2de/internal/geometry/Transformations.hpp>
 
 namespace c2d
 {

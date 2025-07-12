@@ -4,15 +4,15 @@
 #include <vector>
 #include <unordered_map>
 
-#include "collision/Manifold.hpp"
-#include "colli2de/Ray.hpp"
-#include "colli2de/Shapes.hpp"
-#include "data_structures/BroadPhaseTree.hpp"
-#include "geometry/AABB.hpp"
-#include "geometry/Transformations.hpp"
-#include "geometry/ShapesUtils.hpp"
-#include "geometry/RaycastShapes.hpp"
-#include "collision/Collision.hpp"
+#include <colli2de/Ray.hpp>
+#include <colli2de/Shapes.hpp>
+#include <colli2de/internal/collision/Manifold.hpp>
+#include <colli2de/internal/data_structures/BroadPhaseTree.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
+#include <colli2de/internal/geometry/Transformations.hpp>
+#include <colli2de/internal/geometry/ShapesUtils.hpp>
+#include <colli2de/internal/geometry/RaycastShapes.hpp>
+#include <colli2de/internal/collision/Collision.hpp>
 
 namespace c2d
 {

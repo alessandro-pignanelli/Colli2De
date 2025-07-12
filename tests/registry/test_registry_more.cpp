@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
-#include "colli2de/Registry.hpp"
+#include <colli2de/Registry.hpp>
 
 using namespace c2d;
 using Catch::Approx;

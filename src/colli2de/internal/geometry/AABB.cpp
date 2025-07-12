@@ -1,4 +1,4 @@
-#include "geometry/AABB.hpp"
+#include <colli2de/internal/geometry/AABB.hpp>
 
 #include <algorithm>
 #include <utility>

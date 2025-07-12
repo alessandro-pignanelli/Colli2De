@@ -5,8 +5,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
 
-#include "data_structures/BroadPhaseTree.hpp"
-#include "geometry/AABB.hpp"
+#include <colli2de/internal/data_structures/BroadPhaseTree.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
 #include "utils/Performance.hpp"
 #include "utils/Random.hpp"
 

@@ -1,8 +1,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "geometry/ShapesUtils.hpp"
-#include "colli2de/Shapes.hpp"
+#include <colli2de/Shapes.hpp>
+#include <colli2de/internal/geometry/ShapesUtils.hpp>
 
 using namespace c2d;
 using namespace Catch;

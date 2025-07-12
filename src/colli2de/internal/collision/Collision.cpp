@@ -2,7 +2,7 @@
 #include <cmath>
 #include <vector>
 
-#include "collision/Collision.hpp"
+#include <colli2de/internal/collision/Collision.hpp>
 
 namespace c2d
 {

@@ -1,10 +1,10 @@
-#include "geometry/RaycastShapes.hpp"
+#include <colli2de/internal/geometry/RaycastShapes.hpp>
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-#include "geometry/AABB.hpp"
+#include <colli2de/internal/geometry/AABB.hpp>
 
 namespace c2d
 {

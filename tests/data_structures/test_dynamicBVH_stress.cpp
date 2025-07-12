@@ -8,8 +8,8 @@
 #include <catch2/interfaces/catch_interfaces_config.hpp>
 #include <catch2/internal/catch_context.hpp>
 
-#include "data_structures/DynamicBVH.hpp"
-#include "geometry/AABB.hpp"
+#include <colli2de/internal/data_structures/DynamicBVH.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
 #include "utils/Performance.hpp"
 #include "utils/Random.hpp"
 

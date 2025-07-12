@@ -1,8 +1,6 @@
 #pragma once
 
-#include <concepts>
-
-#include "colli2de/Vec2.hpp"
+#include <colli2de/Vec2.hpp>
 
 namespace c2d
 {

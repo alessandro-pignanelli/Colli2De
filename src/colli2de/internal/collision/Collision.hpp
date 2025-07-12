@@ -2,9 +2,9 @@
 
 #include <functional>
 
-#include "colli2de/Shapes.hpp"
-#include "collision/Manifold.hpp"
-#include "geometry/Transformations.hpp"
+#include <colli2de/Shapes.hpp>
+#include <colli2de/internal/collision/Manifold.hpp>
+#include <colli2de/internal/geometry/Transformations.hpp>
 
 namespace c2d
 {

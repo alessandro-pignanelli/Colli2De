@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include "colli2de/Vec2.hpp"
-#include "utils/methods.hpp"
+#include <colli2de/Vec2.hpp>
+#include <colli2de/internal/utils/methods.hpp>
 
 namespace c2d
 {

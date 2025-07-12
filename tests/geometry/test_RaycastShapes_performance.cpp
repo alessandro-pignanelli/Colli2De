@@ -3,7 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
 
-#include "geometry/RaycastShapes.hpp"
+#include <colli2de/internal/geometry/RaycastShapes.hpp>
 #include "utils/Performance.hpp"
 #include "utils/Random.hpp"
 

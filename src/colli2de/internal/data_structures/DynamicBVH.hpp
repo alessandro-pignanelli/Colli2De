@@ -3,11 +3,11 @@
 #include <cstdint>
 #include <set>
 #include <utility>
-#include <utils/methods.hpp>
 #include <vector>
 
-#include "colli2de/Ray.hpp"
-#include "geometry/AABB.hpp"
+#include <colli2de/Ray.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
+#include <colli2de/internal/utils/methods.hpp>
 
 namespace
 {
@@ -192,5 +192,5 @@ static_assert(std::is_trivially_copyable_v<BVHNode<uint32_t>>, "BVHNode must be 
 
 } // namespace c2d
 
-#include "DynamicBVH_treeHandling.tpp"
-#include "DynamicBVH_queries.tpp"
+#include <colli2de/internal/data_structures/DynamicBVH_treeHandling.tpp>
+#include <colli2de/internal/data_structures/DynamicBVH_queries.tpp>

@@ -1,4 +1,3 @@
-#include <colli2de/Ray.hpp>
 #include <cstdint>
 #include <iostream>
 #include <ranges>
@@ -6,8 +5,9 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "data_structures/DynamicBVH.hpp"
-#include "geometry/AABB.hpp"
+#include <colli2de/Ray.hpp>
+#include <colli2de/internal/data_structures/DynamicBVH.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
 #include "utils/Random.hpp"
 
 using namespace c2d;

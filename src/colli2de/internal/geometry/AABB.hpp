@@ -4,8 +4,8 @@
 #include <optional>
 #include <string>
 
-#include "colli2de/Ray.hpp"
-#include "colli2de/Vec2.hpp"
+#include <colli2de/Ray.hpp>
+#include <colli2de/Vec2.hpp>
 
 namespace c2d
 {

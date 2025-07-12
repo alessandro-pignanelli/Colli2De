@@ -1,8 +1,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "geometry/RaycastShapes.hpp"
-#include "geometry/AABB.hpp"
+#include <colli2de/internal/geometry/RaycastShapes.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
 
 using namespace c2d;
 using namespace Catch;

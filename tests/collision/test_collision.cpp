@@ -10,9 +10,9 @@
     #define println(...) ((void)0)
 #endif
 
-#include "collision/Collision.hpp"
-#include "colli2de/Shapes.hpp"
-#include "geometry/Transformations.hpp"
+#include <colli2de/Shapes.hpp>
+#include <colli2de/internal/collision/Collision.hpp>
+#include <colli2de/internal/geometry/Transformations.hpp>
 
 using namespace c2d;
 using namespace Catch;

@@ -6,9 +6,8 @@
 #include <cassert>
 #include <variant>
 
-#include "colli2de/Vec2.hpp"
-#include "colli2de/Constants.hpp"
-#include "geometry/AABB.hpp"
+#include <colli2de/Vec2.hpp>
+#include <colli2de/Constants.hpp>
 
 namespace c2d
 {
