@@ -7,8 +7,8 @@ namespace c2d
 
 struct Ray
 {
-    Vec2 p1;
-    Vec2 p2;
+    Vec2 start;
+    Vec2 end;
 };
 
 struct InfiniteRay
@@ -34,8 +34,8 @@ struct RaycastHit
         return RaycastHit<IdType>
         {
             id,
-            ray.p1 + (ray.p2 - ray.p1) * entryTime,
-            ray.p1 + (ray.p2 - ray.p1) * exitTime,
+            ray.start + (ray.end - ray.start) * entryTime,
+            ray.start + (ray.end - ray.start) * exitTime,
             entryTime,
             exitTime
         };
@@ -45,8 +45,8 @@ struct RaycastHit
         return RaycastHit<IdType>
         {
             id,
-            ray.p1 + (ray.p2 - ray.p1) * intersectionTimes.first,
-            ray.p1 + (ray.p2 - ray.p1) * intersectionTimes.second,
+            ray.start + (ray.end - ray.start) * intersectionTimes.first,
+            ray.start + (ray.end - ray.start) * intersectionTimes.second,
             intersectionTimes.first,
             intersectionTimes.second
         };

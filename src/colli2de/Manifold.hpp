@@ -18,15 +18,14 @@ struct ManifoldPoint
     Vec2 anchorA;     // Contact point relative to shape A origin
     Vec2 anchorB;     // Contact point relative to shape B origin
     float separation; // Negative if overlapping, positive if separated
-    uint16_t id{0};   // Used for persistent contact (feature id, if needed)
 
     // Constructors
     constexpr ManifoldPoint() = default;
 
     std::string toString() const
     {
-        return std::format("ManifoldPoint(point={}, anchorA={}, anchorB={}, separation={}, id={})",
-                           point.toString(), anchorA.toString(), anchorB.toString(), separation, id);
+        return std::format("ManifoldPoint(point={}, anchorA={}, anchorB={}, separation={})",
+                           point.toString(), anchorA.toString(), anchorB.toString(), separation);
     }
 };
 

@@ -273,16 +273,16 @@ std::set<std::pair<IdType, IdType>> BroadPhaseTree<IdType>::findAllCollisions() 
 template<typename IdType>
 std::optional<RaycastInfo<IdType>> BroadPhaseTree<IdType>::firstHitRaycast(Ray ray, BitMaskType maskBits) const
 {
-    const auto direction = ray.p2 - ray.p1;
+    const auto direction = ray.end - ray.start;
     const int32_t directionX = (direction.x > 0 ? cellSize : -cellSize);
     const int32_t directionY = (direction.y > 0 ? cellSize : -cellSize);
 
     const bool isParallelX = std::abs(direction.y) < 1e-6f;
     const bool isParallelY = std::abs(direction.x) < 1e-6f;
 
-    const GridCell lastCell = getCellFor(ray.p2, cellSize);
-    auto currentCell = getCellFor(ray.p1, cellSize);
-    auto currentPoint = ray.p1;
+    const GridCell lastCell = getCellFor(ray.end, cellSize);
+    auto currentCell = getCellFor(ray.start, cellSize);
+    auto currentPoint = ray.start;
 
     while (currentCell.x * directionX <= lastCell.x * directionX &&
            currentCell.y * directionY <= lastCell.y * directionY)
@@ -341,16 +341,16 @@ std::optional<RaycastInfo<IdType>> BroadPhaseTree<IdType>::firstHitRaycast(Infin
 template<typename IdType>
 std::set<RaycastInfo<IdType>> BroadPhaseTree<IdType>::piercingRaycast(Ray ray, BitMaskType maskBits) const
 {
-    const auto direction = ray.p2 - ray.p1;
+    const auto direction = ray.end - ray.start;
     const int32_t directionX = (direction.x > 0 ? cellSize : -cellSize);
     const int32_t directionY = (direction.y > 0 ? cellSize : -cellSize);
 
     const bool isParallelX = std::abs(direction.y) < 1e-6f;
     const bool isParallelY = std::abs(direction.x) < 1e-6f;
 
-    const GridCell lastCell = getCellFor(ray.p2, cellSize);
-    auto currentCell = getCellFor(ray.p1, cellSize);
-    auto currentPoint = ray.p1;
+    const GridCell lastCell = getCellFor(ray.end, cellSize);
+    auto currentCell = getCellFor(ray.start, cellSize);
+    auto currentPoint = ray.start;
 
     std::set<RaycastInfo<IdType>> hits;
 

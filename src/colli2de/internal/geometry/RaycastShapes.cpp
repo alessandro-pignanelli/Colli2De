@@ -14,8 +14,8 @@ std::optional<std::pair<float, float>> raycast(const Circle& circle,
                                                Ray ray)
 {
     const Vec2 center = transform.apply(circle.center);
-    const Vec2 rayDirection = ray.p2 - ray.p1;
-    const Vec2 fromStartToCenter = ray.p1 - center;
+    const Vec2 rayDirection = ray.end - ray.start;
+    const Vec2 fromStartToCenter = ray.start - center;
 
     const float directionLengthSq = rayDirection.dot(rayDirection);
     const float startProjection = fromStartToCenter.dot(rayDirection);
@@ -103,8 +103,8 @@ std::optional<std::pair<float, float>> raycast(const Segment& segment,
     const Vec2 point1 = transform.apply(segment.start);
     const Vec2 point2 = transform.apply(segment.end);
     const Vec2 segmentVector = point2 - point1;
-    const Vec2 rayVector = ray.p2 - ray.p1;
-    const Vec2 delta = ray.p1 - point1;
+    const Vec2 rayVector = ray.end - ray.start;
+    const Vec2 delta = ray.start - point1;
 
     const float crossSegRay = segmentVector.cross(rayVector);
     const float crossDeltaSeg = delta.cross(segmentVector);
@@ -150,7 +150,7 @@ std::optional<std::pair<float, float>> raycast(const Polygon& polygon,
                                                Transform transform,
                                                Ray ray)
 {
-    const Vec2 rayDirection = ray.p2 - ray.p1;
+    const Vec2 rayDirection = ray.end - ray.start;
 
     float lower = 0.0f;
     float upper = 1.0f;
@@ -158,7 +158,7 @@ std::optional<std::pair<float, float>> raycast(const Polygon& polygon,
     {
         const Vec2 vertex = transform.apply(polygon.vertices[i]);
         const Vec2 normal = transform.rotation.apply(polygon.normals[i]);
-        const float numerator = normal.dot(vertex - ray.p1);
+        const float numerator = normal.dot(vertex - ray.start);
         const float denominator = normal.dot(rayDirection);
 
         if (std::abs(denominator) < 1e-8f)
@@ -246,7 +246,7 @@ std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
         return Vec2{ diff.dot(axisUnit), diff.dot(side) };
     };
 
-    Ray localRay{ toLocal(ray.p1), toLocal(ray.p2) };
+    Ray localRay{ toLocal(ray.start), toLocal(ray.end) };
     AABB core{ Vec2{0.0f, -radius}, Vec2{length, radius} };
 
     float entryTime = std::numeric_limits<float>::max();

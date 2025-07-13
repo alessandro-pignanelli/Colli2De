@@ -5,7 +5,7 @@
 
 #include <colli2de/Ray.hpp>
 #include <colli2de/Shapes.hpp>
-#include <colli2de/internal/geometry/Transformations.hpp>
+#include <colli2de/Transform.hpp>
 
 namespace c2d
 {

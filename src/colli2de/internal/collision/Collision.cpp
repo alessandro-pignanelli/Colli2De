@@ -46,7 +46,6 @@ Manifold collide(const Circle& circleA,
     manifold.points[0].anchorA = transformA.toLocal(worldContact);
     manifold.points[0].anchorB = transformB.toLocal(worldContact);
     manifold.points[0].separation = distance - radius; // Negative = penetration
-    manifold.points[0].id = 0;
     manifold.pointCount = 1;
 
     return manifold;
@@ -101,7 +100,6 @@ Manifold collide(const Capsule& capsule,
     manifold.points[0].anchorA = transformA.toLocal(worldContact);
     manifold.points[0].anchorB = transformB.toLocal(worldContact);
     manifold.points[0].separation = distance - sumRadius; // Negative = penetration
-    manifold.points[0].id = 0;
     manifold.pointCount = 1;
 
     return manifold;
@@ -218,7 +216,6 @@ Manifold collide(const Capsule& capsuleA,
     manifold.points[0].anchorA = transformA.toLocal(worldContact);
     manifold.points[0].anchorB = transformB.toLocal(worldContact);
     manifold.points[0].separation = distance - radius;
-    manifold.points[0].id = 0;
     manifold.pointCount = 1;
 
     return manifold;
@@ -415,7 +412,6 @@ Manifold collide(const Polygon& polygonA,
         manifold.points[0].anchorA = transformA.toLocal(worldContact);
         manifold.points[0].anchorB = transformB.toLocal(worldContact);
         manifold.points[0].separation = -overlap;
-        manifold.points[0].id = 0;
         manifold.pointCount = 1;
         return manifold;
     }
@@ -430,7 +426,6 @@ Manifold collide(const Polygon& polygonA,
         manifold.points[i].anchorA = transformA.toLocal(contactPoint);
         manifold.points[i].anchorB = transformB.toLocal(contactPoint);
         manifold.points[i].separation = -overlap;
-        manifold.points[i].id = static_cast<uint16_t>(i);
     }
     manifold.pointCount = static_cast<uint8_t>(count);
 
@@ -512,7 +507,6 @@ Manifold collide(const Polygon& polygon,
     manifold.points[0].anchorA = transformA.toLocal(worldContact);
     manifold.points[0].anchorB = transformB.toLocal(worldContact);
     manifold.points[0].separation = isInside ? -(circle.radius + distance) : (distance - circle.radius);
-    manifold.points[0].id = 0;
     manifold.pointCount = 1;
 
     return manifold;
@@ -780,7 +774,7 @@ bool areColliding(const Polygon& polygon,
                   Transform transformB)
 {
     const Vec2 center = transformB.apply(circle.center);
-    
+
     if (isPointInsidePolygon(center, polygon, transformA))
         return true;
 

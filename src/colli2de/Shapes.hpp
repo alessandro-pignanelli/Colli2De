@@ -98,17 +98,32 @@ struct Polygon
     {
         for (uint8_t i = 0; i < count; ++i)
             vertices[i] = verts[i];
+        computeNormals();
     }
 
     constexpr ShapeType getType() const
     {
         return ShapeType::Polygon;
     }
+
+    constexpr void computeNormals()
+    {
+        const auto lastEdgeIndex = count - 1;
+        for (uint8_t i = 0; i < lastEdgeIndex; ++i)
+        {
+            const Vec2 edge = vertices[(i + 1)] - vertices[i];
+            normals[i] = Vec2::normalized(edge.y, -edge.x); // Right-hand normal (CCW)
+        }
+        {
+            const Vec2 edge = vertices[0] - vertices[lastEdgeIndex];
+            normals[lastEdgeIndex] = Vec2::normalized(edge.y, -edge.x); // Right-hand normal (CCW)
+        }
+    }
 };
 
 Polygon makeRectangle(Vec2 center, float halfWidth, float halfHeight, float angle = 0.0f);
 Polygon makeTriangle(Vec2 v0, Vec2 v1, Vec2 v2);
-Polygon makeRegularPolygon(Vec2 center, float radius, uint8_t n, float rotationAngle = 0.0f);
+Polygon makeRegularPolygon(uint8_t n, Vec2 center, float radius, float rotationAngle = 0.0f);
 Polygon makePolygon(const std::initializer_list<Vec2>& points);
 
 } // namespace c2d

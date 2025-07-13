@@ -30,16 +30,7 @@ Polygon makeRectangle(Vec2 center, float halfWidth, float halfHeight, float angl
         poly.vertices[i] = Vec2{ x, y };
     }
 
-    // Compute normals
-    for (uint8_t i = 0; i < 3; ++i)
-    {
-        const Vec2 edge = poly.vertices[(i + 1)] - poly.vertices[i];
-        poly.normals[i] = Vec2::normalized(edge.y, -edge.x); // Right-hand normal (CCW)
-    }
-    {
-        const Vec2 edge = poly.vertices[0] - poly.vertices[3];
-        poly.normals[3] = Vec2::normalized(edge.y, -edge.x); // Right-hand normal (CCW)
-    }
+    poly.computeNormals();
 
     return poly;
 }
@@ -53,22 +44,13 @@ Polygon makeTriangle(Vec2 v0, Vec2 v1, Vec2 v2)
     poly.vertices[1] = v1;
     poly.vertices[2] = v2;
 
-    // Normals (right hand, CCW)
-    for (uint8_t i = 0; i < 2; ++i)
-    {
-        const Vec2 edge = poly.vertices[(i + 1)] - poly.vertices[i];
-        poly.normals[i] = Vec2::normalized(edge.y, -edge.x);
-    }
-    {
-        const Vec2 edge = poly.vertices[0] - poly.vertices[2];
-        poly.normals[2] = Vec2::normalized(edge.y, -edge.x);
-    }
+    poly.computeNormals();
 
     return poly;
 }
 
 // --- Create a regular convex n-gon (centered at `center`, given radius, n >= 3) ---
-Polygon makeRegularPolygon(Vec2 center, float radius, uint8_t n, float rotationAngle)
+Polygon makeRegularPolygon(uint8_t n, Vec2 center, float radius, float rotationAngle)
 {
     assert(n >= 3 && n <= MAX_POLYGON_VERTICES);
 
@@ -82,22 +64,13 @@ Polygon makeRegularPolygon(Vec2 center, float radius, uint8_t n, float rotationA
         poly.vertices[i] = center + radius * Vec2{ std::cos(theta), std::sin(theta) };
     }
 
-    // Normals
-    for (uint8_t i = 0; i < n - 1; ++i)
-    {
-        const Vec2 edge = poly.vertices[(i + 1)] - poly.vertices[i];
-        poly.normals[i] = Vec2::normalized(edge.y, -edge.x);
-    }
-    {
-        const Vec2 edge = poly.vertices[0] - poly.vertices[n - 1];
-        poly.normals[n - 1] = Vec2::normalized(edge.y, -edge.x);
-    }
+    poly.computeNormals();
 
     return poly;
 }
 
 // --- Convex hull from a list of points (Graham scan or Andrew's monotone chain, stubbed here) ---
-// Note: Implement a real convex hull for robustness!
+// TODO: Implement a real convex hull for robustness!
 Polygon makePolygon(const std::initializer_list<Vec2>& points)
 {
     assert(points.size() >= 3 && points.size() <= MAX_POLYGON_VERTICES);
@@ -108,16 +81,7 @@ Polygon makePolygon(const std::initializer_list<Vec2>& points)
 
     std::copy(points.begin(), points.end(), poly.vertices.begin());
 
-    // Compute normals (CCW, right-hand)
-    for (uint8_t i = 0; i < poly.count - 1; ++i)
-    {
-        const Vec2 edge = poly.vertices[(i + 1)] - poly.vertices[i];
-        poly.normals[i] = Vec2::normalized(edge.y, -edge.x);
-    }
-    {
-        const Vec2 edge = poly.vertices[0] - poly.vertices[poly.count - 1];
-        poly.normals[poly.count - 1] = Vec2::normalized(edge.y, -edge.x);
-    }
+    poly.computeNormals();
 
     return poly;
 }

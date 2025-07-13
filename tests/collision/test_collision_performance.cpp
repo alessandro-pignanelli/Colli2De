@@ -5,7 +5,7 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 
 #include <colli2de/internal/collision/Collision.hpp>
-#include <colli2de/internal/geometry/Transformations.hpp>
+#include <colli2de/Transform.hpp>
 #include "utils/Performance.hpp"
 #include "utils/Random.hpp"
 

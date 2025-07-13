@@ -4,7 +4,7 @@
 
 #include <colli2de/Shapes.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
-#include <colli2de/internal/geometry/Transformations.hpp>
+#include <colli2de/Transform.hpp>
 
 namespace c2d
 {

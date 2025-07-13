@@ -3,8 +3,8 @@
 #include <functional>
 
 #include <colli2de/Shapes.hpp>
-#include <colli2de/internal/collision/Manifold.hpp>
-#include <colli2de/internal/geometry/Transformations.hpp>
+#include <colli2de/Manifold.hpp>
+#include <colli2de/Transform.hpp>
 
 namespace c2d
 {

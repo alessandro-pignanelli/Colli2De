@@ -50,12 +50,12 @@ std::optional<std::pair<float, float>> AABB::intersects(Ray ray) const
     // https://en.wikipedia.org/wiki/Slab_method
     float intersectionTimeMin = 0.0f;
     float intersectionTimeMax = 1.0f;
-    Vec2 direction = ray.p2 - ray.p1;
+    Vec2 direction = ray.end - ray.start;
 
     // X intersection
     {
         const float dir = direction.x;
-        const float origin = ray.p1.x;
+        const float origin = ray.start.x;
         if (std::abs(dir) < 1e-8f)
         {
             // Ray is parallel to X axis: only "inside" if origin is within [min.x, max.x]
@@ -82,7 +82,7 @@ std::optional<std::pair<float, float>> AABB::intersects(Ray ray) const
     // Y intersection (same as X)
     {
         const float dir = direction.y;
-        const float origin = ray.p1.y;
+        const float origin = ray.start.y;
         if (std::abs(dir) < 1e-8f)
         {
             if (origin < min.y || origin > max.y)

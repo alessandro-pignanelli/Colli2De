@@ -6,10 +6,10 @@
 
 #include <colli2de/Ray.hpp>
 #include <colli2de/Shapes.hpp>
-#include <colli2de/internal/collision/Manifold.hpp>
+#include <colli2de/Manifold.hpp>
+#include <colli2de/Transform.hpp>
 #include <colli2de/internal/data_structures/BroadPhaseTree.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
-#include <colli2de/internal/geometry/Transformations.hpp>
 #include <colli2de/internal/geometry/ShapesUtils.hpp>
 #include <colli2de/internal/geometry/RaycastShapes.hpp>
 #include <colli2de/internal/collision/Collision.hpp>
