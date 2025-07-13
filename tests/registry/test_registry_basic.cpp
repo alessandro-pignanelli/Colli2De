@@ -1,3 +1,4 @@
+#include <map>
 #include <catch2/catch_test_macros.hpp>
 
 #include <colli2de/Registry.hpp>
@@ -8,14 +9,15 @@ using namespace c2d;
 TEST_CASE("Registry entity creation and shape management", "[Registry][Basic]")
 {
     Registry<int> reg;
+    std::map<int, ShapeId> shapeIds;
 
     // SECTION("Create and add shapes to an entity, non-colliding")
     {
         reg.createEntity(1, BodyType::Static, Transform({0.0f, 0.0f}));
-        reg.addShape(1, Circle{ {0.0f, 0.0f}, 1.0f });
+        shapeIds[1] = reg.addShape(1, Circle{ {0.0f, 0.0f}, 1.0f });
         reg.createEntity(2, BodyType::Dynamic, Transform({3.0f, 0.0f}));
-        reg.addShape(2, Circle{ {0.0f, 0.0f}, 1.0f });
-        
+        shapeIds[2] = reg.addShape(2, Circle{ {0.0f, 0.0f}, 1.0f });
+
         CHECK_FALSE(reg.areColliding(1, 2));
     }
 
@@ -29,11 +31,11 @@ TEST_CASE("Registry entity creation and shape management", "[Registry][Basic]")
     {
         // Colliding with 1 and 2
         reg.createEntity(3, BodyType::Dynamic, Transform({2.0f, 0.0f}));
-        reg.addShape(3, Circle{ {0.0f, 0.0f}, 1.0f });
+        shapeIds[3] = reg.addShape(3, Circle{ {0.0f, 0.0f}, 1.0f });
 
         // Colliding with 2
         reg.createEntity(4, BodyType::Dynamic, Transform({1.0f, 2.0f}));
-        reg.addShape(4, Circle{ {0.0f, 0.0f}, 1.0f });
+        shapeIds[4] = reg.addShape(4, Circle{ {0.0f, 0.0f}, 1.0f });
 
         // Not colliding
         reg.createEntity(5, BodyType::Dynamic, Transform({1.0f, 5.0f}));
@@ -60,6 +62,23 @@ TEST_CASE("Registry entity creation and shape management", "[Registry][Basic]")
             };
             CHECK(std::find_if(collisions.begin(), collisions.end(), findCollision) != collisions.end());
         }
+    }
+
+    // SECTION("Set inactive shapes and check collisions")
+    {
+        reg.setShapeActive(shapeIds[2], false);
+        CHECK(reg.getCollidingPairs().size() == 1); // Only {1, 3} should collide now
+        CHECK(reg.areColliding(1, 3));
+        CHECK_FALSE(reg.areColliding(1, 2));
+        CHECK_FALSE(reg.areColliding(2, 3));
+        CHECK_FALSE(reg.areColliding(2, 4));
+
+        reg.setShapeActive(shapeIds[2]);
+        CHECK(reg.getCollidingPairs().size() == 4); // All pairs should collide again
+        CHECK(reg.areColliding(1, 2));
+        CHECK(reg.areColliding(1, 3));
+        CHECK(reg.areColliding(2, 3));
+        CHECK(reg.areColliding(2, 4));
     }
 
     // SECTION("Remove shapes and check collisions")

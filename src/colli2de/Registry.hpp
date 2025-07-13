@@ -45,6 +45,7 @@ public:
     template <IsShape Shape>
     ShapeId addShape(EntityId entityId, const Shape& shape, uint64_t categoryBits = 1, uint64_t maskBits = ~0ull);
     void removeShape(ShapeId shapeId);
+    void setShapeActive(ShapeId shapeId, bool isActive = true);
 
     void teleportEntity(EntityId id, const Transform& transform);
     void teleportEntity(EntityId id, Vec2 translation);
@@ -73,6 +74,7 @@ private:
         BroadPhaseTreeHandle treeHandle = {};
         BitMaskType categoryBits = {1};
         BitMaskType maskBits = {~0ull};
+        bool isActive = true;
     };
 
     struct EntityInfo
@@ -181,6 +183,18 @@ void Registry<EntityId>::removeShape(ShapeId shapeId)
 
     freeShapeIds.push_back(shapeId);
     entity.shapes.erase(it);
+}
+
+template<typename EntityId>
+void Registry<EntityId>::setShapeActive(ShapeId shapeId, bool isActive)
+{
+    assert(shapeEntity.size() > shapeId && "Shape ID out of bounds");
+    const auto [entityId, shapeIndex] = shapeEntity.at(shapeId);
+
+    assert(entities.find(entityId) != entities.end() && "Entity with this ID does not exist");
+    EntityInfo& entity = entities.at(entityId);
+
+    entity.shapes[shapeIndex].isActive = isActive;
 }
 
 template<typename EntityId>
@@ -338,8 +352,11 @@ void Registry<EntityId>::narrowPhaseCollisions(const std::vector<ShapeId>& shape
             const auto [otherEntityId, otherShapeIndex] = shapeEntity[otherShapeId];
             const auto& queryEntity = entities.at(queryEntityId);
             const auto& otherEntity = entities.at(otherEntityId);
-            const auto& queryShape = queryEntity.shapes[queryShapeIndex].shape;
-            const auto& otherShape = otherEntity.shapes[otherShapeIndex].shape;
+            const auto& queryShape = queryEntity.shapes[queryShapeIndex];
+            const auto& otherShape = otherEntity.shapes[otherShapeIndex];
+
+            if (!queryShape.isActive || !otherShape.isActive)
+                continue;
             
             Manifold manifold;
 
@@ -355,7 +372,7 @@ void Registry<EntityId>::narrowPhaseCollisions(const std::vector<ShapeId>& shape
                         const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
                                                               otherShapeConcrete, otherEntity.transform);
                         return sweepManifold ? sweepManifold->manifold : Manifold{};
-                    }, queryShape, otherShape);
+                    }, queryShape.shape, otherShape.shape);
                 }
                 else
                 {
@@ -366,14 +383,14 @@ void Registry<EntityId>::narrowPhaseCollisions(const std::vector<ShapeId>& shape
                         const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
                                                               otherShapeConcrete, otherPreviousTransform, otherCurrentTransform);
                         return sweepManifold ? sweepManifold->manifold : Manifold{};
-                    }, queryShape, otherShape);
+                    }, queryShape.shape, otherShape.shape);
                 }
             }
             else
             {
                 manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
                     return c2d::collide(queryShapeConcrete, queryEntity.transform, otherShapeConcrete, otherEntity.transform);
-                }, queryShape, otherShape);
+                }, queryShape.shape, otherShape.shape);
             }
 
             if (!manifold.isColliding())
@@ -410,6 +427,9 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
         {
             for (const auto& shape : entity.shapes)
             {
+                if (!shape.isActive)
+                    continue;
+
                 queries.emplace_back(shape.aabb, shape.maskBits);
                 shapesQueried.push_back(shape.id);
             }
@@ -422,6 +442,9 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
             const auto deltaTransform = previousTransform - currentTransform;
             for (const auto& shape : entity.shapes)
             {
+                if (!shape.isActive)
+                    continue;
+                
                 const auto previousAABB = shape.aabb.translated(deltaTransform.translation);
                 sweepQueries.emplace_back(shape.aabb, previousAABB, shape.maskBits);
                 shapesSweepQueried.push_back(shape.id);
@@ -463,16 +486,18 @@ void Registry<EntityId>::narrowPhaseCollisionsPairs(
         const auto [entityBId, shapeBIndex] = shapeEntity[shapeBId];
         const auto& entityA = entities.at(entityAId);
         const auto& entityB = entities.at(entityBId);
-        const auto& shapeA = entityA.shapes[shapeAIndex].shape;
-        const auto& shapeB = entityB.shapes[shapeBIndex].shape;
+        const auto& shapeA = entityA.shapes[shapeAIndex];
+        const auto& shapeB = entityB.shapes[shapeBIndex];
+
+        if (!shapeA.isActive || !shapeB.isActive)
+            continue;
 
         const Manifold manifold = std::visit(
             [&](const auto& concreteA, const auto& concreteB)
             {
                 return c2d::collide(concreteA, entityA.transform, concreteB, entityB.transform);
             },
-            shapeA,
-            shapeB);
+            shapeA.shape, shapeB.shape);
 
         if (!manifold.isColliding())
             continue;
@@ -505,6 +530,9 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
 
         for (const auto& shape : entity.shapes)
         {
+            if (!shape.isActive)
+                continue;
+                
             const auto previousAABB = shape.aabb.translated(deltaTransform.translation);
             sweepQueries.emplace_back(shape.aabb, previousAABB, shape.maskBits);
             shapesSweepQueried.push_back(shape.id);
@@ -532,6 +560,9 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
 
     for (const auto& shape : entity.shapes)
     {
+        if (!shape.isActive)
+            continue;
+        
         queries.emplace_back(shape.aabb, shape.maskBits);
         shapesQueried.push_back(shape.id);
     }
@@ -556,6 +587,9 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
 
         for (const auto& bulletShape : otherEntity.shapes)
         {
+            if (!bulletShape.isActive)
+                continue;
+                
             for (const auto& shape : entity.shapes)
             {
                 std::optional<SweepManifold> manifold = std::visit([&](const auto& queryShapeConcrete, const auto& bulletShapeConcrete) {
@@ -601,8 +635,14 @@ bool Registry<EntityId>::areColliding(EntityId a, EntityId b)
         Manifold manifold;
         for (const auto& shapeA : entityA.shapes)
         {
+            if (!shapeA.isActive)
+                continue;
+                
             for (const auto& shapeB : entityB.shapes)
             {
+                if (!shapeB.isActive)
+                    continue;
+                
                 std::optional<SweepManifold> manifold = std::visit([&](const auto& shapeAConcrete, const auto& shapeBConcrete) {
                     return c2d::sweep(shapeAConcrete, entityAPreviousTransform, entityACurrentTransform,
                                       shapeBConcrete, entityBPreviousTransform, entityBCurrentTransform);
@@ -626,8 +666,14 @@ bool Registry<EntityId>::areColliding(EntityId a, EntityId b)
 
         for (const auto& shapeBullet : bulletEntity.shapes)
         {
+            if (!shapeBullet.isActive)
+                continue;
+                
             for (const auto& shapeOther : otherEntity.shapes)
             {
+                if (!shapeOther.isActive)
+                    continue;
+
                 std::optional<SweepManifold> manifold = std::visit([&](const auto& shapeBulletConcrete, const auto& shapeOtherConcrete) {
                     return c2d::sweep(shapeBulletConcrete, bulletPreviousTransform, bulletCurrentTransform,
                                       shapeOtherConcrete, otherEntity.transform);
@@ -643,8 +689,14 @@ bool Registry<EntityId>::areColliding(EntityId a, EntityId b)
 
     for (const auto& shapeA : entityA.shapes)
     {
+        if (!shapeA.isActive)
+            continue;
+
         for (const auto& shapeB : entityB.shapes)
         {
+            if (!shapeB.isActive)
+                continue;
+
             bool colliding = std::visit([&](const auto& shapeA, const auto& shapeB) {
                 return c2d::areColliding(shapeA, entityA.transform, shapeB, entityB.transform);
             }, shapeA.shape, shapeB.shape);
@@ -670,11 +722,14 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
         const auto& entity = entities[entityId];
-        const auto& shape = entity.shapes[shapeInfo.second].shape;
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
         
         const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
             return raycast(shapeConcrete, entity.transform, ray);
-        }, shape);
+        }, shape.shape);
         
         if (narrowHit && narrowHit->first < bestEntryTime)
         {
@@ -688,11 +743,14 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
         const auto& entity = entities[entityId];
-        const auto& shape = entity.shapes[shapeInfo.second].shape;
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
         
         const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
             return raycast(shapeConcrete, entity.transform, ray);
-        }, shape);
+        }, shape.shape);
 
         if (narrowHit && narrowHit->first < bestEntryTime)
         {
@@ -718,11 +776,14 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
         const auto& entity = entities[entityId];
-        const auto& shape = entity.shapes[shapeInfo.second].shape;
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
         
         const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
             return raycast(shapeConcrete, entity.transform, ray);
-        }, shape);
+        }, shape.shape);
 
         if (narrowHit && narrowHit->first < bestEntryTime)
         {
@@ -741,11 +802,14 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
         const auto& entity = entities[entityId];
-        const auto& shape = entity.shapes[shapeInfo.second].shape;
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
         
         const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
             return raycast(shapeConcrete, entity.transform, ray);
-        }, shape);
+        }, shape.shape);
         
         if (narrowHit && narrowHit->first < bestEntryTime)
         {
@@ -777,11 +841,14 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(R
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
         const auto& entity = entities[entityId];
-        const auto& shape = entity.shapes[shapeInfo.second].shape;
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
         
         const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
             return raycast(shapeConcrete, entity.transform, ray);
-        }, shape);
+        }, shape.shape);
 
         if (narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
@@ -792,11 +859,14 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(R
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
         const auto& entity = entities[entityId];
-        const auto& shape = entity.shapes[shapeInfo.second].shape;
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
         
         const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
             return raycast(shapeConcrete, entity.transform, ray);
-        }, shape);
+        }, shape.shape);
 
         if (!narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
@@ -819,11 +889,14 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(I
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
         const auto& entity = entities[entityId];
-        const auto& shape = entity.shapes[shapeInfo.second].shape;
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
         
         const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
             return raycast(shapeConcrete, entity.transform, ray);
-        }, shape);
+        }, shape.shape);
         
         if (narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
@@ -834,11 +907,14 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(I
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
         const auto& entity = entities[entityId];
-        const auto& shape = entity.shapes[shapeInfo.second].shape;
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
         
         const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
             return raycast(shapeConcrete, entity.transform, ray);
-        }, shape);
+        }, shape.shape);
         
         if (narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
