@@ -71,7 +71,7 @@ TEST_CASE("Polygon raycast through square", "[Raycast][Polygon]")
 TEST_CASE("Polygon infinite ray starting inside", "[Raycast][Polygon]")
 {
     std::array<Vec2,3> verts{ Vec2{0,0}, Vec2{2,0}, Vec2{1,2} };
-    Polygon tri{ verts, 3, 0.0f };
+    Polygon tri{ verts, 3 };
     InfiniteRay ray{ Vec2{1.0f, 1.0f}, Vec2{0.0f, 1.0f} };
 
     const auto result = raycast(tri, Transform{}, ray);

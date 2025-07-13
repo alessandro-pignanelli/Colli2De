@@ -62,9 +62,6 @@ inline AABB computeAABB(const Polygon& polygon, const Transform& transform)
         maxVertex.y = std::max(maxVertex.y, vertex.y);
     }
 
-    // Expand for polygon radius (rounded polygons)
-    minVertex = minVertex - polygon.radius;
-    maxVertex = maxVertex + polygon.radius;
     return AABB{minVertex, maxVertex};
 }
 

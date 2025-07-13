@@ -86,16 +86,15 @@ struct Segment
 struct Polygon
 {
     std::array<Vec2, MAX_POLYGON_VERTICES> vertices{};
-    std::array<Vec2, MAX_POLYGON_VERTICES> normals{}; // Outward edge normals (optional, for SAT)
+    std::array<Vec2, MAX_POLYGON_VERTICES> normals{}; // Outward edge normals (for SAT)
     uint8_t count{0}; // Number of vertices actually used
-    float radius{0}; // Rounding radius (for Minkowski sum)
 
     constexpr Polygon() = default;
 
-    // Polygon with N vertices (radius optional)
+    // Polygon with N vertices
     template<std::size_t N>
-    constexpr Polygon(const std::array<Vec2, N>& verts, uint8_t count, float radius = 0)
-        requires(N <= MAX_POLYGON_VERTICES) : count(count), radius(radius)
+    constexpr Polygon(const std::array<Vec2, N>& verts, uint8_t count)
+        requires(N <= MAX_POLYGON_VERTICES) : count(count)
     {
         for (uint8_t i = 0; i < count; ++i)
             vertices[i] = verts[i];
@@ -107,9 +106,9 @@ struct Polygon
     }
 };
 
-Polygon makeRectangle(Vec2 center, float halfWidth, float halfHeight, float angle = 0.0f, float radius = 0.0f);
-Polygon makeTriangle(Vec2 v0, Vec2 v1, Vec2 v2, float radius = 0.0f);
-Polygon makeRegularPolygon(Vec2 center, float radius, uint8_t n, float angle = 0.0f, float rounding = 0.0f);
-Polygon makePolygon(const std::initializer_list<Vec2>& points, float radius = 0.0f);
+Polygon makeRectangle(Vec2 center, float halfWidth, float halfHeight, float angle = 0.0f);
+Polygon makeTriangle(Vec2 v0, Vec2 v1, Vec2 v2);
+Polygon makeRegularPolygon(Vec2 center, float radius, uint8_t n, float rotationAngle = 0.0f);
+Polygon makePolygon(const std::initializer_list<Vec2>& points);
 
 } // namespace c2d

@@ -460,7 +460,6 @@ Manifold collide(const Polygon& polygon,
     Manifold manifold{};
 
     const Vec2 center = transformB.apply(circle.center);
-    const float combinedRadius = circle.radius + polygon.radius;
 
     float minDistSq = std::numeric_limits<float>::max();
     Vec2 closest{ 0.0f, 0.0f };
@@ -495,9 +494,7 @@ Manifold collide(const Polygon& polygon,
     }
 
     const bool isInside = isPointInsidePolygon(center, polygon, transformA);
-    const float radius = combinedRadius;
-
-    if (!isInside && minDistSq > radius * radius)
+    if (!isInside && minDistSq > circle.radius * circle.radius)
         return manifold;
 
     const float distance = std::sqrt(minDistSq);
@@ -514,7 +511,7 @@ Manifold collide(const Polygon& polygon,
     manifold.points[0].point = worldContact;
     manifold.points[0].anchorA = transformA.toLocal(worldContact);
     manifold.points[0].anchorB = transformB.toLocal(worldContact);
-    manifold.points[0].separation = isInside ? -(circle.radius + distance) : (distance - radius);
+    manifold.points[0].separation = isInside ? -(circle.radius + distance) : (distance - circle.radius);
     manifold.points[0].id = 0;
     manifold.pointCount = 1;
 
@@ -546,7 +543,6 @@ Manifold collide(const Capsule& capsule,
     capsulePoly.normals[0] = normal;
     capsulePoly.normals[1] = -normal;
     capsulePoly.count = 2;
-    capsulePoly.radius = capsule.radius;
 
     return collide(capsulePoly, transformA, polygon, transformB);
 }
@@ -784,9 +780,9 @@ bool areColliding(const Polygon& polygon,
                   Transform transformB)
 {
     const Vec2 center = transformB.apply(circle.center);
-    const float combinedRadius = circle.radius + polygon.radius;
-
-    float minDistSq = std::numeric_limits<float>::max();
+    
+    if (isPointInsidePolygon(center, polygon, transformA))
+        return true;
 
     for (uint8_t i = 0; i < polygon.count; ++i)
     {
@@ -803,17 +799,11 @@ bool areColliding(const Polygon& polygon,
         const Vec2 delta = center - pointOnEdge;
         const float distSq = delta.lengthSqr();
 
-        if (distSq < minDistSq)
-            minDistSq = distSq;
+        if (distSq <= circle.radius * circle.radius)
+            return true;
     }
 
-    const bool inside = isPointInsidePolygon(center, polygon, transformA);
-    const float radius = combinedRadius;
-
-    if (!inside && minDistSq > radius * radius)
-        return false;
-
-    return true;
+    return false;
 }
 
 bool areColliding(const Circle& circle,
@@ -838,7 +828,6 @@ bool areColliding(const Capsule& capsule,
     capsulePoly.normals[0] = normal;
     capsulePoly.normals[1] = -normal;
     capsulePoly.count = 2;
-    capsulePoly.radius = capsule.radius;
 
     return areColliding(capsulePoly, transformA, polygon, transformB);
 }
