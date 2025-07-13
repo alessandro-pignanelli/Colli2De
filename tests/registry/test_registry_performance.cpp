@@ -78,7 +78,7 @@ TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
         reg.addShape(i, circles[i]);
     }
 
-    BENCHMARK_FUNCTION("Registry | Move 100k entities", 80ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Move 100k entities", 130ms, [&]()
     {
         for(uint32_t i = 0; i < 100'000; ++i)
             reg.moveEntity(i, Transform(translations[i]));

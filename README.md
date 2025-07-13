@@ -681,15 +681,17 @@ Colli2De uses a broad-phase collision detection algorithm to quickly eliminate p
     - The AABB (Axis-Aligned Bounding Box) of the shape is computed and stored in the entity's entry.
     - If the shape belongs to a static entity, the AABB is added to the static `BroadPhaseTree`.
     - If the shape belongs to a dynamic entity, the AABB is added to the dynamic `BroadPhaseTree`.
-    - If the shape belongs to a bullet entity, the AABB is stored in a `std::vector` within the entity's entry.
+    - If the shape belongs to a bullet entity, the AABB is added to the bullet `BroadPhaseTree`.
 3. **Entity movement**:
     - The entity's position and rotation are updated in the registry.
-    - The AABB of the entity is updated based on the new position and rotation.
+    - For dynamic entities, the AABB of the entity is updated based on the new position and rotation.
+    - For bullet entities, the AABB is created to cover the entire movement path of the entity, allowing for swept collision detection.
     - The AABB is reinserted into the right `BroadPhaseTree` based on the entity's BodyType.
 4. **Collision detection**:
     - For each dynamic or bullet entity, the broad-phase algorithm:
         - Checks for potential collisions by querying the static `BroadPhaseTree` for overlapping AABBs.
         - Checks for potential collisions by querying the dynamic `BroadPhaseTree` for overlapping AABBs.
+        - Checks for potential collisions by querying the bullet `BroadPhaseTree` for overlapping AABBs.
     - For each pair of potential colliding entities, the narrow-phase algorithm:
         - Computes the actual collision by checking if the shapes are overlapping based on their AABBs.
         - If they are overlapping, it computes the collision manifold and stores it in the `EntityCollision` structure.
