@@ -2,8 +2,9 @@
 
 #include <functional>
 
-#include <colli2de/Shapes.hpp>
 #include <colli2de/Manifold.hpp>
+#include <colli2de/Ray.hpp>
+#include <colli2de/Shapes.hpp>
 #include <colli2de/Transform.hpp>
 
 namespace c2d
@@ -166,10 +167,9 @@ bool areColliding(const Segment& segment,
 // --- Sweep collision detection ---
 inline std::optional<float> sweepHelper(Transform startTransform,
                                         Transform endTransform,
-                                        Transform targetTransform,
-                                        const std::function<bool(const Transform&, const Transform&)>& areColliding)
+                                        const std::function<bool(const Transform&)>& isColliding)
 {
-    if (areColliding(startTransform, targetTransform))
+    if (isColliding(startTransform))
         return 0.0f;
 
     const Transform deltaTransform = endTransform - startTransform;
@@ -186,7 +186,7 @@ inline std::optional<float> sweepHelper(Transform startTransform,
         currentTransform.translation = startTransform.translation + deltaTransform.translation * testFraction;
         currentTransform.rotation = startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * testFraction;
 
-        if (areColliding(currentTransform, targetTransform))
+        if (isColliding(currentTransform))
         {
             fractionLower = static_cast<float>(stepIndex - 1) / static_cast<float>(coarseSteps);
             fractionUpper = testFraction;
@@ -204,7 +204,7 @@ inline std::optional<float> sweepHelper(Transform startTransform,
         currentTransform.translation = startTransform.translation + deltaTransform.translation * midFraction;
         currentTransform.rotation = startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * midFraction;
 
-        if (areColliding(currentTransform, targetTransform))
+        if (isColliding(currentTransform))
             fractionUpper = midFraction;
         else
             fractionLower = midFraction;
@@ -286,16 +286,14 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape,
                                    const ShapeB& targetShape,
                                    Transform targetTransform)
 {
-
-    const auto areCollidingFunc = [&](const Transform& transformShapeA, const Transform& transformShapeB) -> bool
+    const auto isCollidingFunc = [&](const Transform& sweepTransform) -> bool
     {
-        return areColliding(movingShape, transformShapeA, targetShape, transformShapeB);
+        return areColliding(movingShape, sweepTransform, targetShape, targetTransform);
     };
 
     std::optional<float> collisionFraction = sweepHelper(startTransform,
                                                          endTransform,
-                                                         targetTransform,
-                                                         areCollidingFunc);
+                                                         isCollidingFunc);
     if (!collisionFraction)
         return std::nullopt;
 
@@ -335,6 +333,28 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape1,
                                 startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * *collisionFraction};
 
     return SweepManifold{*collisionFraction, collide(movingShape1, targetTransform1, movingShape2, targetTransform2)};
+}
+
+template <IsShape ShapeA, IsRay RayType>
+std::optional<std::pair<float, float>> sweep(const ShapeA& movingShape,
+                                             Transform startTransform,
+                                             Transform endTransform,
+                                             RayType ray)
+{
+    std::optional<std::pair<float, float>> raycastResult = std::nullopt;
+    const auto isCollidingFunc = [&](const Transform& sweepTransform) -> bool
+    {
+        const auto currentRaycastResult = raycast(movingShape, sweepTransform, ray);
+        if (currentRaycastResult)
+        {
+            raycastResult = currentRaycastResult;
+            return true;
+        }
+        return false;
+    };
+
+    sweepHelper(startTransform, endTransform, isCollidingFunc);
+    return raycastResult;
 }
 
 } // namespace c2d

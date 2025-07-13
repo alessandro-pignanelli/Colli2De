@@ -724,11 +724,14 @@ bool Registry<EntityId>::areColliding(EntityId a, EntityId b)
 template<typename EntityId>
 std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firstHitRayCast(Ray ray, BitMaskType maskBits)
 {
-    const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
-    const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
     std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> bestHit;
     float bestEntryTime = std::numeric_limits<float>::max();
 
+    const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
+    const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
+    const auto bulletHits = treeBullet.piercingRaycast(ray, maskBits);
+
+    uint32_t toCheck = staticHits.size();
     for (const auto& hit : staticHits)
     {
         const auto& shapeInfo = shapeEntity[hit.id];
@@ -747,9 +750,14 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
         {
             bestEntryTime = narrowHit->first;
             bestHit = RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit);
+            toCheck = 5; // Check 5 other hits after finding the first one
         }
+
+        if (--toCheck == 0)
+            break;
     }
 
+    toCheck = dynamicHits.size();
     for (const auto& hit : dynamicHits)
     {
         const auto& shapeInfo = shapeEntity[hit.id];
@@ -768,10 +776,43 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
         {
             bestEntryTime = narrowHit->first;
             bestHit = RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit);
+            toCheck = 5; // Check 5 other hits after finding the first one
         }
-    }
+        else if (narrowHit->first >= bestEntryTime)
+            toCheck = std::min(toCheck, 5u); // If the hit is not better, check 5 more hits
 
-    // TODO: Bullets
+        if (--toCheck == 0)
+            break;
+    }
+    
+    toCheck = bulletHits.size();
+    for (const auto& hit : bulletHits)
+    {
+        const auto& shapeInfo = shapeEntity[hit.id];
+        const auto entityId = shapeInfo.first;
+        const auto& entity = entities[entityId];
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
+        
+        const auto& previousTransform = bulletPreviousTransforms.at(entityId);
+        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
+            return sweep(shapeConcrete, previousTransform, entity.transform, ray);
+        }, shape.shape);
+
+        if (narrowHit && narrowHit->first < bestEntryTime)
+        {
+            bestEntryTime = narrowHit->first;
+            bestHit = RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit);
+            toCheck = 5; // Check 5 other hits after finding the first one
+        }
+        else if (narrowHit->first >= bestEntryTime)
+            toCheck = std::min(toCheck, 5u); // If the hit is not better, check 5 more hits
+
+        if (--toCheck == 0)
+            break;
+    }
 
     return bestHit;
 }
@@ -781,6 +822,8 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
 {
     const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
     const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
+    const auto bulletHits = treeBullet.piercingRaycast(ray, maskBits);
+
     std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> bestHit;
     float bestEntryTime = std::numeric_limits<float>::max();
 
@@ -837,8 +880,35 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
         if (--toCheck == 0)
             break;
     }
+    
+    toCheck = bulletHits.size();
+    for (const auto& hit : bulletHits)
+    {
+        const auto& shapeInfo = shapeEntity[hit.id];
+        const auto entityId = shapeInfo.first;
+        const auto& entity = entities[entityId];
+        const auto& shape = entity.shapes[shapeInfo.second];
 
-    // TODO: Bullets
+        if (!shape.isActive)
+            continue;
+        
+        const auto& previousTransform = bulletPreviousTransforms.at(entityId);
+        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
+            return sweep(shapeConcrete, previousTransform, entity.transform, ray);
+        }, shape.shape);
+
+        if (narrowHit && narrowHit->first < bestEntryTime)
+        {
+            bestEntryTime = narrowHit->first;
+            bestHit = RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit);
+            toCheck = 5; // Check 5 other hits after finding the first one
+        }
+        else if (narrowHit->first >= bestEntryTime)
+            toCheck = std::min(toCheck, 5u); // If the hit is not better, check 5 more hits
+
+        if (--toCheck == 0)
+            break;
+    }
 
     return bestHit;
 }
@@ -848,6 +918,8 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(R
 {
     const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
     const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
+    const auto bulletHits = treeBullet.piercingRaycast(ray, maskBits);
+
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> hits;
 
     for (const auto& hit : staticHits)
@@ -882,11 +954,28 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(R
             return raycast(shapeConcrete, entity.transform, ray);
         }, shape.shape);
 
-        if (!narrowHit)
+        if (narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
     }
 
-    // TODO: Bullets
+    for (const auto& hit : bulletHits)
+    {
+        const auto& shapeInfo = shapeEntity[hit.id];
+        const auto entityId = shapeInfo.first;
+        const auto& entity = entities[entityId];
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
+        
+        const auto& previousTransform = bulletPreviousTransforms.at(entityId);
+        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
+            return sweep(shapeConcrete, previousTransform, entity.transform, ray);
+        }, shape.shape);
+
+        if (narrowHit)
+            hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
+    }
 
     return hits;
 }
@@ -896,6 +985,8 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(I
 {
     const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
     const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
+    const auto bulletHits = treeBullet.piercingRaycast(ray, maskBits);
+
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> hits;
     
     for (const auto& hit : staticHits)
@@ -934,7 +1025,24 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(I
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
     }
 
-    // TODO: Bullets
+    for (const auto& hit : bulletHits)
+    {
+        const auto& shapeInfo = shapeEntity[hit.id];
+        const auto entityId = shapeInfo.first;
+        const auto& entity = entities[entityId];
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
+        
+        const auto& previousTransform = bulletPreviousTransforms.at(entityId);
+        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
+            return sweep(shapeConcrete, previousTransform, entity.transform, ray);
+        }, shape.shape);
+
+        if (narrowHit)
+            hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
+    }
 
     return hits;
 }
