@@ -30,25 +30,27 @@ using namespace Catch;
     }; \
     const auto elapsedAvg = std::accumulate(elapsedTimes.begin(), elapsedTimes.end(), microseconds(0)) / elapsedTimes.size(); \
     CHECK(elapsedAvg <= threshold); \
-    printElapsed(elapsedAvg, threshold); \
-    storeBenchmark(name, elapsedTimes, threshold); \
+    c2d::test::printElapsed(elapsedAvg, threshold); \
+    c2d::test::storeBenchmark(name, elapsedTimes, threshold); \
 }
 
 #else
 
 #define __BENCHMARK_FUNCTION(name, threshold, func, reset, ...) \
 { \
+    c2d::test::println("Running benchmark only once: \"{}\"", name); \
     (reset)(); \
-    const auto start = high_resolution_clock::now(); \
     const auto result = (func)(); \
-    const auto end = high_resolution_clock::now(); \
-    const auto elapsed = duration_cast<microseconds>(end - start); \
-    printElapsed(elapsed, threshold); \
 }
 
 #endif
 
 #define BENCHMARK_FUNCTION(...) __BENCHMARK_FUNCTION(__VA_ARGS__, [](){})
+
+namespace c2d
+{
+namespace test
+{
 
 struct BenchmarkResult
 {
@@ -97,7 +99,7 @@ namespace
             return err;
 
         std::filesystem::create_directories(dirName, err);
-        println("Error: {}", err.message());
+        c2d::test::println("Error: {}", err.message());
 
         return err;
     }
@@ -130,8 +132,8 @@ inline void exportBenchmarks(const std::filesystem::path& filePath)
     maxBenchmarkNameLength = std::max(maxBenchmarkNameLength, static_cast<int>(benchmarkNameStr.size()));
 
     #define println2(...) \
-        printlnFile(file, __VA_ARGS__); \
-        println(__VA_ARGS__)
+        _printlnFile(file, __VA_ARGS__); \
+        c2d::test::println(__VA_ARGS__)
 
     // Header
     println2("{:<{}} | Status | Threshold (ms) | Avg (ms) | Min (ms) | Max (ms) |",
@@ -161,4 +163,7 @@ inline void exportBenchmarks(const std::filesystem::path& filePath)
     }
 
     #undef println2
+}
+
+}
 }

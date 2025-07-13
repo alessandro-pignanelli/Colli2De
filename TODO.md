@@ -6,4 +6,4 @@
     - Use SAH to construct a shallower, higher-quality tree
     - Store data in a flat array instead of pointers for fast access
 - Narrow-phase collision detection in parallel inside the Registry class (atm only broad-phase is parallelized)
-- Bullet vs Bullet collision detection
+- Bullet raycasting

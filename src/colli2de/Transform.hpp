@@ -101,15 +101,17 @@ public:
     }
 };
 
+using Translation = Vec2;
+
 struct Transform
 {
-    Vec2 translation{};
+    Translation translation{};
     Rotation rotation{};
 
     constexpr Transform() = default;
-    constexpr Transform(Vec2 translation) : translation(translation), rotation() {}
-    constexpr Transform(Vec2 translation, float angleRadians) : translation(translation), rotation(angleRadians) {}
-    constexpr Transform(Vec2 translation, Rotation rotation) : translation(translation), rotation(rotation) {}
+    constexpr Transform(Translation translation) : translation(translation), rotation() {}
+    constexpr Transform(Translation translation, float angleRadians) : translation(translation), rotation(angleRadians) {}
+    constexpr Transform(Translation translation, Rotation rotation) : translation(translation), rotation(rotation) {}
 
     // Transform a vector (rotate then translate)
     constexpr Vec2 apply(Vec2 vec) const

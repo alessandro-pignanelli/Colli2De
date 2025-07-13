@@ -169,6 +169,9 @@ std::set<IdType> BroadPhaseTree<IdType>::query(AABB queryAABB, BitMaskType maskB
 template<typename IdType>
 std::vector<std::set<IdType>> BroadPhaseTree<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries, size_t numThreads) const
 {
+    if (queries.empty())
+        return {};
+
     const size_t n = queries.size();
     std::vector<std::set<IdType>> results(n);
 
@@ -227,6 +230,9 @@ std::vector<std::set<IdType>> BroadPhaseTree<IdType>::batchSweepQuery(
     size_t numThreads
 ) const
 {
+    if (queries.empty())
+        return {};
+    
     const size_t n = queries.size();
     std::vector<std::set<IdType>> results(n);
 
@@ -267,6 +273,14 @@ std::set<std::pair<IdType, IdType>> BroadPhaseTree<IdType>::findAllCollisions() 
         region.bvh.findAllCollisions(collisions);
 
     return collisions;
+}
+
+template<typename IdType>
+std::set<IdType> BroadPhaseTree<IdType>::findAllCollisions(BroadPhaseTreeHandle handle) const
+{
+    assert(isValidHandle(handle));
+    const Proxy& proxy = proxies.at(handle);
+    return query(proxy.aabb, proxy.maskBits);
 }
 
 // Raycast queries

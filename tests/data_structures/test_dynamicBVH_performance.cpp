@@ -17,10 +17,6 @@ using RaycastInfo = DynamicBVH<uint32_t>::RaycastInfo;
 
 TEST_CASE("DynamicBVH | Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
@@ -44,10 +40,6 @@ TEST_CASE("DynamicBVH | Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
 
 TEST_CASE("DynamicBVH | Moving proxies", "[DynamicBVH][Benchmark][Move]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
@@ -91,10 +83,6 @@ TEST_CASE("DynamicBVH | Moving proxies", "[DynamicBVH][Benchmark][Move]")
 
 TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
@@ -148,10 +136,6 @@ TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]
 
 TEST_CASE("DynamicBVH | Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
@@ -182,10 +166,6 @@ TEST_CASE("DynamicBVH | Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
 
 TEST_CASE("DynamicBVH | First hit raycast", "[DynamicBVH][Benchmark][Raycast]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
@@ -214,10 +194,6 @@ TEST_CASE("DynamicBVH | First hit raycast", "[DynamicBVH][Benchmark][Raycast]")
 
 TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)", "[DynamicBVH][BroadPhaseCollisions][AllPairs][Benchmark]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 1000.0f, 3.0f, seed);

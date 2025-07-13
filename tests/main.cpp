@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
     const auto dateTimeStr = std::format("{:%Y-%m-%d--%H-%M-%S}", dateTime);
     const auto fileName = std::format("benchmarks--{}.md", dateTimeStr);
     const auto folder = argv[argc - 1];
-    exportBenchmarks(std::filesystem::path(folder) / fileName);
+    c2d::test::exportBenchmarks(std::filesystem::path(folder) / fileName);
 
     return result;
 }

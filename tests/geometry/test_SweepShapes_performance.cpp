@@ -13,10 +13,6 @@ using namespace std::chrono;
 
 TEST_CASE("Sweep performance: Circle vs Circle", "[Sweep][Benchmark][Circle]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     auto moving = generateRandomCircles(100'000, -50.0f, 50.0f, 1.0f, seed);
@@ -48,10 +44,6 @@ TEST_CASE("Sweep performance: Circle vs Circle", "[Sweep][Benchmark][Circle]")
 
 TEST_CASE("Sweep performance: Polygon vs Polygon", "[Sweep][Benchmark][Polygon]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     auto moving = generateRandomRectangles(100'000, -50.0f, 50.0f, 0.5f, seed);

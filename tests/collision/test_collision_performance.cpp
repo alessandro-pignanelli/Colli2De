@@ -15,10 +15,6 @@ using namespace std::chrono;
 
 TEST_CASE("Collision performance: Circle vs Circle", "[collision][Benchmark][Circle]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     auto circlesA = generateRandomCircles(100'000, -50.0f, 50.0f, 1.0f, seed);
@@ -44,10 +40,6 @@ TEST_CASE("Collision performance: Circle vs Circle", "[collision][Benchmark][Cir
 
 TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][Segment]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     auto segA = generateRandomSegments(100'000, -50.0f, 50.0f, 1.0f, seed);
@@ -73,10 +65,6 @@ TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][S
 
 TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][Capsule]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     auto capA = generateRandomCapsules(100'000, -50.0f, 50.0f, 1.0f, 0.5f, seed);
@@ -102,10 +90,6 @@ TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][C
 
 TEST_CASE("Collision performance: Polygon vs Polygon", "[collision][Benchmark][Polygon]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     auto polyA = generateRandomRectangles(100'000, -50.0f, 50.0f, 0.5f, seed);

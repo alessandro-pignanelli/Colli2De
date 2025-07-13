@@ -2,6 +2,8 @@
 #include <catch2/catch_approx.hpp>
 #include <colli2de/Registry.hpp>
 
+#include "utils/Print.hpp"
+
 using namespace c2d;
 using Catch::Approx;
 
@@ -175,5 +177,41 @@ TEST_CASE("Registry collision checks", "[Registry]")
         registry.addShape(2, Circle{{0.0f,0.0f},1.0f});
         registry.moveEntity(2, Transform({6.0f,0.0f}));
         CHECK(registry.areColliding(1,2));
+    }
+
+    SECTION("Bullet vs bullet queries")
+    {
+        Registry<int> registry;
+        registry.createEntity(1, BodyType::Bullet, Transform({0.0f,0.0f}));
+        const auto shapeId1 = registry.addShape(1, Circle{{0.0f,0.0f},1.0f});
+        registry.createEntity(2, BodyType::Bullet, Transform({5.0f,0.0f}));
+        const auto shapeId2 = registry.addShape(2, Circle{{0.0f,0.0f},1.0f});
+
+        // Switch places. Without sweep they would not collide
+        registry.teleportEntity(1, Translation({5.0f,0.0f}));
+        registry.teleportEntity(2, Translation({0.0f,0.0f}));
+
+        const auto pairs = registry.getCollidingPairs();
+        REQUIRE(pairs.size() == 1);
+        const auto& collision = pairs[0];
+        CHECK(((collision.entityA == 1 && collision.entityB == 2) ||
+               (collision.entityA == 2 && collision.entityB == 1)));
+        CHECK((collision.shapeA == shapeId1 || collision.shapeA == shapeId2));
+        CHECK((collision.shapeB == shapeId1 || collision.shapeB == shapeId2));
+        CHECK(collision.manifold.pointCount == 1);
+        CHECK(collision.manifold.points[0].point.x == Approx(2.5f));
+        CHECK(collision.manifold.points[0].point.y == Approx(0.0f));
+        CHECK(std::abs(collision.manifold.normal.x) == Approx(1.0f));
+        CHECK(collision.manifold.normal.y == Approx(0.0f));
+
+        const auto collisions1 = registry.getCollisions(1);
+        REQUIRE(collisions1.size() == 1);
+        CHECK(collisions1[0].entityA == 1);
+        CHECK(collisions1[0].entityB == 2);
+
+        const auto collisions2 = registry.getCollisions(2);
+        REQUIRE(collisions2.size() == 1);
+        CHECK(collisions2[0].entityA == 2);
+        CHECK(collisions2[0].entityB == 1);
     }
 }

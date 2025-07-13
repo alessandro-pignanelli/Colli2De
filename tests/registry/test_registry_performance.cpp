@@ -13,10 +13,6 @@ using namespace std::chrono;
 
 TEST_CASE("Registry | Bulk insertion", "[Registry][Benchmark][Insert]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     std::vector<Circle> circles = generateRandomCircles(100'000, -50.0f, 50.0f, 1.0f, seed);
     std::vector<Transform> transforms;
@@ -49,10 +45,6 @@ TEST_CASE("Registry | Bulk insertion", "[Registry][Benchmark][Insert]")
 
 TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     std::vector<Circle> circles = generateRandomCircles(100'000, -200.0f, 200.0f, 1.0f, seed);
     std::vector<Vec2> translations = generateRandomTranslations(100'000, -4.0f, 4.0f, seed + 1);
@@ -104,19 +96,35 @@ TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
 
 TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     std::vector<Circle> circles = generateRandomCircles(100'000, -1920.0f, 3840.0f, 12.0f, seed);
     Registry<uint32_t> reg;
+    for(uint32_t i = 0; i < 1'000; ++i)
+    {
+        const bool isBullet = (i % 1000) == 0;
+        const bool isStatic = !isBullet && (i % 3) == 0;
+        const BodyType type = (isStatic) ? BodyType::Static :
+                        (isBullet) ? BodyType::Bullet : BodyType::Dynamic;
+        reg.createEntity(i, type, Transform(circles[i].center));
+        reg.addShape(i, Circle({0, 0}, circles[i].radius));
+        reg.moveEntity(i, Translation(3.0f, 3.0f));
+    }
+
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k entities", 5ms, [&]()
+    {
+        return reg.getCollidingPairs().size();
+    });
+
+    reg.clear();
     for(uint32_t i = 0; i < 10'000; ++i)
     {
-        const int modulo = i % 4;
-        BodyType type = (modulo == 0) ? BodyType::Static : (modulo == 1) ? BodyType::Bullet : BodyType::Dynamic;
+        const bool isBullet = (i % 1000) == 0;
+        const bool isStatic = !isBullet && (i % 3) == 0;
+        const BodyType type = (isStatic) ? BodyType::Static :
+                        (isBullet) ? BodyType::Bullet : BodyType::Dynamic;
         reg.createEntity(i, type, Transform(circles[i].center));
-        reg.addShape(i, circles[i]);
+        reg.addShape(i, Circle({0, 0}, circles[i].radius));
+        reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
     BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k entities", 10ms, [&]()
@@ -127,13 +135,58 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
     reg.clear();
     for(uint32_t i = 0; i < 100'000; ++i)
     {
-        const int modulo = i % 4;
-        BodyType type = (modulo == 0) ? BodyType::Static : (modulo == 1) ? BodyType::Bullet : BodyType::Dynamic;
+        const bool isBullet = (i % 1000) == 0;
+        const bool isStatic = !isBullet && (i % 3) == 0;
+        const BodyType type = (isStatic) ? BodyType::Static :
+                        (isBullet) ? BodyType::Bullet : BodyType::Dynamic;
         reg.createEntity(i, type, Transform(circles[i].center));
-        reg.addShape(i, circles[i]);
+        reg.addShape(i, Circle({0, 0}, circles[i].radius));
+        reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 130ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 300ms, [&]()
+    {
+        return reg.getCollidingPairs().size();
+    });
+
+    reg.clear();
+    for(uint32_t i = 0; i < 1'000; ++i)
+    {
+        const BodyType type = BodyType::Bullet;
+        reg.createEntity(i, type, Transform(circles[i].center));
+        reg.addShape(i, Circle({0, 0}, circles[i].radius));
+        reg.moveEntity(i, Translation(3.0f, 3.0f));
+    }
+
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k bullets", 500us, [&]()
+    {
+        return reg.getCollidingPairs().size();
+    });
+
+    reg.clear();
+    for(uint32_t i = 0; i < 10'000; ++i)
+    {
+        const BodyType type = BodyType::Bullet;
+        reg.createEntity(i, type, Transform(circles[i].center));
+        reg.addShape(i, Circle({0, 0}, circles[i].radius));
+        reg.moveEntity(i, Translation(3.0f, 3.0f));
+    }
+
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k bullets", 10ms, [&]()
+    {
+        return reg.getCollidingPairs().size();
+    });
+
+    reg.clear();
+    for(uint32_t i = 0; i < 100'000; ++i)
+    {
+        const BodyType type = BodyType::Bullet;
+        reg.createEntity(i, type, Transform(circles[i].center));
+        reg.addShape(i, Circle({0, 0}, circles[i].radius));
+        reg.moveEntity(i, Translation(3.0f, 3.0f));
+    }
+
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k bullets", 700ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });

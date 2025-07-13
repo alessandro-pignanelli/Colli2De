@@ -266,10 +266,11 @@ Note that:
 - The same pair of entities may appear multiple times in the list if they have multiple shapes that are colliding.
 - Two shapes belonging to the same entity cannot collide since they cannot be moved independently from each other.  
 - The pairs are returned in this order:
-  - Dynamic vs Static entities.
+  - Static vs Dynamic entities.
+  - Static vs Bullet entities.
   - Dynamic vs Dynamic entities.
-  - Bullet vs Static entities.
-  - Bullet vs Dynamic entities.  
+  - Dynamic vs Bullet entities.
+  - Bullet vs Bullet entities.  
 
 This method performs queries in parallel on different threads to efficiently compute the collisions.
 

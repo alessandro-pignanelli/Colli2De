@@ -13,10 +13,6 @@ using namespace std::chrono;
 
 TEST_CASE("Raycast performance: Circle", "[Raycast][Benchmark][Circle]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     auto circles = generateRandomCircles(100'000, -50.0f, 50.0f, 1.0f, seed);
@@ -33,7 +29,7 @@ TEST_CASE("Raycast performance: Circle", "[Raycast][Benchmark][Circle]")
         return total;
     });
 
-    BENCHMARK_FUNCTION("Raycast 100k circles", 5ms, [&]()
+    BENCHMARK_FUNCTION("Raycast 100k circles", 2ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
@@ -47,10 +43,6 @@ TEST_CASE("Raycast performance: Circle", "[Raycast][Benchmark][Circle]")
 
 TEST_CASE("Raycast performance: Segment", "[Raycast][Benchmark][Segment]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     auto segments = generateRandomSegments(100'000, -50.0f, 50.0f, 4.0f, seed);
@@ -81,16 +73,12 @@ TEST_CASE("Raycast performance: Segment", "[Raycast][Benchmark][Segment]")
 
 TEST_CASE("Raycast performance: Capsule", "[Raycast][Benchmark][Capsule]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     auto capsules = generateRandomCapsules(100'000, -50.0f, 50.0f, 4.0f, 1.0f, seed);
     auto rays = generateRandomRays(100'000, -60.0f, 60.0f, seed + 1);
 
-    BENCHMARK_FUNCTION("Raycast 10k capsules", 3ms, [&]()
+    BENCHMARK_FUNCTION("Raycast 10k capsules", 2ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -115,10 +103,6 @@ TEST_CASE("Raycast performance: Capsule", "[Raycast][Benchmark][Capsule]")
 
 TEST_CASE("Raycast performance: Polygon", "[Raycast][Benchmark][Polygon]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     auto polygons = generateRandomRectangles(100'000, -50.0f, 50.0f, 0.5f, seed);

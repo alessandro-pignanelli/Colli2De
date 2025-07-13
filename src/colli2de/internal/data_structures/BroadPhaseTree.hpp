@@ -75,6 +75,7 @@ public:
     std::set<IdType> sweepQuery(AABB startAABB, AABB endAABB, BitMaskType maskBits = ~0ull) const;
     std::vector<std::set<IdType>> batchSweepQuery(const std::vector<std::tuple<AABB, AABB, BitMaskType>>& queries, size_t numThreads) const;
     std::set<std::pair<IdType, IdType>> findAllCollisions() const;
+    std::set<IdType> findAllCollisions(BroadPhaseTreeHandle handle) const;
 
     // Raycast queries
     std::optional<RaycastInfo<IdType>> firstHitRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;

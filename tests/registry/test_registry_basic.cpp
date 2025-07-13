@@ -46,13 +46,8 @@ TEST_CASE("Registry entity creation and shape management", "[Registry][Basic]")
         };
         
         auto collisions = reg.getCollidingPairs();
-        println("Collisions found: {}", collisions.size());
-        for (const auto& collision : collisions)
-        {
-            println("Checking collision between {} and {}", collision.entityA, collision.entityB);
-        }
-
         REQUIRE(collisions.size() == expectedCollisions.size());
+        
         for (const auto& pair : expectedCollisions)
         {
             const auto findCollision = [&pair](const Registry<int>::EntityCollision& collision)

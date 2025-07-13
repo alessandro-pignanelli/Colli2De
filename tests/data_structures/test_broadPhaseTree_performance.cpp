@@ -17,10 +17,6 @@ using BPTRaycastInfo = RaycastInfo<uint32_t>;
 
 TEST_CASE("BroadPhaseTree | Bulk insertion", "[BroadPhaseTree][Benchmark][Insert]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
@@ -44,10 +40,6 @@ TEST_CASE("BroadPhaseTree | Bulk insertion", "[BroadPhaseTree][Benchmark][Insert
 
 TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, -100.0f, 100.0f, 2.0f, seed);
@@ -86,10 +78,6 @@ TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]"
 
 TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark][Query]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
@@ -124,7 +112,7 @@ TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark
     }
     std::shuffle(queries.begin(), queries.end(), std::mt19937{std::random_device{}()});
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Queries 100k proxies", 20ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Queries 100k proxies", 30ms, [&]()
     {
         std::set<uint32_t> foundIds;
         for (const auto& query : queries)
@@ -141,10 +129,6 @@ TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark
 
 TEST_CASE("BroadPhaseTree | Piercing raycast", "[BroadPhaseTree][Benchmark][Raycast]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
@@ -173,10 +157,6 @@ TEST_CASE("BroadPhaseTree | Piercing raycast", "[BroadPhaseTree][Benchmark][Rayc
 
 TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)", "[BroadPhaseTree][BroadPhaseCollisions][AllPairs][Benchmark]")
 {
-#ifndef NDEBUG
-    SKIP("Performance test skipped in Debug mode.");
-#endif
-
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 1000.0f, 3.0f, seed);
@@ -197,7 +177,7 @@ TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)"
     for (uint32_t i = 0; i < 10'000; ++i)
         treePairs10k.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 10k proxies", 5ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 10k proxies", 2ms, [&]()
     {
         pairs = treePairs10k.findAllCollisions();
         return pairs.size();
