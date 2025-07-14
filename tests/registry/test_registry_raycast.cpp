@@ -53,27 +53,61 @@ TEST_CASE("Registry rayCast hits nearest entity", "[Registry][Raycast]")
 
 TEST_CASE("Registry bullet rayCast detects swept collision", "[Registry][Raycast][Bullet]")
 {
-    Registry<int> registry;
-    registry.createEntity(1, BodyType::Bullet, Transform({-2.0f, 0.0f}));
-    registry.addShape(1, Circle{{0.0f, 0.0f}, 1.0f});
-    registry.moveEntity(1, Transform({4.0f, 0.0f}));
+    SECTION("Ray parallel to movement")
+    {
+        Registry<int> registry;
+        registry.createEntity(1, BodyType::Bullet, Transform({-2.0f, 0.0f}));
+        registry.addShape(1, Circle{{0.0f, 0.0f}, 1.0f});
+        registry.moveEntity(1, Transform({4.0f, 0.0f}));
 
-    Ray ray{{0.0f, -2.0f}, {0.0f, 2.0f}};
+        Ray ray{{0.0f, -2.0f}, {0.0f, 2.0f}};
 
-    auto hits = registry.rayCast(ray);
-    REQUIRE(hits.size() == 1);
-    const auto& hitInfo = *hits.begin();
-    CHECK(hitInfo.id.first == 1);
-    CHECK(hitInfo.entryTime == Approx(0.5f));
-    CHECK(hitInfo.exitTime == Approx(0.5f));
-    CHECK(hitInfo.entry.x == Approx(0.0f));
-    CHECK(hitInfo.exit.x == Approx(0.0f));
+        auto hits = registry.rayCast(ray);
+        REQUIRE(hits.size() == 1);
+        const auto& hitInfo = *hits.begin();
+        CHECK(hitInfo.id.first == 1);
+        CHECK(hitInfo.entryTime == Approx(0.5f));
+        CHECK(hitInfo.exitTime == Approx(0.5f));
+        CHECK(hitInfo.entry.x == Approx(0.0f));
+        CHECK(hitInfo.exit.x == Approx(0.0f));
 
-    const auto firstHit = registry.firstHitRayCast(ray);
-    REQUIRE(firstHit.has_value());
-    CHECK(firstHit->id.first == 1);
-    CHECK(firstHit->entryTime == Approx(0.5f));
-    CHECK(firstHit->exitTime == Approx(0.5f));
+        const auto firstHit = registry.firstHitRayCast(ray);
+        REQUIRE(firstHit.has_value());
+        CHECK(firstHit->id.first == 1);
+        CHECK(firstHit->entryTime == Approx(0.5f));
+        CHECK(firstHit->exitTime == Approx(0.5f));
+    }
+
+    SECTION("Ray hits in the middle of movement")
+    {
+        Registry<int> registry;
+        registry.createEntity(1, BodyType::Bullet, Transform({-2.0f, 0.0f}));
+        registry.addShape(1, Circle{{0.0f, 0.0f}, 1.0f});
+        registry.moveEntity(1, Transform({4.0f, 0.0f}));
+
+        Ray ray{{0.0f, 10.0f}, {0.0f, -10.0f}};
+
+        auto hits = registry.rayCast(ray);
+        REQUIRE(hits.size() == 1);
+        const auto& hitInfo = *hits.begin();
+        CHECK(hitInfo.id.first == 1);
+        CHECK(hitInfo.entryTime == Approx(0.5f));
+        CHECK(hitInfo.exitTime == Approx(0.5f));
+        CHECK(hitInfo.entry.x == Approx(0.0f));
+        CHECK(hitInfo.exit.x == Approx(0.0f));
+        CHECK(hitInfo.entry.y == Approx(0.0f));
+        CHECK(hitInfo.exit.y == Approx(0.0f));
+
+        const auto firstHit = registry.firstHitRayCast(ray);
+        REQUIRE(firstHit.has_value());
+        CHECK(firstHit->id.first == 1);
+        CHECK(firstHit->entryTime == Approx(0.5f));
+        CHECK(firstHit->exitTime == Approx(0.5f));
+        CHECK(firstHit->entry.x == Approx(0.0f));
+        CHECK(firstHit->exit.x == Approx(0.0f));
+        CHECK(firstHit->entry.y == Approx(0.0f));
+        CHECK(firstHit->exit.y == Approx(0.0f));
+    }
 }
 
 TEST_CASE("Registry bullet rayCast miss when path does not cross ray", "[Registry][Raycast][Bullet]")

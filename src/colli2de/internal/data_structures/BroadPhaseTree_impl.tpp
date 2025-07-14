@@ -71,18 +71,13 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
     if (proxy.aabb.contains(aabb))
         return;
 
-    const int32_t oldMinX = int32_t(proxy.aabb.min.x) / cellSize;
-    const int32_t oldMinY = int32_t(proxy.aabb.min.y) / cellSize;
-    const int32_t oldMaxX = int32_t(proxy.aabb.max.x) / cellSize;
-    const int32_t oldMaxY = int32_t(proxy.aabb.max.y) / cellSize;
-
-    const int32_t newMinX = int32_t(aabb.min.x) / cellSize;
-    const int32_t newMinY = int32_t(aabb.min.y) / cellSize;
-    const int32_t newMaxX = int32_t(aabb.max.x) / cellSize;
-    const int32_t newMaxY = int32_t(aabb.max.y) / cellSize;
+    const auto oldMinCell = getCellFor(proxy.aabb.min, cellSize);
+    const auto oldMaxCell = getCellFor(proxy.aabb.max, cellSize);
+    const auto newMinCell = getCellFor(aabb.min, cellSize);
+    const auto newMaxCell = getCellFor(aabb.max, cellSize);
 
     proxy.aabb = aabb;
-    const bool isSameCellRange = oldMinX == newMinX && oldMinY == newMinY && oldMaxX == newMaxX && oldMaxY == newMaxY;
+    const bool isSameCellRange = oldMinCell == newMinCell && oldMaxCell == newMaxCell;
 
     if (isSameCellRange)
     {
@@ -126,17 +121,17 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
         region.bvh.moveProxy(proxy.bvhHandles.at(cell), aabb);
     };
 
-    const int32_t minX = std::min(oldMinX, newMinX);
-    const int32_t minY = std::min(oldMinY, newMinY);
-    const int32_t maxX = std::max(oldMaxX, newMaxX);
-    const int32_t maxY = std::max(oldMaxY, newMaxY);
+    const int32_t minX = std::min(oldMinCell.x, newMinCell.x);
+    const int32_t minY = std::min(oldMinCell.y, newMinCell.y);
+    const int32_t maxX = std::max(oldMaxCell.x, newMaxCell.x);
+    const int32_t maxY = std::max(oldMaxCell.y, newMaxCell.y);
 
-    for (int32_t x = minX; x <= maxX; ++x)
-        for (int32_t y = minY; y <= maxY; ++y)
+    for (int32_t x = minX; x <= maxX; x += cellSize)
+        for (int32_t y = minY; y <= maxY; y += cellSize)
         {
             const GridCell cell{x, y};
-            const bool isNotInOld = (x < oldMinX || x > oldMaxX || y < oldMinY || y > oldMaxY);
-            const bool isNotInNew = (x < newMinX || x > newMaxX || y < newMinY || y > newMaxY);
+            const bool isNotInOld = (x < oldMinCell.x || x > oldMaxCell.x || y < oldMinCell.y || y > oldMaxCell.y);
+            const bool isNotInNew = (x < newMinCell.x || x > newMaxCell.x || y < newMinCell.y || y > newMaxCell.y);
 
             if (isNotInOld)
                 addToCell(cell);

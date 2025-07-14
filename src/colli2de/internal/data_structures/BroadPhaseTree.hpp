@@ -38,18 +38,22 @@ namespace
 
 inline GridCell getCellFor(c2d::Vec2 position, int32_t cellSize)
 {
-    return { int32_t(position.x) / cellSize, int32_t(position.y) / cellSize };
+    const int32_t posX = int32_t(position.x);
+    const int32_t posY = int32_t(position.y);
+
+    return { 
+        .x = int32_t(position.x) - (position.x >= 0 ? posX % cellSize : (posX % cellSize) + cellSize),
+        .y = int32_t(position.y) - (position.y >= 0 ? posY % cellSize : (posY % cellSize) + cellSize)
+    };
 }
 
 inline void forEachCell(c2d::AABB aabb, int32_t cellSize, std::function<void(GridCell)> callback)
 {
-    const int32_t minX = int32_t(aabb.min.x) / cellSize;
-    const int32_t minY = int32_t(aabb.min.y) / cellSize;
-    const int32_t maxX = int32_t(aabb.max.x) / cellSize;
-    const int32_t maxY = int32_t(aabb.max.y) / cellSize;
+    const GridCell startCell = getCellFor(aabb.min, cellSize);
+    const GridCell endCell = getCellFor(aabb.max, cellSize);
 
-    for (int32_t x = minX; x <= maxX; ++x)
-        for (int32_t y = minY; y <= maxY; ++y)
+    for (int32_t y = startCell.y; y <= endCell.y; y += cellSize)
+        for (int32_t x = startCell.x; x <= endCell.x; x += cellSize)
             callback(GridCell{x, y});
 }
 
