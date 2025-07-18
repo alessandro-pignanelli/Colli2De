@@ -4,71 +4,74 @@ cmake_minimum_required(VERSION 3.16)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL" CACHE STRING "" FORCE)
+    if (WIN32)
+        add_compile_options(-fdiagnostics-color=always -fno-diagnostics-show-caret)
+    endif()
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-demangle")
+else()
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "" FORCE)
+endif()
+
 # ---- Gather source files (.cpp) ----
 file(GLOB_RECURSE SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/colli2de/internal/**/*.cpp
+    ${PROJECT_SOURCE_DIR}/src/*.cpp
 )
 
-# ---- Gather internal and public header files ----
-file(GLOB_RECURSE INTERNAL_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/colli2de/internal/**/*.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/colli2de/internal/**/*.tpp
-)
-
-file(GLOB_RECURSE PUBLIC_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/colli2de/public/*.hpp
+# ---- Gather header files ----
+file(GLOB_RECURSE HEADERS
+    ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/*.hpp
 )
 
 # ---- Add library ----
-add_library(colli2de ${SOURCES} ${INTERNAL_HEADERS} ${PUBLIC_HEADERS})
+if(APPLE)
+    add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+else()
+    add_library(${PROJECT_NAME} STATIC ${SOURCES} ${HEADERS})
+endif()
+set(CMAKE_DEBUG_POSTFIX "d")
+set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
 
 # ---- Include directories ----
-target_include_directories(colli2de
+target_include_directories(${PROJECT_NAME}
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:include>
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>     # during build
+        $<INSTALL_INTERFACE:include/${PROJECT_NAME}>   # after install
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/colli2de/internal
+        ${PROJECT_SOURCE_DIR}/src
 )
-set(CMAKE_DEBUG_POSTFIX "d")
+# target_include_directories(${PROJECT_NAME} INTERFACE $<INSTALL_INTERFACE:include>)
 
 if (MSVC)
 	if (BUILD_SHARED_LIBS)
 		# this is needed by DLL users to import Colli2De symbols
-		target_compile_definitions(colli2de INTERFACE COLLI2DE_DLL)
+		target_compile_definitions(${PROJECT_NAME} INTERFACE COLLI2DE_DLL)
 	endif()
 
 	# Warnings
-	# 4710 - warn about inline functions that are not inlined
-	target_compile_options(colli2de PRIVATE /Wall /wd4820 /wd5045 /wd4061 /wd4711 /wd4710)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX)
 
 	if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
-		target_compile_options(colli2de PRIVATE -Wmissing-prototypes)
+		target_compile_options(${PROJECT_NAME} PRIVATE -Wmissing-prototypes)
 	endif()
-elseif (MINGW)
-elseif (APPLE)
-	target_compile_options(colli2de PRIVATE -Wmissing-prototypes -Wall -Wextra -pedantic -Werror)
-elseif (EMSCRIPTEN)
-	target_compile_options(colli2de PRIVATE -msimd128 -msse2)
-elseif (UNIX)
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
-
-# ---- Create alias ----
-add_library(colli2de::colli2de ALIAS colli2de)
 
 # ---- Installation ----
 
 # Install public and internal headers to include/colli2de
 install(
-    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/colli2de
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}
     DESTINATION include
     FILES_MATCHING PATTERN "*.hpp" PATTERN "*.tpp"
 )
 
 # Install library
 install(
-    TARGETS colli2de
-    EXPORT colli2deConfig
+    TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}Config
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -76,18 +79,18 @@ install(
 
 # Install CMake config
 install(
-    EXPORT colli2deConfig
-    NAMESPACE colli2de::
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/colli2de"
+    EXPORT ${PROJECT_NAME}Config
+    NAMESPACE ${PROJECT_NAME}::
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
 )
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/colli2deConfigVersion.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
     VERSION ${COLLI2DE_VERSION}
     COMPATIBILITY SameMajorVersion
 )
 install(
-    FILES "${CMAKE_CURRENT_BINARY_DIR}/colli2deConfigVersion.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/colli2de"
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
 )

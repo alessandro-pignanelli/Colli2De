@@ -43,7 +43,7 @@ build.bat --cmake --release
 ./build.sh --cmake --release
 ```
 
-The library can also be added to an existing CMake project using `add_subdirectory` and linking to the target `colli2de::colli2de`.
+The library can also be added to an existing CMake project using `add_subdirectory` and linking to the target `colli2de`.
 
 ### Running the Tests
 

@@ -55,14 +55,14 @@ public:
     void moveEntity(EntityId id, const Transform& delta);
     void moveEntity(EntityId id, Translation deltaTranslation);
 
-    std::vector<EntityCollision> getCollidingPairs();
-    std::vector<EntityCollision> getCollisions(EntityId id);
-    bool areColliding(EntityId a, EntityId b);
+    std::vector<EntityCollision> getCollidingPairs() const;
+    std::vector<EntityCollision> getCollisions(EntityId id) const;
+    bool areColliding(EntityId a, EntityId b) const;
 
-    std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> firstHitRayCast(Ray ray, BitMaskType maskBits = ~0ull);
-    std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> firstHitRayCast(InfiniteRay ray, BitMaskType maskBits = ~0ull);
-    std::set<RaycastHit<std::pair<EntityId, ShapeId>>> rayCast(Ray ray, BitMaskType maskBits = ~0ull);
-    std::set<RaycastHit<std::pair<EntityId, ShapeId>>> rayCast(InfiniteRay ray, BitMaskType maskBits = ~0ull);
+    std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> firstHitRayCast(Ray ray, BitMaskType maskBits = ~0ull) const;
+    std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> firstHitRayCast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
+    std::set<RaycastHit<std::pair<EntityId, ShapeId>>> rayCast(Ray ray, BitMaskType maskBits = ~0ull) const;
+    std::set<RaycastHit<std::pair<EntityId, ShapeId>>> rayCast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
 
     size_t size() const;
     void clear();
@@ -101,14 +101,14 @@ private:
     void getAllCollisionAABBQueries(std::vector<std::pair<AABB, BitMaskType>>& dynamicQueries,
                                     std::vector<std::pair<AABB, BitMaskType>>& staticQueries,
                                     std::vector<ShapeId>& dynamicShapesQueried,
-                                    std::vector<ShapeId>& staticShapesQueried);
+                                    std::vector<ShapeId>& staticShapesQueried) const;
     void narrowPhaseCollisions(const std::vector<ShapeId>& shapesQueried,
                                const std::vector<std::set<ShapeId>>& collisions,
-                               std::vector<EntityCollision>& outCollisionsInfo);
+                               std::vector<EntityCollision>& outCollisionsInfo) const;
     void narrowPhaseDynamicCollisionsPairs(const std::set<std::pair<ShapeId, ShapeId>>& pairs,
-                                           std::vector<EntityCollision>& outCollisionsInfo);
+                                           std::vector<EntityCollision>& outCollisionsInfo) const;
     void narrowPhaseBulletCollisionsPairs(const std::set<std::pair<ShapeId, ShapeId>>& pairs,
-                                          std::vector<EntityCollision>& outCollisionsInfo);
+                                          std::vector<EntityCollision>& outCollisionsInfo) const;
 };
 
 template<typename EntityId>
@@ -343,7 +343,7 @@ void Registry<EntityId>::moveEntity(EntityId id, Translation deltaTranslation)
 }
 
 template<typename EntityId>
-std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::getCollidingPairs()
+std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::getCollidingPairs() const
 {
     std::vector<std::pair<AABB, BitMaskType>> dynamicQueries;
     std::vector<ShapeId> dynamicShapesQueried;
@@ -379,7 +379,7 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
 }
 
 template<typename EntityId>
-std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::getCollisions(EntityId id)
+std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::getCollisions(EntityId id) const
 {
     assert(entities.find(id) != entities.end());
     const EntityInfo& entity = entities.at(id);
@@ -443,7 +443,7 @@ template <typename EntityId>
 void Registry<EntityId>::getAllCollisionAABBQueries(std::vector<std::pair<AABB, BitMaskType>>& dynamicQueries,
                                                     std::vector<std::pair<AABB, BitMaskType>>& staticQueries,
                                                     std::vector<ShapeId>& dynamicShapesQueried,
-                                                    std::vector<ShapeId>& staticShapesQueried)
+                                                    std::vector<ShapeId>& staticShapesQueried) const
 {
     dynamicQueries.reserve(treeDynamic.size());
     staticQueries.reserve(treeStatic.size());
@@ -480,7 +480,7 @@ void Registry<EntityId>::getAllCollisionAABBQueries(std::vector<std::pair<AABB, 
 template<typename EntityId>
 void Registry<EntityId>::narrowPhaseCollisions(const std::vector<ShapeId>& shapesQueried,
                                                const std::vector<std::set<ShapeId>>& collisions,
-                                               std::vector<EntityCollision>& outCollisionsInfo)
+                                               std::vector<EntityCollision>& outCollisionsInfo) const
 {
     for (size_t i = 0; i < collisions.size(); ++i)
         for (const auto otherShapeId : collisions[i])
@@ -548,7 +548,7 @@ void Registry<EntityId>::narrowPhaseCollisions(const std::vector<ShapeId>& shape
 
 template<typename EntityId>
 void Registry<EntityId>::narrowPhaseDynamicCollisionsPairs(const std::set<std::pair<ShapeId, ShapeId>>& pairs,
-                                                           std::vector<EntityCollision>& outCollisionsInfo)
+                                                           std::vector<EntityCollision>& outCollisionsInfo) const
 {
     for (const auto& [shapeAId, shapeBId] : pairs)
     {
@@ -583,7 +583,7 @@ void Registry<EntityId>::narrowPhaseDynamicCollisionsPairs(const std::set<std::p
 
 template<typename EntityId>
 void Registry<EntityId>::narrowPhaseBulletCollisionsPairs(const std::set<std::pair<ShapeId, ShapeId>>& pairs,
-                                                          std::vector<EntityCollision>& outCollisionsInfo)
+                                                          std::vector<EntityCollision>& outCollisionsInfo) const
 {
     for (const auto& [shapeAId, shapeBId] : pairs)
     {
@@ -625,7 +625,7 @@ void Registry<EntityId>::narrowPhaseBulletCollisionsPairs(const std::set<std::pa
 }
 
 template<typename EntityId>
-bool Registry<EntityId>::areColliding(EntityId a, EntityId b)
+bool Registry<EntityId>::areColliding(EntityId a, EntityId b) const
 {
     assert(entities.find(a) != entities.end() && "Entity A does not exist");
     assert(entities.find(b) != entities.end() && "Entity B does not exist");
@@ -721,7 +721,7 @@ bool Registry<EntityId>::areColliding(EntityId a, EntityId b)
 }
 
 template<typename EntityId>
-std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firstHitRayCast(Ray ray, BitMaskType maskBits)
+std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firstHitRayCast(Ray ray, BitMaskType maskBits) const
 {
     std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> bestHit;
     float bestEntryTime = std::numeric_limits<float>::max();
@@ -817,7 +817,7 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
 }
 
 template<typename EntityId>
-std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firstHitRayCast(InfiniteRay ray, BitMaskType maskBits)
+std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firstHitRayCast(InfiniteRay ray, BitMaskType maskBits) const
 {
     const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
     const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
@@ -913,7 +913,7 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
 }
 
 template<typename EntityId>
-std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(Ray ray, BitMaskType maskBits)
+std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(Ray ray, BitMaskType maskBits) const
 {
     const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
     const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
@@ -980,7 +980,7 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(R
 }
 
 template<typename EntityId>
-std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(InfiniteRay ray, BitMaskType maskBits)
+std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(InfiniteRay ray, BitMaskType maskBits) const
 {
     const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
     const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
