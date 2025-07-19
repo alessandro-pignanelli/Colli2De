@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cstdint>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -23,12 +22,12 @@ TEST_CASE("BroadPhaseTree | query handles degenerate and thin AABBs", "[BroadPha
 
     // Query covering all
     AABB query{Vec2{0,0}, Vec2{6,11}};
-    std::set<uint32_t> hits = tree.query(query);
+    auto hits = tree.query(query);
 
     REQUIRE(hits.size() == 3);
-    REQUIRE(hits.count(1) == 1);
-    REQUIRE(hits.count(2) == 1);
-    REQUIRE(hits.count(3) == 1);
+    REQUIRE(std::find(hits.begin(), hits.end(), 1) != hits.end());
+    REQUIRE(std::find(hits.begin(), hits.end(), 2) != hits.end());
+    REQUIRE(std::find(hits.begin(), hits.end(), 3) != hits.end());
 }
 
 TEST_CASE("BroadPhaseTree | raycastFirstHit detects grazing rays", "[BroadPhaseTree][Advanced][RayGrazing]")

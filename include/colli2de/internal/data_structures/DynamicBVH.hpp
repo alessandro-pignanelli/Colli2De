@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <execution>
 #include <ranges>
 #include <set>
 #include <utility>
@@ -10,7 +9,7 @@
 
 #include <colli2de/Ray.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
-#include <colli2de/internal/utils/methods.hpp>
+#include <colli2de/internal/utils/Methods.hpp>
 
 namespace
 {
@@ -47,7 +46,7 @@ struct BVHNode
     NodeIndex child1Index = INVALID_NODE_INDEX;
     NodeIndex child2Index = INVALID_NODE_INDEX;
 
-    uint32_t height = -1;
+    int32_t height = -1;
 
     IdType id{}; // stored payload (instead of void*)
 
@@ -94,10 +93,10 @@ public:
     LeafConstIterator cend() const { return LeafConstIterator(nodes, nodes.size()); }
 
     // AABB queries
-    void query(AABB queryAABB, std::set<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
-    std::vector<std::set<IdType>> batchQuery(const std::vector<AABB>& queries,
-                                             BitMaskType maskBits = ~0ull) const;
-    void findAllCollisions(std::set<std::pair<IdType, IdType>>& collisions) const;
+    void query(AABB queryAABB, std::vector<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
+    void findAllCollisions(std::vector<std::pair<IdType, IdType>>& collisions) const;
+    void findAllCollisions(const DynamicBVH<IdType>& other,
+                           std::vector<std::pair<IdType, IdType>>& collisions) const;
 
     // Finite raycast queries
     std::optional<RaycastInfo> firstHitRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;
@@ -126,8 +125,12 @@ private:
     void insertLeaf(NodeIndex leaf);
     void removeLeaf(NodeIndex leafIndex);
     void collectLeaves(NodeIndex nodeIdx, std::vector<NodeIndex>& out) const;
-    void findPairsBetween(NodeIndex nodeAIdx, NodeIndex nodeBIdx, std::set<std::pair<IdType, IdType>>& out) const;
-    void findAllCollisionsRecursive(NodeIndex nodeIdx, std::set<std::pair<IdType, IdType>>& out) const;
+    void findPairsBetween(NodeIndex nodeAIdx, NodeIndex nodeBIdx, std::vector<std::pair<IdType, IdType>>& out) const;
+    void findPairsBetween(const DynamicBVH<IdType>& other,
+                          NodeIndex nodeAIdx,
+                          NodeIndex nodeBIdx,
+                          std::vector<std::pair<IdType, IdType>>& out) const;
+    void findAllCollisionsRecursive(NodeIndex nodeIdx, std::vector<std::pair<IdType, IdType>>& out) const;
 
     NodeIndex findBestSiblingIndex(AABB leaf) const;
     NodeIndex balance(NodeIndex index);
@@ -477,10 +480,6 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 {
     BVHNode<IdType>& node = nodes[index];
 
-    // Can't balance a leaf
-    // if (node.isLeaf() || node.height < 2)
-    //     return index;
-
     const NodeIndex child1Index = node.child1Index;
     const NodeIndex child2Index = node.child2Index;
     const BVHNode<IdType>& child1 = nodes[child1Index];
@@ -615,7 +614,7 @@ auto DynamicBVH<IdType>::leavesView() const
 }
 
 template<typename IdType>
-void DynamicBVH<IdType>::query(AABB queryAABB, std::set<IdType>& intersections, BitMaskType maskBits) const
+void DynamicBVH<IdType>::query(AABB queryAABB, std::vector<IdType>& intersections, BitMaskType maskBits) const
 {
     std::vector<NodeIndex> stack;
     stack.push_back(rootIndex);
@@ -635,7 +634,7 @@ void DynamicBVH<IdType>::query(AABB queryAABB, std::set<IdType>& intersections, 
 
         if (node.isLeaf())
         {
-            intersections.insert(node.id);
+            intersections.push_back(node.id);
         }
         else
         {
@@ -643,21 +642,6 @@ void DynamicBVH<IdType>::query(AABB queryAABB, std::set<IdType>& intersections, 
             stack.push_back(node.child2Index);
         }
     }
-}
-
-template<typename IdType>
-std::vector<std::set<IdType>> DynamicBVH<IdType>::batchQuery(const std::vector<AABB>& queries,
-                                                             BitMaskType maskBits) const
-{
-    const size_t n = queries.size();
-    std::vector<std::set<IdType>> results(n);
-    std::ranges::iota_view indexes((size_t)0, n);
-
-    std::for_each(std::execution::par_unseq, indexes.begin(), indexes.end(), [&](size_t i) {
-        query(queries[i], results[i], maskBits);
-    });
-
-    return results;
 }
 
 template<typename IdType>
@@ -825,9 +809,16 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
 }
 
 template<typename IdType>
-void DynamicBVH<IdType>::findAllCollisions(std::set<std::pair<IdType, IdType>>& out) const
+void DynamicBVH<IdType>::findAllCollisions(std::vector<std::pair<IdType, IdType>>& out) const
 {
     findAllCollisionsRecursive(rootIndex, out);
+}
+
+template<typename IdType>
+void DynamicBVH<IdType>::findAllCollisions(const DynamicBVH<IdType>& other,
+                                           std::vector<std::pair<IdType, IdType>>& out) const
+{
+    findPairsBetween(other, rootIndex, other.rootIndex, out);
 }
 
 template<typename IdType>
@@ -847,7 +838,7 @@ void DynamicBVH<IdType>::collectLeaves(NodeIndex nodeIdx, std::vector<NodeIndex>
 template<typename IdType>
 void DynamicBVH<IdType>::findPairsBetween(NodeIndex nodeAIdx,
                                           NodeIndex nodeBIdx,
-                                          std::set<std::pair<IdType, IdType>>& out) const
+                                          std::vector<std::pair<IdType, IdType>>& out) const
 {
     if (nodeAIdx == INVALID_NODE_INDEX || nodeBIdx == INVALID_NODE_INDEX || nodeAIdx == nodeBIdx)
         return;
@@ -865,9 +856,9 @@ void DynamicBVH<IdType>::findPairsBetween(NodeIndex nodeAIdx,
     {
         // Always store (min, max) to avoid (A, B) and (B, A) being different
         if (nodeA.id < nodeB.id)
-            out.emplace(nodeA.id, nodeB.id);
+            out.emplace_back(nodeA.id, nodeB.id);
         else
-            out.emplace(nodeB.id, nodeA.id);
+            out.emplace_back(nodeB.id, nodeA.id);
         return;
     }
 
@@ -885,8 +876,46 @@ void DynamicBVH<IdType>::findPairsBetween(NodeIndex nodeAIdx,
 }
 
 template<typename IdType>
+void DynamicBVH<IdType>::findPairsBetween(const DynamicBVH<IdType>& other,
+                                          NodeIndex nodeAIdx,
+                                          NodeIndex nodeBIdx,
+                                          std::vector<std::pair<IdType, IdType>>& out) const
+{
+    if (nodeAIdx == INVALID_NODE_INDEX || nodeBIdx == INVALID_NODE_INDEX)
+        return;
+
+    const auto& nodeA = nodes[nodeAIdx];
+    const auto& nodeB = other.nodes[nodeBIdx];
+
+    if (!nodeA.matchesMask(nodeB.categoryBits) || !nodeB.matchesMask(nodeA.categoryBits))
+        return;
+    if (!nodeA.aabb.intersects(nodeB.aabb))
+        return;
+
+    if (nodeA.isLeaf() && nodeB.isLeaf())
+    {
+        if (nodeA.id < nodeB.id)
+            out.emplace_back(nodeA.id, nodeB.id);
+        else
+            out.emplace_back(nodeB.id, nodeA.id);
+        return;
+    }
+
+    if (nodeA.isLeaf() || (!nodeB.isLeaf() && nodeB.height > nodeA.height))
+    {
+        findPairsBetween(other, nodeAIdx, nodeB.child1Index, out);
+        findPairsBetween(other, nodeAIdx, nodeB.child2Index, out);
+    }
+    else
+    {
+        findPairsBetween(other, nodeA.child1Index, nodeBIdx, out);
+        findPairsBetween(other, nodeA.child2Index, nodeBIdx, out);
+    }
+}
+
+template<typename IdType>
 void DynamicBVH<IdType>::findAllCollisionsRecursive(NodeIndex nodeIdx,
-                                                    std::set<std::pair<IdType, IdType>>& out) const
+                                                    std::vector<std::pair<IdType, IdType>>& out) const
 {
     if (nodeIdx == INVALID_NODE_INDEX)
         return;

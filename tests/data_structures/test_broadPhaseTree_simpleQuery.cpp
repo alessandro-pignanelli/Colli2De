@@ -65,7 +65,7 @@ TEST_CASE("BroadPhaseTree | query finds all overlapping proxies", "[BroadPhaseTr
         }
     }
 
-    std::set<uint32_t> foundIds;
+    std::vector<uint32_t> foundIds;
 
     // Query an area covering (2,2) to (4,4)
     AABB queryAABB{Vec2{2.0f, 2.0f}, Vec2{4.0f, 4.0f}};
@@ -97,7 +97,7 @@ TEST_CASE("BroadPhaseTree | query finds all overlapping proxies", "[BroadPhaseTr
 
     // Should find exactly one id
     CHECK(foundIds.size() == 1);
-    CHECK(foundIds.count(21) == 1); // The proxy with AABB{(3, 3), (4, 4)}
+    CHECK(std::find(foundIds.begin(), foundIds.end(), 21) != foundIds.end()); // The proxy with AABB{(3, 3), (4, 4)}
 
     // Query an area that overlaps with every proxy
     AABB fullOverlapQuery{Vec2{0.0f, 0.0f}, Vec2{6.0f, 6.0f}};
@@ -504,20 +504,20 @@ TEST_CASE("BroadPhaseTree: findAllCollisions finds correct pairs", "[BroadPhaseT
     tree.addProxy(2, {Vec2{4,4}, Vec2{5,5}});
     tree.addProxy(3, {Vec2{1.5f,1.5f}, Vec2{2.5f,2.5f}});
 
-    std::set<std::pair<uint32_t, uint32_t>> pairs;
-    tree.findAllCollisions([&pairs](std::set<std::pair<uint32_t, uint32_t>>&& foundPairs) {
-        pairs = std::move(foundPairs);
+    std::vector<std::pair<uint32_t, uint32_t>> pairs;
+    tree.findAllCollisions([&pairs](std::vector<std::pair<uint32_t, uint32_t>> foundPairs) {
+        pairs.insert(pairs.end(), foundPairs.begin(), foundPairs.end());
     });
 
     // Should find (0,1), (0,3), (1,3)
-    std::set<std::pair<uint32_t, uint32_t>> expected {
+    std::vector<std::pair<uint32_t, uint32_t>> expected {
         {0,1}, {0,3}, {1,3}
     };
 
     REQUIRE(pairs.size() == expected.size());
     for (const auto& e : expected)
     {
-        CHECK(pairs.find(e) != pairs.end());
+        CHECK(std::find(pairs.begin(), pairs.end(), e) != pairs.end());
     }
 }
 
@@ -528,21 +528,20 @@ TEST_CASE("BroadPhaseTree batchQuery with multiple threads", "[BroadPhaseTree][B
         tree.addProxy(i, {Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}});
 
     std::vector<std::pair<AABB, BitMaskType>> queries;
-    std::vector<std::set<uint32_t>> expectedResults;
+    std::vector<std::vector<uint32_t>> expectedResults;
     for (uint32_t i = 0; i < 20000; ++i)
     {
         queries.emplace_back(AABB{Vec2{float(i * 10), float(i * 10)},
                                         Vec2{float((i + 1) * 10), float((i + 1) * 10)}},
                              ~0ull);
-        std::set<uint32_t> hits;
-        hits = tree.query(queries.back().first, queries.back().second);
+        auto hits = tree.query(queries.back().first, queries.back().second);
         expectedResults.push_back(std::move(hits));
     }
 
-    std::vector<std::set<uint32_t>> results;
-    results.reserve(queries.size());
-    tree.batchQuery(queries, [&results](size_t, const std::set<uint32_t>& hits) {
-        results.push_back(std::move(hits));
+    std::vector<std::vector<uint32_t>> results;
+    results.resize(queries.size());
+    tree.batchQuery(queries, [&results](size_t i, std::vector<uint32_t> hits) {
+        results[i] = std::move(hits);
     });
     CHECK(results.size() == expectedResults.size());
 

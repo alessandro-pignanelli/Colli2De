@@ -22,13 +22,13 @@ TEST_CASE("DynamicBVH | query handles degenerate and thin AABBs", "[DynamicBVH][
 
     // Query covering all
     AABB query{Vec2{0,0}, Vec2{6,11}};
-    std::set<uint32_t> hits;
+    std::vector<uint32_t> hits;
     bvh.query(query, hits);
 
     REQUIRE(hits.size() == 3);
-    REQUIRE(hits.count(1) == 1);
-    REQUIRE(hits.count(2) == 1);
-    REQUIRE(hits.count(3) == 1);
+    REQUIRE(std::find(hits.begin(), hits.end(), 1) != hits.end());
+    REQUIRE(std::find(hits.begin(), hits.end(), 2) != hits.end());
+    REQUIRE(std::find(hits.begin(), hits.end(), 3) != hits.end());
 }
 
 TEST_CASE("DynamicBVH | raycastFirstHit detects grazing rays", "[DynamicBVH][Advanced][RayGrazing]")

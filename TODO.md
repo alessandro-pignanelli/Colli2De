@@ -7,3 +7,4 @@
     - Store data in a flat array instead of pointers for fast access
 - Narrow-phase collision detection in parallel inside the Registry class (atm only broad-phase is parallelized)
 - Bullet raycasting
+- Change std::set to std::vector for raycast queries everywhere, like in the normal collision detection.

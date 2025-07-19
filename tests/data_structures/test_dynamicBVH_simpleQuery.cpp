@@ -65,7 +65,7 @@ TEST_CASE("DynamicBVH | query finds all overlapping proxies", "[DynamicBVH][Quer
         }
     }
 
-    std::set<uint32_t> foundIds;
+    std::vector<uint32_t> foundIds;
     
     // Query an area covering (2,2) to (4,4)
     AABB queryAABB{Vec2{2.0f, 2.0f}, Vec2{4.0f, 4.0f}};
@@ -97,7 +97,7 @@ TEST_CASE("DynamicBVH | query finds all overlapping proxies", "[DynamicBVH][Quer
 
     // Should find exactly one id
     CHECK(foundIds.size() == 1);
-    CHECK(foundIds.count(21) == 1); // The proxy with AABB{(3, 3), (4, 4)}
+    CHECK(std::find(foundIds.begin(), foundIds.end(), 21) != foundIds.end()); // The proxy with AABB{(3, 3), (4, 4)}
 
     // Query an area that overlaps with every proxy
     AABB fullOverlapQuery{Vec2{0.0f, 0.0f}, Vec2{6.0f, 6.0f}};
@@ -517,7 +517,7 @@ TEST_CASE("DynamicBVH | findAllCollisions finds correct pairs", "[DynamicBVH][Br
     bvh.createProxy({Vec2{4,4}, Vec2{5,5}}, 2);
     bvh.createProxy({Vec2{1.5f,1.5f}, Vec2{2.5f,2.5f}}, 3);
 
-    std::set<std::pair<uint32_t, uint32_t>> pairs;
+    std::vector<std::pair<uint32_t, uint32_t>> pairs;
     bvh.findAllCollisions(pairs);
 
     // Should find (0,1), (0,3), (1,3)
@@ -528,35 +528,6 @@ TEST_CASE("DynamicBVH | findAllCollisions finds correct pairs", "[DynamicBVH][Br
     REQUIRE(pairs.size() == expected.size());
     for (const auto& e : expected)
     {
-        CHECK(pairs.find(e) != pairs.end());
-    }
-}
-
-TEST_CASE("DynamicBVH | batchQuery with multiple threads", "[DynamicBVH][BatchQuery]")
-{
-    DynamicBVH<uint32_t> bvh;
-    for (uint32_t i = 0; i < 1000; ++i)
-        bvh.createProxy({Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}}, i);
-
-    std::vector<AABB> queries;
-    std::vector<std::set<uint32_t>> expectedResults;
-    for (uint32_t i = 0; i < 20000; ++i)
-    {
-        queries.push_back({Vec2{float(i * 10), float(i * 10)}, Vec2{float((i + 1) * 10), float((i + 1) * 10)}});
-        std::set<uint32_t> hits;
-        bvh.query(queries.back(), hits);
-        expectedResults.push_back(std::move(hits));
-    }
-
-    auto results = bvh.batchQuery(queries);
-    CHECK(results.size() == expectedResults.size());
-
-    for (size_t i = 0; i < results.size(); ++i)
-    {
-        const auto& query = queries[i];
-        const auto& hits = results[i];
-        const auto& expected = expectedResults[i];
-
-        CHECK(hits == expected);
+        CHECK(std::find(pairs.begin(), pairs.end(), e) != pairs.end());
     }
 }

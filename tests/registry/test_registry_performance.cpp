@@ -20,7 +20,7 @@ TEST_CASE("Registry | Bulk insertion", "[Registry][Benchmark][Insert]")
     for(size_t i = 0; i < circles.size(); ++i)
         transforms.push_back(Transform(circles[i].center));
 
-    BENCHMARK_FUNCTION("Registry | Insert 10k entities and shapes", 30ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Insert 10k entities and shapes", 15ms, [&]()
     {
         Registry<uint32_t> reg;
         for(uint32_t i = 0; i < 10'000; ++i)
@@ -31,7 +31,7 @@ TEST_CASE("Registry | Bulk insertion", "[Registry][Benchmark][Insert]")
         return reg.size();
     });
 
-    BENCHMARK_FUNCTION("Registry | Insert 100k entities and shapes", 300ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Insert 100k entities and shapes", 200ms, [&]()
     {
         Registry<uint32_t> reg;
         for(uint32_t i = 0; i < 100'000; ++i)
@@ -56,7 +56,7 @@ TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
         reg.addShape(i, circles[i]);
     }
 
-    BENCHMARK_FUNCTION("Registry | Move 10k entities", 10ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Move 10k entities", 5ms, [&]()
     {
         for(uint32_t i = 0; i < 10'000; ++i)
             reg.moveEntity(i, Transform(translations[i]));
@@ -78,7 +78,7 @@ TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
         reg.addShape(i, circles[i]);
     }
 
-    BENCHMARK_FUNCTION("Registry | Move 100k entities", 130ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Move 100k entities", 80ms, [&]()
     {
         for(uint32_t i = 0; i < 100'000; ++i)
             reg.moveEntity(i, Transform(translations[i]));
@@ -110,7 +110,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k entities", 200us, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k entities", 50us, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -127,7 +127,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k entities", 7ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k entities", 5ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -144,7 +144,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 400ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 300ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -158,7 +158,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k bullets", 100us, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k bullets", 50us, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -186,7 +186,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k bullets", 700ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k bullets", 500ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });

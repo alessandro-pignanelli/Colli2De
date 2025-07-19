@@ -3,8 +3,7 @@
 #include <execution>
 #include <functional>
 #include <set>
-#include <unordered_map>
-#include <unordered_set>
+#include <map>
 #include <vector>
 
 #include <colli2de/Ray.hpp>
@@ -26,13 +25,11 @@ struct GridCell
     int32_t y;
 
     bool operator==(GridCell other) const { return x == other.x && y == other.y; }
-};
-struct HashGridCell
-{
-    size_t operator()(GridCell cell) const noexcept
-    {
-        return std::hash<int32_t>{}(cell.x) ^ (std::hash<int32_t>{}(cell.y) << 1);
-    }
+    bool operator!=(GridCell other) const { return !(*this == other); }
+    bool operator<(GridCell other) const { return (x < other.x) || (x == other.x && y < other.y); }
+    bool operator>(GridCell other) const { return (x > other.x) || (x == other.x && y > other.y); }
+    bool operator<=(GridCell other) const { return !(*this > other); }
+    bool operator>=(GridCell other) const { return !(*this < other); }
 };
 
 namespace
@@ -76,11 +73,13 @@ public:
     void moveProxy(BroadPhaseTreeHandle handle, AABB aabb);
 
     // AABB queries
-    std::set<IdType> query(AABB queryAABB, BitMaskType maskBits = ~0ull) const;
+    std::vector<IdType> query(AABB queryAABB, BitMaskType maskBits = ~0ull) const;
     void batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
-                    const std::function<void(size_t, std::set<IdType>)>& callback) const;
-    void findAllCollisions(const std::function<void(std::set<std::pair<IdType, IdType>>)>& callback) const;
-    std::set<IdType> findAllCollisions(BroadPhaseTreeHandle handle) const;
+                    const std::function<void(size_t, std::vector<IdType>)>& callback) const;
+    void findAllCollisions(const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const;
+    std::vector<IdType> findAllCollisions(BroadPhaseTreeHandle handle) const;
+    void findAllCollisions(const BroadPhaseTree<IdType>& other,
+                           const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const;
 
     // Raycast queries
     std::optional<RaycastInfo<IdType>> firstHitRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;
@@ -99,23 +98,17 @@ private:
 
     struct Proxy
     {
-        std::unordered_map<GridCell, NodeIndex, HashGridCell> bvhHandles;
+        std::map<GridCell, NodeIndex> bvhHandles;
         IdType entityId;
         AABB aabb;
         BitMaskType categoryBits;           // For collision filtering
         BitMaskType maskBits;               // For collision filtering
     };
-    
-    struct Region
-    {
-        DynamicBVH<IdType> bvh;
-        std::unordered_set<BroadPhaseTreeHandle> proxies;
-    };
 
     const int32_t cellSize;                       // Size of each grid cell for spatial partitioning
     std::vector<Proxy> proxies;                   // Indexed by BroadPhaseTreeHandle
     std::vector<BroadPhaseTreeHandle> freeList;   // For fast recycling
-    std::unordered_map<GridCell, Region, HashGridCell> regions;
+    std::map<GridCell, DynamicBVH<IdType>> regions;
 };
 
 
@@ -143,11 +136,7 @@ BroadPhaseTreeHandle BroadPhaseTree<IdType>::addProxy(IdType entityId, AABB aabb
 
     forEachCell(aabb, cellSize, [&](GridCell cell)
     {
-        auto& region = regions[cell];
-        auto& bvh = region.bvh;
-
-        // Region stores every proxy that belongs to it
-        region.proxies.insert(treeHandle);
+        auto& bvh = regions[cell];
 
         // Proxy stores the BVH handle for each cell (region) it belongs to
         const auto bvhHandle = bvh.createProxy(aabb, entityId, categoryBits, maskBits);
@@ -167,11 +156,10 @@ void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
     // Remove the proxy from all regions it belongs to
     for (const auto& [cell, bvhHandle] : proxy.bvhHandles)
     {
-        auto& region = regions.at(cell);
-        region.proxies.erase(handle);
-        region.bvh.destroyProxy(bvhHandle);
+        auto& bvh = regions.at(cell);
+        bvh.destroyProxy(bvhHandle);
 
-        if (region.proxies.empty())
+        if (bvh.size() == 0)
             regions.erase(cell);
     }
     
@@ -199,43 +187,41 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
     if (isSameCellRange)
     {
         for (const auto& [cell, bvhHandle] : proxy.bvhHandles)
-            regions.at(cell).bvh.moveProxy(bvhHandle, aabb);
+            regions.at(cell).moveProxy(bvhHandle, aabb);
         return;
     }
 
     const auto addToCell = [this, handle, aabb](GridCell cell)
     {
         // Region stores every proxy that belongs to it
-        auto& region = regions[cell];
-        region.proxies.insert(handle);
+        auto& bvh = regions[cell];
 
         // Proxy stores the BVH handle for each cell (region) it belongs to
         auto& proxy = proxies.at(handle);
-        const auto bvhHandle = region.bvh.createProxy(aabb, proxy.entityId, proxy.categoryBits, proxy.maskBits);
+        const auto bvhHandle = bvh.createProxy(aabb, proxy.entityId, proxy.categoryBits, proxy.maskBits);
         proxy.bvhHandles.emplace(cell, bvhHandle);
     };
     const auto removeFromCell = [this, handle](GridCell cell)
     {
         // Remove the proxy from the region
-        auto& region = regions.at(cell);
-        region.proxies.erase(handle);
-
+        auto& bvh = regions.at(cell);
+        
         // Destroy the proxy from the BVH in that region and remove the bvh handle
         auto& proxy = proxies.at(handle);
         const auto bvhHandleInRegion = proxy.bvhHandles.find(cell);
         assert(bvhHandleInRegion != proxy.bvhHandles.end());
-        region.bvh.destroyProxy(bvhHandleInRegion->second);
+        bvh.destroyProxy(bvhHandleInRegion->second);
         proxy.bvhHandles.erase(bvhHandleInRegion);
 
-        if (region.proxies.empty())
+        if (bvh.size() == 0)
             regions.erase(cell);
     };
     const auto moveSameCell = [this, handle, aabb](GridCell cell)
     {
         // If the proxy is still in the same cell, just update the BVH
-        auto& region = regions.at(cell);
+        auto& bvh = regions.at(cell);
         const auto& proxy = proxies.at(handle);
-        region.bvh.moveProxy(proxy.bvhHandles.at(cell), aabb);
+        bvh.moveProxy(proxy.bvhHandles.at(cell), aabb);
     };
 
     const int32_t minX = std::min(oldMinCell.x, newMinCell.x);
@@ -261,9 +247,9 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 
 // AABB queries
 template<typename IdType>
-std::set<IdType> BroadPhaseTree<IdType>::query(AABB queryAABB, BitMaskType maskBits) const
+std::vector<IdType> BroadPhaseTree<IdType>::query(AABB queryAABB, BitMaskType maskBits) const
 {
-    std::set<IdType> intersections;
+    std::vector<IdType> intersections;
 
     forEachCell(queryAABB, cellSize, [&](GridCell cell)
     {
@@ -271,8 +257,8 @@ std::set<IdType> BroadPhaseTree<IdType>::query(AABB queryAABB, BitMaskType maskB
         if (regionIt == regions.end())
             return; // No region here
 
-        const auto& region = regionIt->second;
-        region.bvh.query(queryAABB, intersections, maskBits);
+        const auto& bvh = regionIt->second;
+        bvh.query(queryAABB, intersections, maskBits);
     });
 
     return intersections;
@@ -280,35 +266,56 @@ std::set<IdType> BroadPhaseTree<IdType>::query(AABB queryAABB, BitMaskType maskB
 
 template<typename IdType>
 void BroadPhaseTree<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
-                                        const std::function<void(size_t, std::set<IdType>)>& callback) const
+                                        const std::function<void(size_t, std::vector<IdType>)>& callback) const
 {
     std::ranges::iota_view indexes((size_t)0, queries.size());
     std::for_each(std::execution::par_unseq, indexes.begin(), indexes.end(), [&](size_t i) {
-        std::set<IdType> hits = query(queries[i].first, queries[i].second);
-        callback(i, std::move(hits));
+        auto hits = query(queries[i].first, queries[i].second);
+
+        if (!hits.empty())
+            callback(i, std::move(hits));
     });
 }
 
 template<typename IdType>
-void BroadPhaseTree<IdType>::findAllCollisions(const std::function<void(std::set<std::pair<IdType, IdType>>)>& callback) const
+void BroadPhaseTree<IdType>::findAllCollisions(const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const
 {
-    std::set<std::pair<IdType, IdType>> collisions;
+    std::vector<std::pair<IdType, IdType>> collisions;
 
-    std::for_each(std::execution::par_unseq, regions.begin(), regions.end(),
-                  [&collisions](const auto& regionPair) {
-        const auto& region = regionPair.second;
-        region.bvh.findAllCollisions(collisions);
+    std::for_each(std::execution::par_unseq, regions.begin(), regions.end(), [&collisions](const auto& regionPair) {
+        const auto& bvh = regionPair.second;
+        bvh.findAllCollisions(collisions);
     });
 
-    callback(std::move(collisions));
+    if (!collisions.empty())
+        callback(std::move(collisions));
 }
 
 template<typename IdType>
-std::set<IdType> BroadPhaseTree<IdType>::findAllCollisions(BroadPhaseTreeHandle handle) const
+std::vector<IdType> BroadPhaseTree<IdType>::findAllCollisions(BroadPhaseTreeHandle handle) const
 {
     assert(isValidHandle(handle));
     const Proxy& proxy = proxies.at(handle);
     return query(proxy.aabb, proxy.maskBits);
+}
+
+template<typename IdType>
+void BroadPhaseTree<IdType>::findAllCollisions(const BroadPhaseTree<IdType>& other,
+                                               const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const
+{
+    std::vector<std::pair<IdType, IdType>> collisions;
+
+    std::for_each(std::execution::par_unseq, regions.begin(), regions.end(), [&](const auto& regionPair)
+    {
+        const auto otherIt = other.regions.find(regionPair.first);
+        if (otherIt == other.regions.end())
+            return;
+
+        regionPair.second.findAllCollisions(otherIt->second, collisions);
+    });
+
+    if (!collisions.empty())
+        callback(std::move(collisions));
 }
 
 // Raycast queries
@@ -331,8 +338,8 @@ std::optional<RaycastInfo<IdType>> BroadPhaseTree<IdType>::firstHitRaycast(Ray r
     {
         if (const auto regionIt = regions.find(currentCell); regionIt != regions.end())
         {
-            const auto& region = regionIt->second;
-            const auto firstHit = region.bvh.firstHitRaycast(ray, maskBits);
+            const auto& bvh = regionIt->second;
+            const auto firstHit = bvh.firstHitRaycast(ray, maskBits);
             if (firstHit)
                 return firstHit;
         }
@@ -401,8 +408,8 @@ std::set<RaycastInfo<IdType>> BroadPhaseTree<IdType>::piercingRaycast(Ray ray, B
     {
         if (const auto regionIt = regions.find(currentCell); regionIt != regions.end())
         {
-            const auto& region = regionIt->second;
-            region.bvh.piercingRaycast(ray, hits, maskBits);
+            const auto& bvh = regionIt->second;
+            bvh.piercingRaycast(ray, hits, maskBits);
         }
 
         if (isParallelX)
@@ -462,7 +469,7 @@ void BroadPhaseTree<IdType>::clear()
     proxies.clear();
     freeList.clear();
     regions.clear();
-    regions.reserve(32);
+    proxies.reserve(32);
 }
 
 } // namespace c2d

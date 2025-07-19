@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cstdint>
-#include <map>
 #include <set>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -41,34 +40,31 @@ TEST_CASE("BroadPhaseTree | query with mask bits filters correctly", "[BroadPhas
     SECTION("BroadPhaseTree | Query with mask for category 2")
     {
         BitMaskType only2 = 0b0100;
-        std::set<uint32_t> result;
-        result = tree.query(allAABB, only2);
+        auto result = tree.query(allAABB, only2);
         CHECK(result.size() == 1);
-        CHECK(result.count(3) == 1); // Should match only the proxy with category 2
+        CHECK(std::find(result.begin(), result.end(), 3) != result.end()); // Should match only the proxy with category 2
     }
 
     // Query with mask that matches category 1 and 3
     SECTION("BroadPhaseTree | Query with mask for category 1 and 3")
     {
         BitMaskType oneAndThree = 0b1010;
-        std::set<uint32_t> result;
-        result = tree.query(allAABB, oneAndThree);
+        auto result = tree.query(allAABB, oneAndThree);
         CHECK(result.size() == 2);
-        CHECK(result.count(2) == 1);
-        CHECK(result.count(4) == 1);
+        CHECK(std::find(result.begin(), result.end(), 2) != result.end());
+        CHECK(std::find(result.begin(), result.end(), 4) != result.end());
     }
 
     // Query with mask that matches all
     SECTION("BroadPhaseTree | Query with mask for all categories")
     {
         BitMaskType all = 0b1111;
-        std::set<uint32_t> result;
-        result = tree.query(allAABB, all);
+        auto result = tree.query(allAABB, all);
         CHECK(result.size() == 4);
-        CHECK(result.count(1) == 1);
-        CHECK(result.count(2) == 1);
-        CHECK(result.count(3) == 1);
-        CHECK(result.count(4) == 1);
+        CHECK(std::find(result.begin(), result.end(), 1) != result.end());
+        CHECK(std::find(result.begin(), result.end(), 2) != result.end());
+        CHECK(std::find(result.begin(), result.end(), 3) != result.end());
+        CHECK(std::find(result.begin(), result.end(), 4) != result.end());
     }
 }
 

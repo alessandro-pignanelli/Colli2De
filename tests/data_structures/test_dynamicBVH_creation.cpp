@@ -293,15 +293,15 @@ TEST_CASE("DynamicBVH | handles moving proxies with remove and reinsert", "[Dyna
 
     // Query at old location should NOT find proxy
     AABB oldArea{Vec2{-1,-1}, Vec2{2,2}};
-    std::set<uint32_t> hits;
+    std::vector<uint32_t> hits;
     bvh.query(oldArea, hits);
-    REQUIRE_FALSE(hits.count(5));
+    REQUIRE(std::find(hits.begin(), hits.end(), 5) == hits.end());
 
     // Query at new location should find proxy
     AABB newArea{Vec2{9,9}, Vec2{12,12}};
     hits.clear();
     bvh.query(newArea, hits);
-    REQUIRE(hits.count(5));
+    REQUIRE(std::find(hits.begin(), hits.end(), 5) != hits.end());
 }
 
 TEST_CASE("DynamicBVH | can serialize and deserialize correctly", "[DynamicBVH][Serialize][Deserialize]")
@@ -329,7 +329,7 @@ TEST_CASE("DynamicBVH | can serialize and deserialize correctly", "[DynamicBVH][
     // 5. Query both and compare results
     AABB query{Vec2{20, 20}, Vec2{40, 40}};
     
-    std::set<uint32_t> hits1, hits2;
+    std::vector<uint32_t> hits1, hits2;
     bvh.query(query, hits1);
     bvh2.query(query, hits2);
 

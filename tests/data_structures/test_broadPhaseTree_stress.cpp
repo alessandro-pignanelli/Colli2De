@@ -1,5 +1,4 @@
 #include <cstdint>
-#include <set>
 #include <catch2/catch_test_macros.hpp>
 
 #include <colli2de/internal/data_structures/BroadPhaseTree.hpp>

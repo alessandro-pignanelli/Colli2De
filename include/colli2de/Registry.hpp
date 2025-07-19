@@ -2,7 +2,7 @@
 
 #include <variant>
 #include <vector>
-#include <unordered_map>
+#include <map>
 
 #include <colli2de/Ray.hpp>
 #include <colli2de/Shapes.hpp>
@@ -87,14 +87,14 @@ private:
         BodyType type;
     };
 
-    std::unordered_map<EntityId, EntityInfo> entities;
+    std::map<EntityId, EntityInfo> entities;
     std::vector<std::pair<EntityId, size_t>> shapeEntity;
     std::vector<ShapeId> freeShapeIds;
 
     BroadPhaseTree<ShapeId> treeStatic;
     BroadPhaseTree<ShapeId> treeDynamic;
     BroadPhaseTree<ShapeId> treeBullet;
-    std::unordered_map<EntityId, Transform> bulletPreviousTransforms;
+    std::map<EntityId, Transform> bulletPreviousTransforms;
     uint32_t previousAllCollisionsCount = 0;
 
     constexpr BroadPhaseTree<ShapeId>& treeFor(BodyType type);
@@ -107,13 +107,10 @@ private:
                               ShapeId shapeBId,
                               std::vector<EntityCollision>& outCollisionsInfo) const;
     void narrowPhaseCollisions(ShapeId shapeQueried,
-                               const std::set<ShapeId>& collisions,
+                               std::vector<ShapeId>& collisions,
                                std::vector<EntityCollision>& outCollisionsInfo) const;
-    void narrowPhaseDynamicCollisionsPairs(const std::set<std::pair<ShapeId, ShapeId>>& pairs,
-                                           std::vector<EntityCollision>& outCollisionsInfo) const;
-    void narrowPhaseBulletCollisionsPairs(ShapeId shapeAId,
-                                          ShapeId shapeBId,
-                                          std::vector<EntityCollision>& outCollisionsInfo) const;
+    void narrowPhaseCollisions(std::vector<std::pair<ShapeId, ShapeId>>& collisions,
+                               std::vector<EntityCollision>& outCollisionsInfo) const;
 };
 
 template<typename EntityId>
@@ -350,33 +347,25 @@ void Registry<EntityId>::moveEntity(EntityId id, Translation deltaTranslation)
 template<typename EntityId>
 std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::getCollidingPairs()
 {
-    std::vector<std::pair<AABB, BitMaskType>> dynamicQueries;
-    std::vector<ShapeId> dynamicShapesQueried;
-    std::vector<std::pair<AABB, BitMaskType>> staticQueries;
-    std::vector<ShapeId> staticShapesQueried;
+    // std::vector<std::pair<AABB, BitMaskType>> dynamicQueries;
+    // std::vector<ShapeId> dynamicShapesQueried;
+    // std::vector<std::pair<AABB, BitMaskType>> staticQueries;
+    // std::vector<ShapeId> staticShapesQueried;
 
-    getAllCollisionAABBQueries(dynamicQueries, staticQueries, dynamicShapesQueried, staticShapesQueried);
+    // getAllCollisionAABBQueries(dynamicQueries, staticQueries, dynamicShapesQueried, staticShapesQueried);
 
     std::vector<EntityCollision> collisionsInfo;
     collisionsInfo.reserve(previousAllCollisionsCount);
 
-    treeDynamic.batchQuery(staticQueries, [&](size_t i, std::set<ShapeId> collisions) {
-        narrowPhaseCollisions(staticShapesQueried[i], collisions, collisionsInfo);
-    });
-    treeBullet.batchQuery(staticQueries, [&](size_t i, std::set<ShapeId> collisions) {
-        narrowPhaseCollisions(staticShapesQueried[i], collisions, collisionsInfo);
-    });
-    treeBullet.batchQuery(dynamicQueries, [&](size_t i, std::set<ShapeId> collisions) {
-        narrowPhaseCollisions(dynamicShapesQueried[i], collisions, collisionsInfo);
-    });
-    treeDynamic.findAllCollisions([&](std::set<std::pair<ShapeId, ShapeId>> collisions) {
-        for (const auto& [a, b] : collisions)
-            narrowPhaseCollision(a, b, collisionsInfo);
-    });
-    treeBullet.findAllCollisions([&](std::set<std::pair<ShapeId, ShapeId>> collisions) {
-        for (const auto& [a, b] : collisions)
-            narrowPhaseCollision(a, b, collisionsInfo);
-    });
+    const auto handlePairCollisions = [&](std::vector<std::pair<ShapeId, ShapeId>> collisions) {
+        narrowPhaseCollisions(collisions, collisionsInfo);
+    };
+
+    treeDynamic.findAllCollisions(treeStatic, handlePairCollisions);
+    treeBullet.findAllCollisions(treeStatic, handlePairCollisions);
+    treeBullet.findAllCollisions(treeDynamic, handlePairCollisions);
+    treeDynamic.findAllCollisions(handlePairCollisions);
+    treeBullet.findAllCollisions(handlePairCollisions);
 
     previousAllCollisionsCount = collisionsInfo.size();
     return collisionsInfo;
@@ -426,14 +415,14 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
 
     if (entity.type != BodyType::Static)
     {
-        treeStatic.batchQuery(queries, [&](size_t i, std::set<ShapeId> collisions) {
+        treeStatic.batchQuery(queries, [&](size_t i, std::vector<ShapeId> collisions) {
             narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo);
         });
     }
-    treeDynamic.batchQuery(queries, [&](size_t i, std::set<ShapeId> collisions) {
+    treeDynamic.batchQuery(queries, [&](size_t i, std::vector<ShapeId> collisions) {
         narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo);
     });
-    treeBullet.batchQuery(queries, [&](size_t i, std::set<ShapeId> collisions) {
+    treeBullet.batchQuery(queries, [&](size_t i, std::vector<ShapeId> collisions) {
         narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo);
     });
 
@@ -543,53 +532,41 @@ void Registry<EntityId>::narrowPhaseCollision(ShapeId shapeAId,
 }
 
 template<typename EntityId>
-void Registry<EntityId>::narrowPhaseCollisions(ShapeId shapeQueried,
-                                               const std::set<ShapeId>& collisions,
+void Registry<EntityId>::narrowPhaseCollisions(std::vector<std::pair<ShapeId, ShapeId>>& collisions,
                                                std::vector<EntityCollision>& outCollisionsInfo) const
 {
-    for (const auto otherShapeId : collisions)
-        narrowPhaseCollision(shapeQueried, otherShapeId, outCollisionsInfo);
+    // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
+    std::sort(collisions.begin(), collisions.end());
+
+    narrowPhaseCollision(collisions[0].first, collisions[0].second, outCollisionsInfo);
+    for (size_t i = 1; i < collisions.size(); ++i)
+    {
+        // Skip duplicates
+        if ((collisions[i].first == collisions[i - 1].first && collisions[i].second == collisions[i - 1].second) ||
+            (collisions[i].first == collisions[i - 1].second && collisions[i].second == collisions[i - 1].first))
+            continue;
+
+        narrowPhaseCollision(collisions[i].first, collisions[i].second, outCollisionsInfo);
+    }
 }
 
 template<typename EntityId>
-void Registry<EntityId>::narrowPhaseBulletCollisionsPairs(ShapeId shapeAId,
-                                                          ShapeId shapeBId,
-                                                          std::vector<EntityCollision>& outCollisionsInfo) const
+void Registry<EntityId>::narrowPhaseCollisions(ShapeId shapeQueried,
+                                               std::vector<ShapeId>& collisions,
+                                               std::vector<EntityCollision>& outCollisionsInfo) const
 {
-    const auto [entityAId, shapeAIndex] = shapeEntity[shapeAId];
-    const auto [entityBId, shapeBIndex] = shapeEntity[shapeBId];
-    const auto& entityA = entities.at(entityAId);
-    const auto& entityB = entities.at(entityBId);
-    const auto& shapeA = entityA.shapes[shapeAIndex];
-    const auto& shapeB = entityB.shapes[shapeBIndex];
+    // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
+    std::sort(collisions.begin(), collisions.end());
+    
+    narrowPhaseCollision(shapeQueried, collisions[0], outCollisionsInfo);
+    for (size_t i = 1; i < collisions.size(); ++i)
+    {
+        // Skip duplicates
+        if (collisions[i] == collisions[i - 1])
+            continue;
 
-    // Skip self-collision
-    if (entityAId == entityBId)
-        return;
-
-    if (!shapeA.isActive || !shapeB.isActive)
-        return;
-
-    const auto& previousTransform = bulletPreviousTransforms.at(entityAId);
-    const auto& currentTransform = entityA.transform;
-
-    const auto& otherPreviousTransform = bulletPreviousTransforms.at(entityBId);
-    const auto& otherCurrentTransform = entityB.transform;
-
-    const Manifold manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
-        const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
-                                                otherShapeConcrete, otherPreviousTransform, otherCurrentTransform);
-        return sweepManifold ? sweepManifold->manifold : Manifold{};
-    }, shapeA.shape, shapeB.shape);
-
-    if (!manifold.isColliding())
-        return;
-
-    outCollisionsInfo.emplace_back(EntityCollision{entityAId,
-                                                   entityBId,
-                                                   shapeAId,
-                                                   shapeBId,
-                                                   std::move(manifold)});
+        narrowPhaseCollision(shapeQueried, collisions[i], outCollisionsInfo);
+    }
 }
 
 template<typename EntityId>

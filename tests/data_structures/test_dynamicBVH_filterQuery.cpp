@@ -40,34 +40,34 @@ TEST_CASE("DynamicBVH | query with mask bits filters correctly", "[DynamicBVH][Q
     SECTION("DynamicBVH | Query with mask for category 2")
     {
         BitMaskType only2 = 0b0100;
-        std::set<uint32_t> result;
-        bvh.query(allAABB,result, only2);
+        std::vector<uint32_t> result;
+        bvh.query(allAABB, result, only2);
         CHECK(result.size() == 1);
-        CHECK(result.count(3) == 1); // Should match only the proxy with category 2
+        CHECK(std::find(result.begin(), result.end(), 3) != result.end()); // Should match only the proxy with category 2
     }
 
     // Query with mask that matches category 1 and 3
     SECTION("DynamicBVH | Query with mask for category 1 and 3")
     {
         BitMaskType oneAndThree = 0b1010;
-        std::set<uint32_t> result;
-        bvh.query(allAABB,result, oneAndThree);
+        std::vector<uint32_t> result;
+        bvh.query(allAABB, result, oneAndThree);
         CHECK(result.size() == 2);
-        CHECK(result.count(2) == 1);
-        CHECK(result.count(4) == 1);
+        CHECK(std::find(result.begin(), result.end(), 2) != result.end());
+        CHECK(std::find(result.begin(), result.end(), 4) != result.end());
     }
 
     // Query with mask that matches all
     SECTION("DynamicBVH | Query with mask for all categories")
     {
         BitMaskType all = 0b1111;
-        std::set<uint32_t> result;
-        bvh.query(allAABB,result, all);
+        std::vector<uint32_t> result;
+        bvh.query(allAABB, result, all);
         CHECK(result.size() == 4);
-        CHECK(result.count(1) == 1);
-        CHECK(result.count(2) == 1);
-        CHECK(result.count(3) == 1);
-        CHECK(result.count(4) == 1);
+        CHECK(std::find(result.begin(), result.end(), 1) != result.end());
+        CHECK(std::find(result.begin(), result.end(), 2) != result.end());
+        CHECK(std::find(result.begin(), result.end(), 3) != result.end());
+        CHECK(std::find(result.begin(), result.end(), 4) != result.end());
     }
 }
 

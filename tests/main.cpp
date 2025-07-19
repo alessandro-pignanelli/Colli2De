@@ -25,6 +25,9 @@ void parseCustomArgs(int& argc, char* argv[])
             toRemove.push(i + 1);
         }
 
+    if (toRemove.empty())
+        return;
+
     int copyFrom = 0;
     for (int i = 0; i < argc; i++)
     {

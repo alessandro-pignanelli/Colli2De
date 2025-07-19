@@ -1,5 +1,4 @@
 #include <cstdint>
-#include <set>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
@@ -19,13 +18,13 @@ TEST_CASE("BroadPhaseTree | proxies can be added and queried", "[BroadPhaseTree]
     REQUIRE(tree.size() == 2);
 
     auto hits = tree.query({{0,0}, {3,3}});
-    CHECK(hits.count(1) == 1);
-    CHECK(hits.count(2) == 1);
+    CHECK(std::find(hits.begin(), hits.end(), 1) != hits.end());
+    CHECK(std::find(hits.begin(), hits.end(), 2) != hits.end());
 
     tree.removeProxy(h1);
     hits = tree.query({{0,0}, {3,3}});
-    CHECK(hits.count(1) == 0);
-    CHECK(hits.count(2) == 1);
+    CHECK(std::find(hits.begin(), hits.end(), 1) == hits.end());
+    CHECK(std::find(hits.begin(), hits.end(), 2) != hits.end());
     REQUIRE(tree.size() == 1);
 }
 
@@ -36,7 +35,7 @@ TEST_CASE("BroadPhaseTree | moveProxy updates location", "[BroadPhaseTree]")
 
     tree.moveProxy(h, {{5,5}, {6,6}});
     auto hits = tree.query({{5,5}, {6,6}});
-    CHECK(hits.count(1) == 1);
+    CHECK(std::find(hits.begin(), hits.end(), 1) != hits.end());
     hits = tree.query({{0,0}, {1,1}});
     CHECK(hits.empty());
 }
@@ -49,12 +48,12 @@ TEST_CASE("BroadPhaseTree | findAllCollisions detects overlaps", "[BroadPhaseTre
     tree.addProxy(2, {{4,4}, {5,5}});
     tree.addProxy(3, {{1.5f,1.5f}, {2.5f,2.5f}});
 
-    std::set<std::pair<uint32_t,uint32_t>> pairs;
-    tree.findAllCollisions([&pairs](std::set<std::pair<uint32_t,uint32_t>> collisionPairs) {
+    std::vector<std::pair<uint32_t, uint32_t>> pairs;
+    tree.findAllCollisions([&pairs](auto collisionPairs) {
         pairs = std::move(collisionPairs);
     });
-    std::set<std::pair<uint32_t,uint32_t>> expected{{0,1},{0,3},{1,3}};
+    std::vector<std::pair<uint32_t, uint32_t>> expected{{0,1},{0,3},{1,3}};
     REQUIRE(pairs.size() == expected.size());
     for(const auto& p : expected)
-        CHECK(pairs.count(p) == 1);
+        CHECK(std::find(pairs.begin(), pairs.end(), p) != pairs.end());
 }

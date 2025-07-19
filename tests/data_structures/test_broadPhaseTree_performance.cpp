@@ -21,7 +21,7 @@ TEST_CASE("BroadPhaseTree | Bulk insertion", "[BroadPhaseTree][Benchmark][Insert
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Insert 10k proxies", 20ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Insert 10k proxies", 10ms, [&]()
     {
         BroadPhaseTree<uint32_t> tree;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -29,7 +29,7 @@ TEST_CASE("BroadPhaseTree | Bulk insertion", "[BroadPhaseTree][Benchmark][Insert
         return tree.size();
     });
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Insert 100k proxies", 200ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Insert 100k proxies", 130ms, [&]()
     {
         BroadPhaseTree<uint32_t> tree;
         for (uint32_t i = 0; i < 100'000; ++i)
@@ -47,7 +47,7 @@ TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]"
     BroadPhaseTree<uint32_t> tree;
     std::vector<BroadPhaseTreeHandle> indices;
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Move 10k proxies to new location", 15ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Move 10k proxies to new location", 10ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             tree.moveProxy(indices[i], aabbs[i].translated(Vec2{50.0f, 0}));
@@ -62,7 +62,7 @@ TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]"
 
     BroadPhaseTree<uint32_t> treeLarge;
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Move 100k proxies to new location", 200ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Move 100k proxies to new location", 130ms, [&]()
     {
         for (size_t i = 0; i < indices.size(); ++i)
             treeLarge.moveProxy(indices[i], aabbs[i].translated(Vec2{50.0f, 0}));
@@ -87,9 +87,9 @@ TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark
     for (uint32_t i = 0; i < 10'000; ++i)
         tree.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Query 10k proxies", 50us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Query 10k proxies", 10us, [&]()
     {
-        std::set<uint32_t> foundIds = tree.query(query);
+        auto foundIds = tree.query(query);
         return foundIds.size();
     });
 
@@ -97,9 +97,9 @@ TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark
     for (uint32_t i = 0; i < 100'000; ++i)
         treeLargeQuery.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Query 100k proxies", 500us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Query 100k proxies", 50us, [&]()
     {
-        std::set<uint32_t> foundIds = treeLargeQuery.query(query);
+        auto foundIds = treeLargeQuery.query(query);
         return foundIds.size();
     });
 
@@ -112,18 +112,21 @@ TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark
     }
     std::shuffle(queries.begin(), queries.end(), std::mt19937{std::random_device{}()});
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Queries 100k proxies", 30ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Queries 100k proxies", 15ms, [&]()
     {
-        std::set<uint32_t> foundIds;
+        uint32_t totalHits = 0;
         for (const auto& query : queries)
-            foundIds = tree.query(query.first);
-        return foundIds.size();
+        {
+            auto foundIds = tree.query(query.first);
+            totalHits += foundIds.size();
+        }
+        return totalHits;
     });
 
     BENCHMARK_FUNCTION("BroadPhaseTree | 10k Batch Queries 100k proxies", 15ms, [&]()
     {
         uint32_t totalHits = 0;
-        tree.batchQuery(queries, [&totalHits](size_t, const std::set<uint32_t>& hits) {
+        tree.batchQuery(queries, [&totalHits](size_t, auto hits) {
             totalHits += hits.size();
         });
         return totalHits;
@@ -141,7 +144,7 @@ TEST_CASE("BroadPhaseTree | Piercing raycast", "[BroadPhaseTree][Benchmark][Rayc
     for (uint32_t i = 0; i < 10'000; ++i)
         tree.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Raycast through 10k proxies", 100us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Raycast through 10k proxies", 50us, [&]()
     {
         std::set<BPTRaycastInfo> hits = tree.piercingRaycast(ray);
         return hits.size();
@@ -151,7 +154,7 @@ TEST_CASE("BroadPhaseTree | Piercing raycast", "[BroadPhaseTree][Benchmark][Rayc
     for (uint32_t i = 0; i < 100'000; ++i)
         treeLargeRay.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Raycast through 100k proxies", 1ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Raycast through 100k proxies", 800us, [&]()
     {
         std::set<BPTRaycastInfo> hits = treeLargeRay.piercingRaycast(ray);
         return hits.size();
@@ -170,35 +173,38 @@ TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)"
 
     std::set<std::pair<uint32_t, uint32_t>> pairs;
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 1k proxies", 50us, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 1k proxies", 20us, [&]()
     {
-        tree.findAllCollisions([&pairs](std::set<std::pair<uint32_t,uint32_t>> collisionPairs) {
-            pairs = std::move(collisionPairs);
+        uint32_t totalPairs = 0;
+        tree.findAllCollisions([&totalPairs](std::vector<std::pair<uint32_t, uint32_t>> collisionPairs) {
+            totalPairs += collisionPairs.size();
         });
-        return pairs.size();
+        return totalPairs;
     });
 
     BroadPhaseTree<uint32_t> treePairs10k;
     for (uint32_t i = 0; i < 10'000; ++i)
         treePairs10k.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 10k proxies", 2ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 10k proxies", 800us, [&]()
     {
-        treePairs10k.findAllCollisions([&pairs](std::set<std::pair<uint32_t,uint32_t>> collisionPairs) {
-            pairs = std::move(collisionPairs);
+        uint32_t totalPairs = 0;
+        treePairs10k.findAllCollisions([&totalPairs](std::vector<std::pair<uint32_t, uint32_t>> collisionPairs) {
+            totalPairs += collisionPairs.size();
         });
-        return pairs.size();
+        return totalPairs;
     });
 
     BroadPhaseTree<uint32_t> treePairs100k;
     for (uint32_t i = 0; i < 100'000; ++i)
         treePairs100k.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 100k proxies", 130ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 100k proxies", 30ms, [&]()
     {
-        treePairs100k.findAllCollisions([&pairs](std::set<std::pair<uint32_t,uint32_t>> collisionPairs) {
-            pairs = std::move(collisionPairs);
+        uint32_t totalPairs = 0;
+        treePairs100k.findAllCollisions([&totalPairs](std::vector<std::pair<uint32_t, uint32_t>> collisionPairs) {
+            totalPairs += collisionPairs.size();
         });
-        return pairs.size();
+        return totalPairs;
     });
 }

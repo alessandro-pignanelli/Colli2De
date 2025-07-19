@@ -18,7 +18,7 @@ TEST_CASE("Raycast performance: Circle", "[Raycast][Benchmark][Circle]")
     auto circles = generateRandomCircles(100'000, -50.0f, 50.0f, 1.0f, seed);
     auto rays = generateRandomRays(100'000, -60.0f, 60.0f, seed + 1);
 
-    BENCHMARK_FUNCTION("Raycast 10k circles", 500us, [&]()
+    BENCHMARK_FUNCTION("Raycast 10k circles", 100us, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -48,7 +48,7 @@ TEST_CASE("Raycast performance: Segment", "[Raycast][Benchmark][Segment]")
     auto segments = generateRandomSegments(100'000, -50.0f, 50.0f, 4.0f, seed);
     auto rays = generateRandomRays(100'000, -60.0f, 60.0f, seed + 1);
 
-    BENCHMARK_FUNCTION("Raycast 10k segments", 500us, [&]()
+    BENCHMARK_FUNCTION("Raycast 10k segments", 100us, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -59,7 +59,7 @@ TEST_CASE("Raycast performance: Segment", "[Raycast][Benchmark][Segment]")
         return total;
     });
 
-    BENCHMARK_FUNCTION("Raycast 100k segments", 5ms, [&]()
+    BENCHMARK_FUNCTION("Raycast 100k segments", 3ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
@@ -78,7 +78,7 @@ TEST_CASE("Raycast performance: Capsule", "[Raycast][Benchmark][Capsule]")
     auto capsules = generateRandomCapsules(100'000, -50.0f, 50.0f, 4.0f, 1.0f, seed);
     auto rays = generateRandomRays(100'000, -60.0f, 60.0f, seed + 1);
 
-    BENCHMARK_FUNCTION("Raycast 10k capsules", 2ms, [&]()
+    BENCHMARK_FUNCTION("Raycast 10k capsules", 1ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -89,7 +89,7 @@ TEST_CASE("Raycast performance: Capsule", "[Raycast][Benchmark][Capsule]")
         return total;
     });
 
-    BENCHMARK_FUNCTION("Raycast 100k capsules", 15ms, [&]()
+    BENCHMARK_FUNCTION("Raycast 100k capsules", 10ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
@@ -108,7 +108,7 @@ TEST_CASE("Raycast performance: Polygon", "[Raycast][Benchmark][Polygon]")
     auto polygons = generateRandomRectangles(100'000, -50.0f, 50.0f, 0.5f, seed);
     auto rays = generateRandomRays(100'000, -60.0f, 60.0f, seed + 1);
 
-    BENCHMARK_FUNCTION("Raycast 10k polygons", 1ms, [&]()
+    BENCHMARK_FUNCTION("Raycast 10k polygons", 500us, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 10'000; ++i)
@@ -119,7 +119,7 @@ TEST_CASE("Raycast performance: Polygon", "[Raycast][Benchmark][Polygon]")
         return total;
     });
 
-    BENCHMARK_FUNCTION("Raycast 100k polygons", 10ms, [&]()
+    BENCHMARK_FUNCTION("Raycast 100k polygons", 5ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)
