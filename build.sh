@@ -48,11 +48,19 @@ cd "$build_type"
 
 # Run cmake if explicitly requested or if CMakeCache.txt doesn't exist
 if [ "$cmake_arg" -eq 1 ] || [ ! -f "CMakeCache.txt" ]; then
-    cmake ../.. -DCMAKE_BUILD_TYPE="$build_type" -DCMAKE_OSX_ARCHITECTURES=arm64
+    cmake ../.. \
+        -G "Ninja" \
+        -DCMAKE_CXX_COMPILER=g++ \
+        -DCMAKE_INSTALL_PREFIX="../../install/$build_type" \
+        -DCMAKE_BUILD_TYPE=$build_type \
+        -DCMAKE_OSX_ARCHITECTURES=arm64
 fi
 
-# Build the project
-make -j 8
+# Build and install
+if [ -d "../../install/include" ]; then
+    rm -r ../../install/include
+fi
+cmake --build . --target install --config $build_type
 
 # Return to the project root
 popd > /dev/null
