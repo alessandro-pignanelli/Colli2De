@@ -1,8 +1,11 @@
 #pragma once
 
+#include <execution>
+#include <functional>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <print>
 #include <vector>
 
 #include <colli2de/Ray.hpp>
@@ -75,10 +78,9 @@ public:
 
     // AABB queries
     std::set<IdType> query(AABB queryAABB, BitMaskType maskBits = ~0ull) const;
-    std::vector<std::set<IdType>> batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries, size_t numThreads) const;
-    std::set<IdType> sweepQuery(AABB startAABB, AABB endAABB, BitMaskType maskBits = ~0ull) const;
-    std::vector<std::set<IdType>> batchSweepQuery(const std::vector<std::tuple<AABB, AABB, BitMaskType>>& queries, size_t numThreads) const;
-    std::set<std::pair<IdType, IdType>> findAllCollisions() const;
+    void batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
+                    const std::function<void(size_t, std::set<IdType>)>& callback) const;
+    void findAllCollisions(const std::function<void(std::set<std::pair<IdType, IdType>>)>& callback) const;
     std::set<IdType> findAllCollisions(BroadPhaseTreeHandle handle) const;
 
     // Raycast queries
@@ -278,112 +280,28 @@ std::set<IdType> BroadPhaseTree<IdType>::query(AABB queryAABB, BitMaskType maskB
 }
 
 template<typename IdType>
-std::vector<std::set<IdType>> BroadPhaseTree<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries, size_t numThreads) const
+void BroadPhaseTree<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
+                                        const std::function<void(size_t, std::set<IdType>)>& callback) const
 {
-    if (queries.empty())
-        return {};
-
-    const size_t n = queries.size();
-    std::vector<std::set<IdType>> results(n);
-
-    constexpr size_t minQueriesPerThread = 5;
-    numThreads = std::min(numThreads, (n - minQueriesPerThread) / minQueriesPerThread + 1);
-    if (numThreads == 1)
-    {
-        for (size_t i = 0; i < n; ++i)
-            results[i] = query(queries[i].first, queries[i].second);
-        return results;
-    }
-
-    const size_t chunk = (n + numThreads - 1) / numThreads;
-    std::vector<std::future<void>> futures;
-
-    for (size_t t = 0; t < numThreads; ++t) {
-        const size_t begin = t * chunk;
-        const size_t end = std::min(n, begin + chunk);
-
-        futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end]() {
-            for (size_t i = begin; i < end; ++i)
-                results[i] = this->query(queries[i].first, queries[i].second);
-        }));
-    }
-
-    for (auto& f : futures)
-        f.get();
-
-    return results;
-}
-
-
-template<typename IdType>
-std::set<IdType> BroadPhaseTree<IdType>::sweepQuery(AABB startAABB, AABB endAABB, BitMaskType maskBits) const
-{
-    std::set<IdType> intersections;
-
-    AABB combinedAABB = AABB::combine(startAABB, endAABB);
-
-    forEachCell(combinedAABB, cellSize, [&](GridCell cell)
-    {
-        const auto regionIt = regions.find(cell);
-        if (regionIt == regions.end())
-            return; // No region here
-
-        const auto& region = regionIt->second;
-        region.bvh.sweepQuery(startAABB, endAABB, intersections, maskBits);
+    std::ranges::iota_view indexes((size_t)0, queries.size());
+    std::for_each(std::execution::par_unseq, indexes.begin(), indexes.end(), [&](size_t i) {
+        std::set<IdType> hits = query(queries[i].first, queries[i].second);
+        callback(i, std::move(hits));
     });
-
-    return intersections;
 }
 
 template<typename IdType>
-std::vector<std::set<IdType>> BroadPhaseTree<IdType>::batchSweepQuery(
-    const std::vector<std::tuple<AABB, AABB, BitMaskType>>& queries,
-    size_t numThreads
-) const
-{
-    if (queries.empty())
-        return {};
-    
-    const size_t n = queries.size();
-    std::vector<std::set<IdType>> results(n);
-
-    constexpr size_t minQueriesPerThread = 2;
-    numThreads = std::min(numThreads, (n - minQueriesPerThread) / minQueriesPerThread + 1);
-    if (numThreads == 1)
-    {
-        for (size_t i = 0; i < n; ++i)
-            results[i] = sweepQuery(std::get<0>(queries[i]), std::get<1>(queries[i]), std::get<2>(queries[i]));
-        return results;
-    }
-
-    const size_t chunk = (n + numThreads - 1) / numThreads;
-    std::vector<std::future<void>> futures;
-
-    for (size_t t = 0; t < numThreads; ++t) {
-        const size_t begin = t * chunk;
-        const size_t end = std::min(n, begin + chunk);
-
-        futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end]() {
-            for (size_t i = begin; i < end; ++i)
-                results[i] = this->sweepQuery(std::get<0>(queries[i]), std::get<1>(queries[i]), std::get<2>(queries[i]));
-        }));
-    }
-
-    for (auto& f : futures)
-        f.get();
-
-    return results;
-}
-
-template<typename IdType>
-std::set<std::pair<IdType, IdType>> BroadPhaseTree<IdType>::findAllCollisions() const
+void BroadPhaseTree<IdType>::findAllCollisions(const std::function<void(std::set<std::pair<IdType, IdType>>)>& callback) const
 {
     std::set<std::pair<IdType, IdType>> collisions;
 
-    for (const auto& [cell, region] : regions)
+    std::for_each(std::execution::par_unseq, regions.begin(), regions.end(),
+                  [&collisions](const auto& regionPair) {
+        const auto& region = regionPair.second;
         region.bvh.findAllCollisions(collisions);
+    });
 
-    return collisions;
+    callback(std::move(collisions));
 }
 
 template<typename IdType>

@@ -55,7 +55,7 @@ public:
     void moveEntity(EntityId id, const Transform& delta);
     void moveEntity(EntityId id, Translation deltaTranslation);
 
-    std::vector<EntityCollision> getCollidingPairs() const;
+    std::vector<EntityCollision> getCollidingPairs();
     std::vector<EntityCollision> getCollisions(EntityId id) const;
     bool areColliding(EntityId a, EntityId b) const;
 
@@ -95,6 +95,7 @@ private:
     BroadPhaseTree<ShapeId> treeDynamic;
     BroadPhaseTree<ShapeId> treeBullet;
     std::unordered_map<EntityId, Transform> bulletPreviousTransforms;
+    uint32_t previousAllCollisionsCount = 0;
 
     constexpr BroadPhaseTree<ShapeId>& treeFor(BodyType type);
 
@@ -102,12 +103,16 @@ private:
                                     std::vector<std::pair<AABB, BitMaskType>>& staticQueries,
                                     std::vector<ShapeId>& dynamicShapesQueried,
                                     std::vector<ShapeId>& staticShapesQueried) const;
-    void narrowPhaseCollisions(const std::vector<ShapeId>& shapesQueried,
-                               const std::vector<std::set<ShapeId>>& collisions,
+    void narrowPhaseCollision(ShapeId shapeAId,
+                              ShapeId shapeBId,
+                              std::vector<EntityCollision>& outCollisionsInfo) const;
+    void narrowPhaseCollisions(ShapeId shapeQueried,
+                               const std::set<ShapeId>& collisions,
                                std::vector<EntityCollision>& outCollisionsInfo) const;
     void narrowPhaseDynamicCollisionsPairs(const std::set<std::pair<ShapeId, ShapeId>>& pairs,
                                            std::vector<EntityCollision>& outCollisionsInfo) const;
-    void narrowPhaseBulletCollisionsPairs(const std::set<std::pair<ShapeId, ShapeId>>& pairs,
+    void narrowPhaseBulletCollisionsPairs(ShapeId shapeAId,
+                                          ShapeId shapeBId,
                                           std::vector<EntityCollision>& outCollisionsInfo) const;
 };
 
@@ -343,7 +348,7 @@ void Registry<EntityId>::moveEntity(EntityId id, Translation deltaTranslation)
 }
 
 template<typename EntityId>
-std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::getCollidingPairs() const
+std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::getCollidingPairs()
 {
     std::vector<std::pair<AABB, BitMaskType>> dynamicQueries;
     std::vector<ShapeId> dynamicShapesQueried;
@@ -352,29 +357,28 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
 
     getAllCollisionAABBQueries(dynamicQueries, staticQueries, dynamicShapesQueried, staticShapesQueried);
 
-    const auto collisionsStaticDynamic = treeDynamic.batchQuery(staticQueries, std::thread::hardware_concurrency());
-    const auto collisionsStaticBullet = treeBullet.batchQuery(staticQueries, std::thread::hardware_concurrency());
-    const auto collisionsDynamicDynamic = treeDynamic.findAllCollisions();
-    const auto collisionsDynamicBullet = treeBullet.batchQuery(dynamicQueries, std::thread::hardware_concurrency());
-    const auto collisionsBulletBullet = treeBullet.findAllCollisions();
-
-    assert(collisionsStaticDynamic.size() == staticQueries.size() &&
-           "Batch query results size mismatch for static shapes");
-    assert(collisionsStaticBullet.size() == staticQueries.size() &&
-           "Batch sweep query results size mismatch for static bullets");
-    assert(collisionsDynamicBullet.size() == dynamicQueries.size() &&
-           "Batch sweep query results size mismatch for dynamic bullets");
-
     std::vector<EntityCollision> collisionsInfo;
-    collisionsInfo.reserve(collisionsStaticDynamic.size() + collisionsDynamicDynamic.size() +
-                           collisionsStaticBullet.size() + collisionsDynamicBullet.size());
-    
-    narrowPhaseCollisions(staticShapesQueried, collisionsStaticDynamic, collisionsInfo);
-    narrowPhaseCollisions(staticShapesQueried, collisionsStaticBullet, collisionsInfo);
-    narrowPhaseDynamicCollisionsPairs(collisionsDynamicDynamic, collisionsInfo);
-    narrowPhaseCollisions(dynamicShapesQueried, collisionsDynamicBullet, collisionsInfo);
-    narrowPhaseBulletCollisionsPairs(collisionsBulletBullet, collisionsInfo);
+    collisionsInfo.reserve(previousAllCollisionsCount);
 
+    treeDynamic.batchQuery(staticQueries, [&](size_t i, std::set<ShapeId> collisions) {
+        narrowPhaseCollisions(staticShapesQueried[i], collisions, collisionsInfo);
+    });
+    treeBullet.batchQuery(staticQueries, [&](size_t i, std::set<ShapeId> collisions) {
+        narrowPhaseCollisions(staticShapesQueried[i], collisions, collisionsInfo);
+    });
+    treeBullet.batchQuery(dynamicQueries, [&](size_t i, std::set<ShapeId> collisions) {
+        narrowPhaseCollisions(dynamicShapesQueried[i], collisions, collisionsInfo);
+    });
+    treeDynamic.findAllCollisions([&](std::set<std::pair<ShapeId, ShapeId>> collisions) {
+        for (const auto& [a, b] : collisions)
+            narrowPhaseCollision(a, b, collisionsInfo);
+    });
+    treeBullet.findAllCollisions([&](std::set<std::pair<ShapeId, ShapeId>> collisions) {
+        for (const auto& [a, b] : collisions)
+            narrowPhaseCollision(a, b, collisionsInfo);
+    });
+
+    previousAllCollisionsCount = collisionsInfo.size();
     return collisionsInfo;
 }
 
@@ -390,7 +394,6 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
     queries.reserve(entity.shapes.size());
     shapesQueried.reserve(entity.shapes.size());
     
-
     if (entity.type == BodyType::Bullet)
     {
         for (const auto& shape : entity.shapes)
@@ -418,23 +421,21 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
             shapesQueried.push_back(shape.id);
         }
     }
-    
+
     std::vector<EntityCollision> collisionsInfo;
 
     if (entity.type != BodyType::Static)
     {
-        const auto collisionsStatic = treeStatic.batchQuery(queries, std::thread::hardware_concurrency());
-        assert(collisionsStatic.size() == queries.size() && "Batch query results size mismatch for static shapes");
-        narrowPhaseCollisions(shapesQueried, collisionsStatic, collisionsInfo);
+        treeStatic.batchQuery(queries, [&](size_t i, std::set<ShapeId> collisions) {
+            narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo);
+        });
     }
-
-    const auto collisionsDynamic = treeDynamic.batchQuery(queries, std::thread::hardware_concurrency());
-    assert(collisionsDynamic.size() == queries.size() && "Batch query results size mismatch for dynamic shapes");
-    narrowPhaseCollisions(shapesQueried, collisionsDynamic, collisionsInfo);
-
-    const auto collisionsBullet = treeBullet.batchQuery(queries, std::thread::hardware_concurrency());
-    assert(collisionsBullet.size() == queries.size() && "Batch query results size mismatch for bullet shapes");
-    narrowPhaseCollisions(shapesQueried, collisionsBullet, collisionsInfo);
+    treeDynamic.batchQuery(queries, [&](size_t i, std::set<ShapeId> collisions) {
+        narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo);
+    });
+    treeBullet.batchQuery(queries, [&](size_t i, std::set<ShapeId> collisions) {
+        narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo);
+    });
 
     return collisionsInfo;
 }
@@ -478,150 +479,117 @@ void Registry<EntityId>::getAllCollisionAABBQueries(std::vector<std::pair<AABB, 
 }
 
 template<typename EntityId>
-void Registry<EntityId>::narrowPhaseCollisions(const std::vector<ShapeId>& shapesQueried,
-                                               const std::vector<std::set<ShapeId>>& collisions,
+void Registry<EntityId>::narrowPhaseCollision(ShapeId shapeAId,
+                                              ShapeId shapeBId,
+                                              std::vector<EntityCollision>& outCollisionsInfo) const
+{
+    const auto [queryEntityId, queryShapeIndex] = shapeEntity[shapeAId];
+    const auto [otherEntityId, otherShapeIndex] = shapeEntity[shapeBId];
+    const auto& queryEntity = entities.at(queryEntityId);
+    const auto& otherEntity = entities.at(otherEntityId);
+    const auto& queryShape = queryEntity.shapes[queryShapeIndex];
+    const auto& otherShape = otherEntity.shapes[otherShapeIndex];
+
+    // Skip self-collision
+    if (queryEntityId == otherEntityId)
+        return;
+
+    if (!queryShape.isActive || !otherShape.isActive)
+        return;
+    
+    Manifold manifold;
+
+    // Sweep for bullets
+    if (queryEntity.type == BodyType::Bullet)
+    {
+        const auto& previousTransform = bulletPreviousTransforms.at(queryEntityId);
+        const auto& currentTransform = queryEntity.transform;
+
+        if (otherEntity.type != BodyType::Bullet)
+        {
+            manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
+                const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
+                                                        otherShapeConcrete, otherEntity.transform);
+                return sweepManifold ? sweepManifold->manifold : Manifold{};
+            }, queryShape.shape, otherShape.shape);
+        }
+        else
+        {
+            const auto& otherPreviousTransform = bulletPreviousTransforms.at(otherEntityId);
+            const auto& otherCurrentTransform = otherEntity.transform;
+
+            manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
+                const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
+                                                        otherShapeConcrete, otherPreviousTransform, otherCurrentTransform);
+                return sweepManifold ? sweepManifold->manifold : Manifold{};
+            }, queryShape.shape, otherShape.shape);
+        }
+    }
+    else
+    {
+        manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
+            return c2d::collide(queryShapeConcrete, queryEntity.transform, otherShapeConcrete, otherEntity.transform);
+        }, queryShape.shape, otherShape.shape);
+    }
+
+    if (!manifold.isColliding())
+        return;
+
+    outCollisionsInfo.emplace_back(EntityCollision{queryEntityId,
+                                                   otherEntityId,
+                                                   shapeAId,
+                                                   shapeBId,
+                                                   std::move(manifold)});
+}
+
+template<typename EntityId>
+void Registry<EntityId>::narrowPhaseCollisions(ShapeId shapeQueried,
+                                               const std::set<ShapeId>& collisions,
                                                std::vector<EntityCollision>& outCollisionsInfo) const
 {
-    for (size_t i = 0; i < collisions.size(); ++i)
-        for (const auto otherShapeId : collisions[i])
-        {
-            const ShapeId queryShapeId = shapesQueried[i];
-            const auto [queryEntityId, queryShapeIndex] = shapeEntity[queryShapeId];
-            const auto [otherEntityId, otherShapeIndex] = shapeEntity[otherShapeId];
-            const auto& queryEntity = entities.at(queryEntityId);
-            const auto& otherEntity = entities.at(otherEntityId);
-            const auto& queryShape = queryEntity.shapes[queryShapeIndex];
-            const auto& otherShape = otherEntity.shapes[otherShapeIndex];
-
-            // Skip self-collision
-            if (queryEntityId == otherEntityId)
-                continue;
-
-            if (!queryShape.isActive || !otherShape.isActive)
-                continue;
-            
-            Manifold manifold;
-
-            // Sweep for bullets
-            if (queryEntity.type == BodyType::Bullet)
-            {
-                const auto& previousTransform = bulletPreviousTransforms.at(queryEntityId);
-                const auto& currentTransform = queryEntity.transform;
-
-                if (otherEntity.type != BodyType::Bullet)
-                {
-                    manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
-                        const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
-                                                              otherShapeConcrete, otherEntity.transform);
-                        return sweepManifold ? sweepManifold->manifold : Manifold{};
-                    }, queryShape.shape, otherShape.shape);
-                }
-                else
-                {
-                    const auto& otherPreviousTransform = bulletPreviousTransforms.at(otherEntityId);
-                    const auto& otherCurrentTransform = otherEntity.transform;
-
-                    manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
-                        const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
-                                                              otherShapeConcrete, otherPreviousTransform, otherCurrentTransform);
-                        return sweepManifold ? sweepManifold->manifold : Manifold{};
-                    }, queryShape.shape, otherShape.shape);
-                }
-            }
-            else
-            {
-                manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
-                    return c2d::collide(queryShapeConcrete, queryEntity.transform, otherShapeConcrete, otherEntity.transform);
-                }, queryShape.shape, otherShape.shape);
-            }
-
-            if (!manifold.isColliding())
-                continue;
-
-            outCollisionsInfo.emplace_back(EntityCollision{queryEntityId,
-                                                                otherEntityId,
-                                                                queryShapeId,
-                                                                otherShapeId,
-                                                                std::move(manifold)});
-        }
+    for (const auto otherShapeId : collisions)
+        narrowPhaseCollision(shapeQueried, otherShapeId, outCollisionsInfo);
 }
 
 template<typename EntityId>
-void Registry<EntityId>::narrowPhaseDynamicCollisionsPairs(const std::set<std::pair<ShapeId, ShapeId>>& pairs,
-                                                           std::vector<EntityCollision>& outCollisionsInfo) const
-{
-    for (const auto& [shapeAId, shapeBId] : pairs)
-    {
-        const auto [entityAId, shapeAIndex] = shapeEntity[shapeAId];
-        const auto [entityBId, shapeBIndex] = shapeEntity[shapeBId];
-        const auto& entityA = entities.at(entityAId);
-        const auto& entityB = entities.at(entityBId);
-        const auto& shapeA = entityA.shapes[shapeAIndex];
-        const auto& shapeB = entityB.shapes[shapeBIndex];
-
-        // Skip self-collision
-        if (entityAId == entityBId)
-            continue;
-
-        if (!shapeA.isActive || !shapeB.isActive)
-            continue;
-
-        const Manifold manifold = std::visit([&](const auto& concreteA, const auto& concreteB) {
-            return c2d::collide(concreteA, entityA.transform, concreteB, entityB.transform);
-        }, shapeA.shape, shapeB.shape);
-
-        if (!manifold.isColliding())
-            continue;
-
-        outCollisionsInfo.emplace_back(EntityCollision{entityAId,
-                                                       entityBId,
-                                                       shapeAId,
-                                                       shapeBId,
-                                                       std::move(manifold)});
-    }
-}
-
-template<typename EntityId>
-void Registry<EntityId>::narrowPhaseBulletCollisionsPairs(const std::set<std::pair<ShapeId, ShapeId>>& pairs,
+void Registry<EntityId>::narrowPhaseBulletCollisionsPairs(ShapeId shapeAId,
+                                                          ShapeId shapeBId,
                                                           std::vector<EntityCollision>& outCollisionsInfo) const
 {
-    for (const auto& [shapeAId, shapeBId] : pairs)
-    {
-        const auto [entityAId, shapeAIndex] = shapeEntity[shapeAId];
-        const auto [entityBId, shapeBIndex] = shapeEntity[shapeBId];
-        const auto& entityA = entities.at(entityAId);
-        const auto& entityB = entities.at(entityBId);
-        const auto& shapeA = entityA.shapes[shapeAIndex];
-        const auto& shapeB = entityB.shapes[shapeBIndex];
+    const auto [entityAId, shapeAIndex] = shapeEntity[shapeAId];
+    const auto [entityBId, shapeBIndex] = shapeEntity[shapeBId];
+    const auto& entityA = entities.at(entityAId);
+    const auto& entityB = entities.at(entityBId);
+    const auto& shapeA = entityA.shapes[shapeAIndex];
+    const auto& shapeB = entityB.shapes[shapeBIndex];
 
-        // Skip self-collision
-        if (entityAId == entityBId)
-            continue;
+    // Skip self-collision
+    if (entityAId == entityBId)
+        return;
 
-        if (!shapeA.isActive || !shapeB.isActive)
-            continue;
+    if (!shapeA.isActive || !shapeB.isActive)
+        return;
 
-        const auto& previousTransform = bulletPreviousTransforms.at(entityAId);
-        const auto& currentTransform = entityA.transform;
+    const auto& previousTransform = bulletPreviousTransforms.at(entityAId);
+    const auto& currentTransform = entityA.transform;
 
-        const auto& otherPreviousTransform = bulletPreviousTransforms.at(entityBId);
-        const auto& otherCurrentTransform = entityB.transform;
+    const auto& otherPreviousTransform = bulletPreviousTransforms.at(entityBId);
+    const auto& otherCurrentTransform = entityB.transform;
 
-        const Manifold manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
-            const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
-                                                  otherShapeConcrete, otherPreviousTransform, otherCurrentTransform);
-            return sweepManifold ? sweepManifold->manifold : Manifold{};
-        }, shapeA.shape, shapeB.shape);
+    const Manifold manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
+        const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
+                                                otherShapeConcrete, otherPreviousTransform, otherCurrentTransform);
+        return sweepManifold ? sweepManifold->manifold : Manifold{};
+    }, shapeA.shape, shapeB.shape);
 
-        if (!manifold.isColliding())
-            continue;
+    if (!manifold.isColliding())
+        return;
 
-        outCollisionsInfo.emplace_back(EntityCollision{entityAId,
-                                                       entityBId,
-                                                       shapeAId,
-                                                       shapeBId,
-                                                       std::move(manifold)});
-    }
+    outCollisionsInfo.emplace_back(EntityCollision{entityAId,
+                                                   entityBId,
+                                                   shapeAId,
+                                                   shapeBId,
+                                                   std::move(manifold)});
 }
 
 template<typename EntityId>
@@ -735,7 +703,7 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -761,7 +729,7 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -789,7 +757,7 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -831,7 +799,7 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -857,7 +825,7 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -885,7 +853,7 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -925,7 +893,7 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(R
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -943,7 +911,7 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(R
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -961,7 +929,7 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(R
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -992,7 +960,7 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(I
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -1010,7 +978,7 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(I
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)
@@ -1028,7 +996,7 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(I
     {
         const auto& shapeInfo = shapeEntity[hit.id];
         const auto entityId = shapeInfo.first;
-        const auto& entity = entities[entityId];
+        const auto& entity = entities.at(entityId);
         const auto& shape = entity.shapes[shapeInfo.second];
 
         if (!shape.isActive)

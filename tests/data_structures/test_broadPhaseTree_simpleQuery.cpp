@@ -504,7 +504,10 @@ TEST_CASE("BroadPhaseTree: findAllCollisions finds correct pairs", "[BroadPhaseT
     tree.addProxy(2, {Vec2{4,4}, Vec2{5,5}});
     tree.addProxy(3, {Vec2{1.5f,1.5f}, Vec2{2.5f,2.5f}});
 
-    std::set<std::pair<uint32_t, uint32_t>> pairs = tree.findAllCollisions();
+    std::set<std::pair<uint32_t, uint32_t>> pairs;
+    tree.findAllCollisions([&pairs](std::set<std::pair<uint32_t, uint32_t>>&& foundPairs) {
+        pairs = std::move(foundPairs);
+    });
 
     // Should find (0,1), (0,3), (1,3)
     std::set<std::pair<uint32_t, uint32_t>> expected {
@@ -536,7 +539,11 @@ TEST_CASE("BroadPhaseTree batchQuery with multiple threads", "[BroadPhaseTree][B
         expectedResults.push_back(std::move(hits));
     }
 
-    auto results = tree.batchQuery(queries, 8);
+    std::vector<std::set<uint32_t>> results;
+    results.reserve(queries.size());
+    tree.batchQuery(queries, [&results](size_t, const std::set<uint32_t>& hits) {
+        results.push_back(std::move(hits));
+    });
     CHECK(results.size() == expectedResults.size());
 
     for (size_t i = 0; i < results.size(); ++i)

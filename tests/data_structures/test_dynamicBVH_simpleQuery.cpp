@@ -548,7 +548,7 @@ TEST_CASE("DynamicBVH | batchQuery with multiple threads", "[DynamicBVH][BatchQu
         expectedResults.push_back(std::move(hits));
     }
 
-    auto results = bvh.batchQuery(queries, 8);
+    auto results = bvh.batchQuery(queries);
     CHECK(results.size() == expectedResults.size());
 
     for (size_t i = 0; i < results.size(); ++i)

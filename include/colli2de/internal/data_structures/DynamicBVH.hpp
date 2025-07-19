@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <future>
+#include <execution>
 #include <ranges>
 #include <set>
 #include <utility>
@@ -96,12 +96,7 @@ public:
     // AABB queries
     void query(AABB queryAABB, std::set<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
     std::vector<std::set<IdType>> batchQuery(const std::vector<AABB>& queries,
-                                             size_t numThreads,
                                              BitMaskType maskBits = ~0ull) const;
-    void sweepQuery(AABB startAABB, AABB endAABB, std::set<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
-    std::vector<std::set<IdType>> batchSweepQuery(const std::vector<std::pair<AABB, AABB>>& queries,
-                                                  size_t numThreads,
-                                                  BitMaskType maskBits = ~0ull) const;
     void findAllCollisions(std::set<std::pair<IdType, IdType>>& collisions) const;
 
     // Finite raycast queries
@@ -652,78 +647,15 @@ void DynamicBVH<IdType>::query(AABB queryAABB, std::set<IdType>& intersections, 
 
 template<typename IdType>
 std::vector<std::set<IdType>> DynamicBVH<IdType>::batchQuery(const std::vector<AABB>& queries,
-                                                             size_t numThreads,
                                                              BitMaskType maskBits) const
 {
     const size_t n = queries.size();
     std::vector<std::set<IdType>> results(n);
-    
-    constexpr size_t minQueriesPerThread = 5;
-    numThreads = std::min(numThreads, (n - minQueriesPerThread) / minQueriesPerThread + 1);
-    const size_t chunk = (n + numThreads - 1) / numThreads;
+    std::ranges::iota_view indexes((size_t)0, n);
 
-    std::vector<std::future<void>> futures;
-    for (size_t t = 0; t < numThreads; ++t)
-    {
-        const size_t begin = t * chunk;
-        const size_t end = std::min(n, begin + chunk);
-
-        futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end, maskBits]() {
-            for (size_t i = begin; i < end; ++i)
-                this->query(queries[i], results[i], maskBits);
-        }));
-    }
-
-    for (auto& f : futures)
-        f.get();
-
-    return results;
-}
-
-template<typename IdType>
-void DynamicBVH<IdType>::sweepQuery(AABB startAABB, AABB endAABB, std::set<IdType>& intersections, BitMaskType maskBits) const
-{
-    const Vec2 deltaAABB = endAABB - startAABB;
-    constexpr int32_t coarseSteps = 8;
-
-    AABB currentAABB;
-    for (int32_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
-    {
-        const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
-
-        currentAABB.min = startAABB.min + deltaAABB * testFraction;
-        currentAABB.max = startAABB.max + deltaAABB * testFraction;
-        
-        query(currentAABB, intersections, maskBits);
-    }
-}
-
-template<typename IdType>
-std::vector<std::set<IdType>> DynamicBVH<IdType>::batchSweepQuery(const std::vector<std::pair<AABB, AABB>>& queries,
-                                                                  size_t numThreads,
-                                                                  BitMaskType maskBits) const
-{
-    const size_t n = queries.size();
-    std::vector<std::set<IdType>> results(n);
-
-    constexpr size_t minQueriesPerThread = 2;
-    numThreads = std::min(numThreads, (n - minQueriesPerThread) / minQueriesPerThread + 1);
-    const size_t chunk = (n + numThreads - 1) / numThreads;
-
-    std::vector<std::future<void>> futures;
-    for (size_t t = 0; t < numThreads; ++t)
-    {
-        const size_t begin = t * chunk;
-        const size_t end = std::min(n, begin + chunk);
-
-        futures.push_back(std::async(std::launch::async, [this, &queries, &results, begin, end, maskBits]() {
-            for (size_t i = begin; i < end; ++i)
-                this->sweepQuery(queries[i].first, queries[i].second, results[i], maskBits);
-        }));
-    }
-
-    for (auto& f : futures)
-        f.get();
+    std::for_each(std::execution::par_unseq, indexes.begin(), indexes.end(), [&](size_t i) {
+        query(queries[i], results[i], maskBits);
+    });
 
     return results;
 }

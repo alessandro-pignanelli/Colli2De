@@ -110,7 +110,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k entities", 5ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k entities", 200us, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -127,7 +127,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k entities", 10ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k entities", 7ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -144,7 +144,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 300ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 400ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -158,7 +158,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k bullets", 500us, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k bullets", 100us, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -172,7 +172,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k bullets", 10ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k bullets", 5ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -191,4 +191,3 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         return reg.getCollidingPairs().size();
     });
 }
-

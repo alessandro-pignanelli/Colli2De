@@ -49,7 +49,10 @@ TEST_CASE("BroadPhaseTree | findAllCollisions detects overlaps", "[BroadPhaseTre
     tree.addProxy(2, {{4,4}, {5,5}});
     tree.addProxy(3, {{1.5f,1.5f}, {2.5f,2.5f}});
 
-    std::set<std::pair<uint32_t,uint32_t>> pairs = tree.findAllCollisions();
+    std::set<std::pair<uint32_t,uint32_t>> pairs;
+    tree.findAllCollisions([&pairs](std::set<std::pair<uint32_t,uint32_t>> collisionPairs) {
+        pairs = std::move(collisionPairs);
+    });
     std::set<std::pair<uint32_t,uint32_t>> expected{{0,1},{0,3},{1,3}};
     REQUIRE(pairs.size() == expected.size());
     for(const auto& p : expected)

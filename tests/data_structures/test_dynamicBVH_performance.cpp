@@ -127,9 +127,9 @@ TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]
         return foundIds.size();
     });
 
-    BENCHMARK_FUNCTION("DynamicBVH | 10k Batch Queries 100k proxies", 80ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | 10k Batch Queries 100k proxies", 1ms, [&]()
     {
-        std::vector<std::set<uint32_t>> results = bvh.batchQuery(queries, 24);
+        std::vector<std::set<uint32_t>> results = bvh.batchQuery(queries);
         return results.size();
     });
 }

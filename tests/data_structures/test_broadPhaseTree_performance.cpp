@@ -120,10 +120,13 @@ TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark
         return foundIds.size();
     });
 
-    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Batch Queries 100k proxies", 10ms, [&]()
+    BENCHMARK_FUNCTION("BroadPhaseTree | 10k Batch Queries 100k proxies", 15ms, [&]()
     {
-        std::vector<std::set<uint32_t>> results = tree.batchQuery(queries, std::thread::hardware_concurrency());
-        return results.size();
+        uint32_t totalHits = 0;
+        tree.batchQuery(queries, [&totalHits](size_t, const std::set<uint32_t>& hits) {
+            totalHits += hits.size();
+        });
+        return totalHits;
     });
 }
 
@@ -169,7 +172,9 @@ TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)"
 
     BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 1k proxies", 50us, [&]()
     {
-        pairs = tree.findAllCollisions();
+        tree.findAllCollisions([&pairs](std::set<std::pair<uint32_t,uint32_t>> collisionPairs) {
+            pairs = std::move(collisionPairs);
+        });
         return pairs.size();
     });
 
@@ -179,7 +184,9 @@ TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)"
 
     BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 10k proxies", 2ms, [&]()
     {
-        pairs = treePairs10k.findAllCollisions();
+        treePairs10k.findAllCollisions([&pairs](std::set<std::pair<uint32_t,uint32_t>> collisionPairs) {
+            pairs = std::move(collisionPairs);
+        });
         return pairs.size();
     });
 
@@ -189,7 +196,9 @@ TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)"
 
     BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 100k proxies", 130ms, [&]()
     {
-        pairs = treePairs100k.findAllCollisions();
+        treePairs100k.findAllCollisions([&pairs](std::set<std::pair<uint32_t,uint32_t>> collisionPairs) {
+            pairs = std::move(collisionPairs);
+        });
         return pairs.size();
     });
 }

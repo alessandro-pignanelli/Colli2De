@@ -63,7 +63,7 @@ Tests are created using the `Catch2` framework. When creating new tests, make su
 
 To execute benchmarks, make sure to always run the script with the `-r` option, or they will be skipped.
 
-The tag "[Benchmark]" is used to mark performance tests. They might take a long time to run, so if you didn't edit them, it's better to exclude them from the majority of the test runs.
+The tag "[Benchmark]" is used to mark performance tests. They might take a long time to run, so if you didn't edit them, it's better to exclude them from the majority of the test runs. If you are working on optimizing the performance instead, make sure to always run tests including the benchmarks, so you can compare the performance of your changes with the previous implementation.
 If you run them, consider that they might fail because target times were adjusted based on the performance of my machine. So ignore failures in the performance tests, just use them as a way to compare the performance of different implementations or configurations.
 
 If any performance test is ran, a table containing the results of all the performance tests will be generated in the `test_data/` directory and printed in the console. The file will be named `benchmarks--<date>--<time>.md`.
