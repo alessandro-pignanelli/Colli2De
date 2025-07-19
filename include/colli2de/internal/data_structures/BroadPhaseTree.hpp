@@ -5,7 +5,6 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
-#include <print>
 #include <vector>
 
 #include <colli2de/Ray.hpp>

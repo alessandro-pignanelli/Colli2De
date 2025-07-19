@@ -18,29 +18,35 @@ using namespace Catch;
     
 #define __BENCHMARK_FUNCTION(name, threshold, func, reset, ...) \
 { \
-    std::vector<microseconds> elapsedTimes; \
-    BENCHMARK(name) \
+    if (std::string(name).contains(c2d::test::filterBenchmark)) \
     { \
-        (reset)(); \
-        const auto start = high_resolution_clock::now(); \
-        const auto result = func(); \
-        const auto end = high_resolution_clock::now(); \
-        elapsedTimes.push_back(duration_cast<microseconds>(end - start)); \
-        return result; \
-    }; \
-    const auto elapsedAvg = std::accumulate(elapsedTimes.begin(), elapsedTimes.end(), microseconds(0)) / elapsedTimes.size(); \
-    CHECK(elapsedAvg <= threshold); \
-    c2d::test::printElapsed(elapsedAvg, threshold); \
-    c2d::test::storeBenchmark(name, elapsedTimes, threshold); \
+        std::vector<microseconds> elapsedTimes; \
+        BENCHMARK(name) \
+        { \
+            (reset)(); \
+            const auto start = high_resolution_clock::now(); \
+            const auto result = func(); \
+            const auto end = high_resolution_clock::now(); \
+            elapsedTimes.push_back(duration_cast<microseconds>(end - start)); \
+            return result; \
+        }; \
+        const auto elapsedAvg = std::accumulate(elapsedTimes.begin(), elapsedTimes.end(), microseconds(0)) / elapsedTimes.size(); \
+        CHECK(elapsedAvg <= threshold); \
+        c2d::test::printElapsed(elapsedAvg, threshold); \
+        c2d::test::storeBenchmark(name, elapsedTimes, threshold); \
+    } \
 }
 
 #else
 
 #define __BENCHMARK_FUNCTION(name, threshold, func, reset, ...) \
 { \
-    c2d::test::println("Running benchmark only once: \"{}\"", name); \
-    (reset)(); \
-    const auto result = (func)(); \
+    if (std::string(name).contains(c2d::test::filterBenchmark)) \
+    { \
+        c2d::test::println("Running benchmark only once: \"{}\"", name); \
+        (reset)(); \
+        const auto result = (func)(); \
+    } \
 }
 
 #endif
@@ -51,6 +57,8 @@ namespace c2d
 {
 namespace test
 {
+
+inline std::string filterBenchmark = "";
 
 struct BenchmarkResult
 {
