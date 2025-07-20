@@ -13,8 +13,11 @@ inline constexpr bool float_equals(double val1, double val2, double epsilon = 1e
 
 #ifdef __APPLE__
 
-#include <oneapi/tbb/parallel_for.h>
-#define C2D_PARALLEL_FOR(idxStart, idxEnd, func) oneapi::tbb::parallel_for((size_t)idxStart, (size_t)idxEnd, func);
+#define C2D_PARALLEL_FOR(idxStart, idxEnd, func) \
+    { \
+        for (size_t i = (size_t)(idxStart); i < (size_t)(idxEnd); ++i) \
+            func(i); \
+    }
 
 #else
 

@@ -37,26 +37,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 if (MSVC)
     # Nothing needed, works out of the box
 elseif (APPLE)
-    # Use oneTBB
-    if (USE_LOCAL_TBB)
-        find_package(TBB 2022.2.0 REQUIRED PATHS ${CMAKE_SOURCE_DIR}/libs/oneTBB/install/${CMAKE_BUILD_TYPE})
-    else()
-        find_package(TBB 2022.2.0 QUIET PATHS ${CMAKE_SOURCE_DIR}/libs/oneTBB/install/${CMAKE_BUILD_TYPE})
-        if (NOT TBB_FOUND)
-            message(STATUS "TBB not found, fetching from GitHub")
-            include(FetchContent)
-            FetchContent_Declare(
-                TBB
-                GIT_REPOSITORY https://github.com/uxlfoundation/oneTBB.git
-                GIT_TAG        v2022.2.0
-            )
-            FetchContent_MakeAvailable(TBB)
-        else()
-            message(STATUS "Using local TBB from ${TBB_DIR}")
-        endif()
-    endif()
-
-    target_link_libraries(${PROJECT_NAME} TBB::tbb)
+    # Disabled
 elseif (UNIX)
     # GCC: enable OpenMP backend
     target_compile_options(${PROJECT_NAME} PRIVATE -fopenmp)
