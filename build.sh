@@ -53,12 +53,15 @@ if [ "$cmake_arg" -eq 1 ] || [ ! -f "CMakeCache.txt" ]; then
         -DCMAKE_CXX_COMPILER=g++ \
         -DCMAKE_INSTALL_PREFIX="../../install/$build_type" \
         -DCMAKE_BUILD_TYPE=$build_type \
-        -DCMAKE_OSX_ARCHITECTURES=arm64
+        -DCMAKE_OSX_ARCHITECTURES=arm64 \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DCMAKE_INSTALL_BINDIR=bin \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 fi
 
 # Build and install
-if [ -d "../../install/include" ]; then
-    rm -r ../../install/include
+if [ -d "../../install/$build_type" ]; then
+    rm -r ../../install/$build_type
 fi
 cmake --build . --target install --config $build_type
 

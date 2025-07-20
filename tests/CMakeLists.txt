@@ -1,9 +1,6 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 cmake_minimum_required(VERSION 3.16)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 include(CTest)
 enable_testing()
 
@@ -30,6 +27,12 @@ file(GLOB_RECURSE TESTS "test_*.cpp")
 
 # Unit test executable
 add_executable(Colli2DeTests ${TESTS} ${CMAKE_SOURCE_DIR}/tests/main.cpp)
+
+set_target_properties(Colli2DeTests PROPERTIES
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+)
 
 target_link_libraries(Colli2DeTests
     PRIVATE

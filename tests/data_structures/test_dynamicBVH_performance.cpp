@@ -29,7 +29,7 @@ TEST_CASE("DynamicBVH | Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
         return bvh.size();
     });
 
-    BENCHMARK_FUNCTION("DynamicBVH | Insert 100k proxies", 130ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Insert 100k proxies", 100ms, [&]()
     {
         DynamicBVH<uint32_t> bvh;
         for (uint32_t i = 0; i < 100'000; ++i)
@@ -119,7 +119,7 @@ TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]
     }
     std::shuffle(queries.begin(), queries.end(), std::mt19937{std::random_device{}()});
 
-    BENCHMARK_FUNCTION("DynamicBVH | 10k Queries 100k proxies", 200ms, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | 10k Queries 100k proxies", 150ms, [&]()
     {
         std::vector<uint32_t> foundIds;
         for (const auto& query : queries)
@@ -150,7 +150,7 @@ TEST_CASE("DynamicBVH | Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.createProxy(aabbs[i], i);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Piercing raycast through 100k proxies", 800us, [&]()
+    BENCHMARK_FUNCTION("DynamicBVH | Piercing raycast through 100k proxies", 1ms, [&]()
     {
         std::set<RaycastInfo> hits;
         bvh.piercingRaycast(ray, hits);

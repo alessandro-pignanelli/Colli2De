@@ -62,7 +62,7 @@ TEST_CASE("Sweep raycast performance: Polygon", "[SweepRaycast][Benchmark][Polyg
         return total;
     });
 
-    BENCHMARK_FUNCTION("Sweep raycast 100k polygons", 80ms, [&]()
+    BENCHMARK_FUNCTION("Sweep raycast 100k polygons", 50ms, [&]()
     {
         uint32_t total = 0;
         for (uint32_t i = 0; i < 100'000; ++i)

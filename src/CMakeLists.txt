@@ -1,9 +1,6 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 cmake_minimum_required(VERSION 3.16)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL" CACHE STRING "" FORCE)
     if (WIN32)
@@ -15,14 +12,10 @@ else()
 endif()
 
 # ---- Gather source files (.cpp) ----
-file(GLOB_RECURSE SOURCES
-    ${PROJECT_SOURCE_DIR}/src/*.cpp
-)
+file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 # ---- Gather header files ----
-file(GLOB_RECURSE HEADERS
-    ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/*.hpp
-)
+file(GLOB_RECURSE HEADERS ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/*.hpp)
 
 # ---- Add library ----
 if(APPLE)
@@ -31,22 +24,59 @@ else()
     add_library(${PROJECT_NAME} STATIC ${SOURCES} ${HEADERS})
 endif()
 set(CMAKE_DEBUG_POSTFIX "d")
+
 set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED ON
+)
+
+# Add support for std::execution::par
+if (MSVC)
+    # Nothing needed, works out of the box
+elseif (APPLE)
+    # Use oneTBB
+    if (USE_LOCAL_TBB)
+        find_package(TBB 2022.2.0 REQUIRED PATHS ${CMAKE_SOURCE_DIR}/libs/oneTBB/install/${CMAKE_BUILD_TYPE})
+    else()
+        find_package(TBB 2022.2.0 QUIET PATHS ${CMAKE_SOURCE_DIR}/libs/oneTBB/install/${CMAKE_BUILD_TYPE})
+        if (NOT TBB_FOUND)
+            message(STATUS "TBB not found, fetching from GitHub")
+            include(FetchContent)
+            FetchContent_Declare(
+                TBB
+                GIT_REPOSITORY https://github.com/uxlfoundation/oneTBB.git
+                GIT_TAG        v2022.2.0
+            )
+            FetchContent_MakeAvailable(TBB)
+        else()
+            message(STATUS "Using local TBB from ${TBB_DIR}")
+        endif()
+    endif()
+
+    target_link_libraries(${PROJECT_NAME} TBB::tbb)
+elseif (UNIX)
+    # GCC: enable OpenMP backend
+    target_compile_options(${PROJECT_NAME} PRIVATE -fopenmp)
+    target_link_libraries(${PROJECT_NAME} PRIVATE gomp) # or omp
+endif()
 
 # ---- Include directories ----
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>     # during build
-        $<INSTALL_INTERFACE:include/${PROJECT_NAME}>   # after install
+        $<INSTALL_INTERFACE:include/${PROJECT_NAME}>         # after install
     PRIVATE
         ${PROJECT_SOURCE_DIR}/src
 )
-# target_include_directories(${PROJECT_NAME} INTERFACE $<INSTALL_INTERFACE:include>)
+target_include_directories(${PROJECT_NAME} INTERFACE $<INSTALL_INTERFACE:include>)
 
 if (MSVC)
 	if (BUILD_SHARED_LIBS)
 		# this is needed by DLL users to import Colli2De symbols
-		target_compile_definitions(${PROJECT_NAME} INTERFACE COLLI2DE_DLL)
+		target_compile_definitions(${PROJECT_NAME} INTERFACE ${PROJECT_NAME}_DLL)
 	endif()
 
 	# Warnings
@@ -63,9 +93,9 @@ endif()
 
 # Install public and internal headers to include/colli2de
 install(
-    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}
+    DIRECTORY ${PROJECT_SOURCE_DIR}/include/
     DESTINATION include
-    FILES_MATCHING PATTERN "*.hpp" PATTERN "*.tpp"
+    FILES_MATCHING PATTERN "*.hpp"
 )
 
 # Install library

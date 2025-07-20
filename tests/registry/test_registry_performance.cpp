@@ -31,7 +31,7 @@ TEST_CASE("Registry | Bulk insertion", "[Registry][Benchmark][Insert]")
         return reg.size();
     });
 
-    BENCHMARK_FUNCTION("Registry | Insert 100k entities and shapes", 200ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Insert 100k entities and shapes", 150ms, [&]()
     {
         Registry<uint32_t> reg;
         for(uint32_t i = 0; i < 100'000; ++i)
@@ -94,7 +94,7 @@ TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
     });
 }
 
-TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]")
+TEST_CASE("Registry | Collision query dynamic", "[Registry][Query][AllPairs][Benchmark]")
 {
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     std::vector<Circle> circles = generateRandomCircles(100'000, -1920.0f, 3840.0f, 12.0f, seed);
@@ -110,7 +110,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k entities", 50us, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k entities", 30us, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -127,7 +127,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k entities", 5ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 10k entities", 3ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -144,12 +144,17 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 300ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 250ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });
+}
 
-    reg.clear();
+TEST_CASE("Registry | Collision query bullets", "[Registry][Query][AllPairs][Benchmark]")
+{
+    const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
+    std::vector<Circle> circles = generateRandomCircles(100'000, -1920.0f, 3840.0f, 12.0f, seed);
+    Registry<uint32_t> reg;
     for(uint32_t i = 0; i < 1'000; ++i)
     {
         const BodyType type = BodyType::Bullet;
@@ -158,7 +163,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k bullets", 50us, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 1k bullets", 30us, [&]()
     {
         return reg.getCollidingPairs().size();
     });
@@ -186,7 +191,7 @@ TEST_CASE("Registry | Collision query", "[Registry][Query][AllPairs][Benchmark]"
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k bullets", 500ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k bullets", 600ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });

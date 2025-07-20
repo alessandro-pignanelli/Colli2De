@@ -1,6 +1,5 @@
 #pragma once
 
-#include <execution>
 #include <functional>
 #include <set>
 #include <map>
@@ -9,6 +8,7 @@
 #include <colli2de/Ray.hpp>
 #include <colli2de/internal/data_structures/DynamicBVH.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
+#include <colli2de/internal/utils/Methods.hpp>
 
 namespace c2d
 {
@@ -77,7 +77,6 @@ public:
     void batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
                     const std::function<void(size_t, std::vector<IdType>)>& callback) const;
     void findAllCollisions(const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const;
-    std::vector<IdType> findAllCollisions(BroadPhaseTreeHandle handle) const;
     void findAllCollisions(const BroadPhaseTree<IdType>& other,
                            const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const;
 
@@ -88,13 +87,14 @@ public:
     std::set<RaycastInfo<IdType>> piercingRaycast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
 
     // For debugging/statistics
-    std::size_t size() const { return proxies.size() - freeList.size(); }
+    std::size_t size() const { return proxies.size() - proxiesFreeList.size(); }
     void clear();
 
     // Optionally, support spatial partitioning (e.g. grid or region BVHs)
     // Each grid cell/region can have its own BVH
 private:
     bool isValidHandle(BroadPhaseTreeHandle handle) const;
+    size_t getBVHIndexForCell(GridCell cell);
 
     struct Proxy
     {
@@ -105,10 +105,12 @@ private:
         BitMaskType maskBits;               // For collision filtering
     };
 
-    const int32_t cellSize;                       // Size of each grid cell for spatial partitioning
-    std::vector<Proxy> proxies;                   // Indexed by BroadPhaseTreeHandle
-    std::vector<BroadPhaseTreeHandle> freeList;   // For fast recycling
-    std::map<GridCell, DynamicBVH<IdType>> regions;
+    const int32_t cellSize;                                     // Size of each grid cell for spatial partitioning
+    std::vector<Proxy> proxies;                                 // Indexed by BroadPhaseTreeHandle
+    std::vector<BroadPhaseTreeHandle> proxiesFreeList;          // For fast recycling
+    std::vector<std::pair<GridCell, DynamicBVH<IdType>>> bvhs;  // Each grid cell has its own BVH
+    std::map<GridCell, size_t> regions;                         // Maps grid cells to their BVH index
+    std::vector<size_t> bvhFreeList;                            // For fast recycling of BVH indices
 };
 
 
@@ -117,10 +119,10 @@ template<typename IdType>
 BroadPhaseTreeHandle BroadPhaseTree<IdType>::addProxy(IdType entityId, AABB aabb, BitMaskType categoryBits, BitMaskType maskBits)
 {
     BroadPhaseTreeHandle treeHandle;
-    if (!freeList.empty())
+    if (!proxiesFreeList.empty())
     {
-        treeHandle = freeList.back();
-        freeList.pop_back();
+        treeHandle = proxiesFreeList.back();
+        proxiesFreeList.pop_back();
     }
     else
     {
@@ -136,7 +138,8 @@ BroadPhaseTreeHandle BroadPhaseTree<IdType>::addProxy(IdType entityId, AABB aabb
 
     forEachCell(aabb, cellSize, [&](GridCell cell)
     {
-        auto& bvh = regions[cell];
+        size_t bvhIndex = getBVHIndexForCell(cell);
+        auto& bvh = bvhs[bvhIndex].second;
 
         // Proxy stores the BVH handle for each cell (region) it belongs to
         const auto bvhHandle = bvh.createProxy(aabb, entityId, categoryBits, maskBits);
@@ -156,15 +159,19 @@ void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
     // Remove the proxy from all regions it belongs to
     for (const auto& [cell, bvhHandle] : proxy.bvhHandles)
     {
-        auto& bvh = regions.at(cell);
+        size_t bvhIndex = regions.at(cell);
+        auto& bvh = bvhs[bvhIndex].second;
         bvh.destroyProxy(bvhHandle);
 
         if (bvh.size() == 0)
+        {
             regions.erase(cell);
+            bvhFreeList.push_back(bvhIndex);
+        }
     }
     
     proxy.bvhHandles.clear();
-    freeList.push_back(handle);
+    proxiesFreeList.push_back(handle);
 }
 
 template<typename IdType>
@@ -187,14 +194,18 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
     if (isSameCellRange)
     {
         for (const auto& [cell, bvhHandle] : proxy.bvhHandles)
-            regions.at(cell).moveProxy(bvhHandle, aabb);
+        {
+            size_t bvhIndex = regions.at(cell);
+            bvhs[bvhIndex].second.moveProxy(bvhHandle, aabb);
+        }
         return;
     }
 
     const auto addToCell = [this, handle, aabb](GridCell cell)
     {
         // Region stores every proxy that belongs to it
-        auto& bvh = regions[cell];
+        size_t bvhIndex = getBVHIndexForCell(cell);
+        auto& bvh = bvhs[bvhIndex].second;
 
         // Proxy stores the BVH handle for each cell (region) it belongs to
         auto& proxy = proxies.at(handle);
@@ -204,8 +215,9 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
     const auto removeFromCell = [this, handle](GridCell cell)
     {
         // Remove the proxy from the region
-        auto& bvh = regions.at(cell);
-        
+        size_t bvhIndex = regions.at(cell);
+        auto& bvh = bvhs[bvhIndex].second;
+
         // Destroy the proxy from the BVH in that region and remove the bvh handle
         auto& proxy = proxies.at(handle);
         const auto bvhHandleInRegion = proxy.bvhHandles.find(cell);
@@ -214,12 +226,16 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
         proxy.bvhHandles.erase(bvhHandleInRegion);
 
         if (bvh.size() == 0)
+        {
             regions.erase(cell);
+            bvhFreeList.push_back(bvhIndex);
+        }
     };
     const auto moveSameCell = [this, handle, aabb](GridCell cell)
     {
         // If the proxy is still in the same cell, just update the BVH
-        auto& bvh = regions.at(cell);
+        size_t bvhIndex = regions.at(cell);
+        auto& bvh = bvhs[bvhIndex].second;
         const auto& proxy = proxies.at(handle);
         bvh.moveProxy(proxy.bvhHandles.at(cell), aabb);
     };
@@ -257,7 +273,7 @@ std::vector<IdType> BroadPhaseTree<IdType>::query(AABB queryAABB, BitMaskType ma
         if (regionIt == regions.end())
             return; // No region here
 
-        const auto& bvh = regionIt->second;
+        const auto& bvh = bvhs[regionIt->second].second;
         bvh.query(queryAABB, intersections, maskBits);
     });
 
@@ -268,10 +284,9 @@ template<typename IdType>
 void BroadPhaseTree<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
                                         const std::function<void(size_t, std::vector<IdType>)>& callback) const
 {
-    std::ranges::iota_view indexes((size_t)0, queries.size());
-    std::for_each(std::execution::par_unseq, indexes.begin(), indexes.end(), [&](size_t i) {
+    C2D_PARALLEL_FOR(0, queries.size(), [&](size_t i)
+    {
         auto hits = query(queries[i].first, queries[i].second);
-
         if (!hits.empty())
             callback(i, std::move(hits));
     });
@@ -281,22 +296,16 @@ template<typename IdType>
 void BroadPhaseTree<IdType>::findAllCollisions(const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const
 {
     std::vector<std::pair<IdType, IdType>> collisions;
+    collisions.reserve(proxies.size() << 2);
 
-    std::for_each(std::execution::par_unseq, regions.begin(), regions.end(), [&collisions](const auto& regionPair) {
-        const auto& bvh = regionPair.second;
+    for (size_t i = 0; i < bvhs.size(); i++)
+    {
+        const auto& bvh = bvhs[i].second;
         bvh.findAllCollisions(collisions);
-    });
-
+    }
+    
     if (!collisions.empty())
         callback(std::move(collisions));
-}
-
-template<typename IdType>
-std::vector<IdType> BroadPhaseTree<IdType>::findAllCollisions(BroadPhaseTreeHandle handle) const
-{
-    assert(isValidHandle(handle));
-    const Proxy& proxy = proxies.at(handle);
-    return query(proxy.aabb, proxy.maskBits);
 }
 
 template<typename IdType>
@@ -305,14 +314,19 @@ void BroadPhaseTree<IdType>::findAllCollisions(const BroadPhaseTree<IdType>& oth
 {
     std::vector<std::pair<IdType, IdType>> collisions;
 
-    std::for_each(std::execution::par_unseq, regions.begin(), regions.end(), [&](const auto& regionPair)
+    for (size_t i = 0; i < bvhs.size(); ++i)
     {
-        const auto otherIt = other.regions.find(regionPair.first);
-        if (otherIt == other.regions.end())
-            return;
+        const auto& cell = bvhs[i].first;
+        const auto& bvh = bvhs[i].second;
 
-        regionPair.second.findAllCollisions(otherIt->second, collisions);
-    });
+        // No region in the other tree
+        const auto otherIt = other.regions.find(cell);
+        if (otherIt == other.regions.end())
+            continue;
+
+        const auto& otherBvh = other.bvhs[otherIt->second].second;
+        bvh.findAllCollisions(otherBvh, collisions);
+    }
 
     if (!collisions.empty())
         callback(std::move(collisions));
@@ -338,7 +352,7 @@ std::optional<RaycastInfo<IdType>> BroadPhaseTree<IdType>::firstHitRaycast(Ray r
     {
         if (const auto regionIt = regions.find(currentCell); regionIt != regions.end())
         {
-            const auto& bvh = regionIt->second;
+            const auto& bvh = bvhs[regionIt->second].second;
             const auto firstHit = bvh.firstHitRaycast(ray, maskBits);
             if (firstHit)
                 return firstHit;
@@ -408,7 +422,7 @@ std::set<RaycastInfo<IdType>> BroadPhaseTree<IdType>::piercingRaycast(Ray ray, B
     {
         if (const auto regionIt = regions.find(currentCell); regionIt != regions.end())
         {
-            const auto& bvh = regionIt->second;
+            const auto& bvh = bvhs[regionIt->second].second;
             bvh.piercingRaycast(ray, hits, maskBits);
         }
 
@@ -464,12 +478,39 @@ bool BroadPhaseTree<IdType>::isValidHandle(BroadPhaseTreeHandle handle) const
 }
 
 template<typename IdType>
+size_t BroadPhaseTree<IdType>::getBVHIndexForCell(GridCell cell)
+{
+    const auto it = regions.find(cell);
+    if (it != regions.end())
+        return it->second;
+
+    // If the cell does not exist, create a new BVH for it
+    if (!bvhFreeList.empty())
+    {
+        size_t bvhIndex = bvhFreeList.back();
+        bvhFreeList.pop_back();
+        regions.emplace(cell, bvhIndex);
+        bvhs[bvhIndex].first = cell;
+        return bvhIndex;
+    }
+    else
+    {
+        size_t newBvhIndex = bvhs.size();
+        bvhs.emplace_back(cell, DynamicBVH<IdType>());
+        regions.emplace(cell, newBvhIndex);
+        return newBvhIndex;
+    }
+}
+
+template<typename IdType>
 void BroadPhaseTree<IdType>::clear()
 {
     proxies.clear();
-    freeList.clear();
-    regions.clear();
     proxies.reserve(32);
+    proxiesFreeList.clear();
+    regions.clear();
+    bvhs.clear();
+    bvhFreeList.clear();
 }
 
 } // namespace c2d

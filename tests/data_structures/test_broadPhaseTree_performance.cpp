@@ -161,7 +161,7 @@ TEST_CASE("BroadPhaseTree | Piercing raycast", "[BroadPhaseTree][Benchmark][Rayc
     });
 }
 
-TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark (10k random proxies)", "[BroadPhaseTree][BroadPhaseCollisions][AllPairs][Benchmark]")
+TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark", "[BroadPhaseTree][BroadPhaseCollisions][AllPairs][Benchmark]")
 {
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;

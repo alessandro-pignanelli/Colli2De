@@ -855,10 +855,7 @@ void DynamicBVH<IdType>::findPairsBetween(NodeIndex nodeAIdx,
     if (nodeA.isLeaf() && nodeB.isLeaf())
     {
         // Always store (min, max) to avoid (A, B) and (B, A) being different
-        if (nodeA.id < nodeB.id)
-            out.emplace_back(nodeA.id, nodeB.id);
-        else
-            out.emplace_back(nodeB.id, nodeA.id);
+        out.emplace_back(nodeA.id, nodeB.id);
         return;
     }
 
@@ -894,10 +891,7 @@ void DynamicBVH<IdType>::findPairsBetween(const DynamicBVH<IdType>& other,
 
     if (nodeA.isLeaf() && nodeB.isLeaf())
     {
-        if (nodeA.id < nodeB.id)
-            out.emplace_back(nodeA.id, nodeB.id);
-        else
-            out.emplace_back(nodeB.id, nodeA.id);
+        out.emplace_back(nodeA.id, nodeB.id);
         return;
     }
 

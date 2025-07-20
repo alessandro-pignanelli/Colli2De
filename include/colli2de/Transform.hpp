@@ -3,7 +3,7 @@
 #include <cmath>
 
 #include <colli2de/Vec2.hpp>
-#include <colli2de/internal/utils/methods.hpp>
+#include <colli2de/internal/utils/Methods.hpp>
 
 namespace c2d
 {

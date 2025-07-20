@@ -272,8 +272,6 @@ Note that:
   - Dynamic vs Bullet entities.
   - Bullet vs Bullet entities.  
 
-This method performs queries in parallel on different threads to efficiently compute the collisions.
-
 `std::vector<EntityCollision> getCollisions(id)`:
 - `id`: unique identifier of the entity for which you want to get the collisions.
 - -> `std::vector<EntityCollision>`: list of objects representing all currently colliding pairs for the specified entity.  
@@ -675,7 +673,7 @@ Colli2De uses a broad-phase collision detection algorithm to quickly eliminate p
 ### Collision Detection Flow
 
 1. **Entity creation**:
-    - A new entry is created in a `std::unordered_map`, using the entity ID as the key.
+    - A new entry is created inside a `std::map`, using the entity ID as the key.
 2. **Shape addition**:
     - The shape is stored in a `std::vector` within the entity's entry in the registry.
     - The AABB (Axis-Aligned Bounding Box) of the shape is computed and stored in the entity's entry.

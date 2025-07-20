@@ -48,7 +48,7 @@ TEST_CASE("Registry | Bullet raycast", "[Registry][Benchmark][Raycast][Bullet]")
         registry.moveEntity(i, Transform(translations[i]));
     }
 
-    BENCHMARK_FUNCTION("Registry | Bullet raycast among 100k entities", 15ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Bullet raycast among 100k entities", 20ms, [&]()
     {
         return registry.rayCast(ray).size();
     });

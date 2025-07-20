@@ -81,7 +81,7 @@ exit /b 0
 REM ---------- PRINT_HELP ----------
 :PRINT_HELP
 
-echo Usage: get_catch2_local.bat [--cmake] [--release^|--debug^|--profile^|--relwithdebinfo] [--build_deps]
+echo Usage: get_libs_local.bat [--cmake] [--release^|--debug^|--profile^|--relwithdebinfo] [--build_deps]
 echo Options:
 echo     --cmake                            Run CMake configuration
 echo     --release^|-r                      Build in Release mode
