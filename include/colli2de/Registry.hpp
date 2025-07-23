@@ -3,7 +3,6 @@
 #include <variant>
 #include <vector>
 #include <map>
-#include <print>
 
 #include <colli2de/Ray.hpp>
 #include <colli2de/Shapes.hpp>
@@ -27,7 +26,13 @@ enum class BodyType : uint8_t
     Bullet,
 };
 
-template<typename EntityId>
+enum class PartitioningMethod
+{
+    None = 0,
+    Grid,
+};
+
+template<typename EntityId, PartitioningMethod Method = PartitioningMethod::None>
 class Registry
 {
 public:
@@ -41,7 +46,8 @@ public:
     };
 
     Registry() = default;
-    Registry(uint32_t cellSize) : treeStatic(cellSize), treeDynamic(cellSize), treeBullet(cellSize) {}
+    Registry(uint32_t cellSize) requires (Method == PartitioningMethod::Grid)
+        : treeStatic(cellSize), treeDynamic(cellSize), treeBullet(cellSize) {}
 
     void createEntity(EntityId id, BodyType type, const Transform& transform = Transform{});
     void removeEntity(EntityId id);
@@ -93,13 +99,14 @@ private:
     std::vector<std::pair<EntityId, size_t>> shapeEntity;
     std::vector<ShapeId> freeShapeIds;
 
-    BroadPhaseTree<ShapeId> treeStatic;
-    BroadPhaseTree<ShapeId> treeDynamic;
-    BroadPhaseTree<ShapeId> treeBullet;
+    using TreeType = std::conditional_t<Method == PartitioningMethod::Grid, BroadPhaseTree<ShapeId>, DynamicBVH<ShapeId>>;
+    TreeType treeStatic;
+    TreeType treeDynamic;
+    TreeType treeBullet;
     std::map<EntityId, Transform> bulletPreviousTransforms;
     uint32_t previousAllCollisionsCount = 1000;
 
-    constexpr BroadPhaseTree<ShapeId>& treeFor(BodyType type);
+    constexpr TreeType& treeFor(BodyType type);
 
     void narrowPhaseCollision(ShapeId shapeAId,
                               ShapeId shapeBId,
@@ -111,8 +118,8 @@ private:
                                std::vector<EntityCollision>& outCollisionsInfo) const;
 };
 
-template<typename EntityId>
-constexpr BroadPhaseTree<ShapeId>& Registry<EntityId>::treeFor(BodyType type)
+template<typename EntityId, PartitioningMethod Method>
+constexpr typename Registry<EntityId, Method>::TreeType& Registry<EntityId, Method>::treeFor(BodyType type)
 {
     switch (type)
     {
@@ -123,8 +130,8 @@ constexpr BroadPhaseTree<ShapeId>& Registry<EntityId>::treeFor(BodyType type)
     }
 }
 
-template<typename EntityId>
-void Registry<EntityId>::createEntity(EntityId id, BodyType type, const Transform& transform)
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::createEntity(EntityId id, BodyType type, const Transform& transform)
 {
     assert(entities.find(id) == entities.end() && "Entity with this ID already exists");
     entities.emplace(id, EntityInfo{ {}, transform, type });
@@ -133,9 +140,9 @@ void Registry<EntityId>::createEntity(EntityId id, BodyType type, const Transfor
         bulletPreviousTransforms.emplace(id, transform);
 }
 
-template<typename EntityId>
+template<typename EntityId, PartitioningMethod Method>
 template <IsShape Shape>
-ShapeId Registry<EntityId>::addShape(EntityId entityId, const Shape& shape, uint64_t categoryBits, uint64_t maskBits)
+ShapeId Registry<EntityId, Method>::addShape(EntityId entityId, const Shape& shape, uint64_t categoryBits, uint64_t maskBits)
 {
     assert(entities.find(entityId) != entities.end());
     EntityInfo& entity = entities.at(entityId);
@@ -166,8 +173,8 @@ ShapeId Registry<EntityId>::addShape(EntityId entityId, const Shape& shape, uint
     return shapeId;
 }
 
-template<typename EntityId>
-void Registry<EntityId>::removeShape(ShapeId shapeId)
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::removeShape(ShapeId shapeId)
 {
     assert(shapeEntity.size() > shapeId && "Shape ID out of bounds");
     const EntityId entityId = shapeEntity.at(shapeId).first;
@@ -186,8 +193,8 @@ void Registry<EntityId>::removeShape(ShapeId shapeId)
     entity.shapes.erase(it);
 }
 
-template<typename EntityId>
-void Registry<EntityId>::setShapeActive(ShapeId shapeId, bool isActive)
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::setShapeActive(ShapeId shapeId, bool isActive)
 {
     assert(shapeEntity.size() > shapeId && "Shape ID out of bounds");
     const auto [entityId, shapeIndex] = shapeEntity.at(shapeId);
@@ -198,8 +205,8 @@ void Registry<EntityId>::setShapeActive(ShapeId shapeId, bool isActive)
     entity.shapes[shapeIndex].isActive = isActive;
 }
 
-template<typename EntityId>
-void Registry<EntityId>::removeEntity(EntityId id)
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::removeEntity(EntityId id)
 {
     auto it = entities.find(id);
     assert(it != entities.end());
@@ -219,8 +226,8 @@ void Registry<EntityId>::removeEntity(EntityId id)
     entities.erase(it);
 }
 
-template<typename EntityId>
-void Registry<EntityId>::teleportEntity(EntityId id, const Transform& transform)
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::teleportEntity(EntityId id, const Transform& transform)
 {
     assert(entities.find(id) != entities.end());
     EntityInfo& entity = entities.at(id);
@@ -256,8 +263,8 @@ void Registry<EntityId>::teleportEntity(EntityId id, const Transform& transform)
     entity.transform = transform;
 }
 
-template<typename EntityId>
-void Registry<EntityId>::teleportEntity(EntityId id, Translation translation)
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::teleportEntity(EntityId id, Translation translation)
 {
     assert(entities.find(id) != entities.end());
     EntityInfo& entity = entities.at(id);
@@ -266,8 +273,8 @@ void Registry<EntityId>::teleportEntity(EntityId id, Translation translation)
     moveEntity(id, deltaTranslation);
 }
 
-template<typename EntityId>
-void Registry<EntityId>::moveEntity(EntityId id, const Transform& delta)
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::moveEntity(EntityId id, const Transform& delta)
 {
     assert(entities.find(id) != entities.end());
     EntityInfo& entity = entities.at(id);
@@ -304,8 +311,8 @@ void Registry<EntityId>::moveEntity(EntityId id, const Transform& delta)
     }
 }
 
-template<typename EntityId>
-void Registry<EntityId>::moveEntity(EntityId id, Translation deltaTranslation)
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::moveEntity(EntityId id, Translation deltaTranslation)
 {
     assert(entities.find(id) != entities.end());
     EntityInfo& entity = entities.at(id);
@@ -336,36 +343,61 @@ void Registry<EntityId>::moveEntity(EntityId id, Translation deltaTranslation)
     entity.transform.translation += deltaTranslation;
 }
 
-template<typename EntityId>
-Transform Registry<EntityId>::getEntityTransform(EntityId id) const
+template<typename EntityId, PartitioningMethod Method>
+Transform Registry<EntityId, Method>::getEntityTransform(EntityId id) const
 {
     assert(entities.find(id) != entities.end());
     const EntityInfo& entity = entities.at(id);
     return entity.transform;
 }
 
-template<typename EntityId>
-std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::getCollidingPairs()
+template<typename EntityId, PartitioningMethod Method>
+std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<EntityId, Method>::getCollidingPairs()
 {
     std::vector<EntityCollision> collisionsInfo;
     collisionsInfo.reserve(previousAllCollisionsCount + 10);
 
-    const auto handlePairCollisions = [&](std::vector<std::pair<ShapeId, ShapeId>> collisions) {
-        narrowPhaseCollisions(collisions, collisionsInfo);
+    std::vector<std::pair<ShapeId, ShapeId>> collisions;
+
+    const auto handlePairCollisions = [&](ShapeId shapeAId, ShapeId shapeBId) {
+        collisions.emplace_back(shapeAId, shapeBId);
     };
 
+    // Dynamic vs Static
+    collisions.reserve(previousAllCollisionsCount);
     treeDynamic.findAllCollisions(treeStatic, handlePairCollisions);
+    if (!collisions.empty()) narrowPhaseCollisions(collisions, collisionsInfo);
+
+    // Dynamic vs Dynamic
+    collisions.clear();
+    collisions.reserve(previousAllCollisionsCount);
     treeDynamic.findAllCollisions(handlePairCollisions);
+    if (!collisions.empty()) narrowPhaseCollisions(collisions, collisionsInfo);
+
+    // Bullet vs Static
+    collisions.clear();
+    collisions.reserve(previousAllCollisionsCount);
     treeBullet.findAllCollisions(treeStatic, handlePairCollisions);
+    if (!collisions.empty()) narrowPhaseCollisions(collisions, collisionsInfo);
+
+    // Bullet vs Dynamic
+    collisions.clear();
+    collisions.reserve(previousAllCollisionsCount);
     treeBullet.findAllCollisions(treeDynamic, handlePairCollisions);
+    if (!collisions.empty()) narrowPhaseCollisions(collisions, collisionsInfo);
+
+    // Bullet vs Bullet
+    collisions.clear();
+    collisions.reserve(previousAllCollisionsCount);
     treeBullet.findAllCollisions(handlePairCollisions);
+    if (!collisions.empty()) narrowPhaseCollisions(collisions, collisionsInfo);
 
     previousAllCollisionsCount = collisionsInfo.size();
     return collisionsInfo;
 }
 
-template<typename EntityId>
-std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::getCollisions(EntityId id) const
+template<typename EntityId, PartitioningMethod Method>
+std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<EntityId, Method>::getCollisions(EntityId id) const
 {
     assert(entities.find(id) != entities.end());
     const EntityInfo& entity = entities.at(id);
@@ -422,8 +454,8 @@ std::vector<typename Registry<EntityId>::EntityCollision> Registry<EntityId>::ge
     return collisionsInfo;
 }
 
-template<typename EntityId>
-void Registry<EntityId>::narrowPhaseCollision(ShapeId shapeAId,
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::narrowPhaseCollision(ShapeId shapeAId,
                                               ShapeId shapeBId,
                                               std::vector<EntityCollision>& outCollisionsInfo) const
 {
@@ -502,8 +534,8 @@ void Registry<EntityId>::narrowPhaseCollision(ShapeId shapeAId,
                                                    std::move(manifold)});
 }
 
-template<typename EntityId>
-void Registry<EntityId>::narrowPhaseCollisions(std::vector<std::pair<ShapeId, ShapeId>>& collisions,
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::narrowPhaseCollisions(std::vector<std::pair<ShapeId, ShapeId>>& collisions,
                                                std::vector<EntityCollision>& outCollisionsInfo) const
 {
     // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
@@ -521,8 +553,8 @@ void Registry<EntityId>::narrowPhaseCollisions(std::vector<std::pair<ShapeId, Sh
     }
 }
 
-template<typename EntityId>
-void Registry<EntityId>::narrowPhaseCollisions(ShapeId shapeQueried,
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::narrowPhaseCollisions(ShapeId shapeQueried,
                                                std::vector<ShapeId>& collisions,
                                                std::vector<EntityCollision>& outCollisionsInfo) const
 {
@@ -540,8 +572,8 @@ void Registry<EntityId>::narrowPhaseCollisions(ShapeId shapeQueried,
     }
 }
 
-template<typename EntityId>
-bool Registry<EntityId>::areColliding(EntityId entityAId, EntityId entityBId) const
+template<typename EntityId, PartitioningMethod Method>
+bool Registry<EntityId, Method>::areColliding(EntityId entityAId, EntityId entityBId) const
 {
     assert(entities.find(entityAId) != entities.end() && "Entity A does not exist");
     assert(entities.find(entityBId) != entities.end() && "Entity B does not exist");
@@ -636,15 +668,16 @@ bool Registry<EntityId>::areColliding(EntityId entityAId, EntityId entityBId) co
     return false;
 }
 
-template<typename EntityId>
-std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firstHitRayCast(Ray ray, BitMaskType maskBits) const
+template<typename EntityId, PartitioningMethod Method>
+std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::firstHitRayCast(Ray ray, BitMaskType maskBits) const
 {
     std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> bestHit;
     float bestEntryTime = std::numeric_limits<float>::max();
 
-    const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
-    const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
-    const auto bulletHits = treeBullet.piercingRaycast(ray, maskBits);
+    std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
+    treeStatic.piercingRaycast(ray, staticHits, maskBits);
+    treeDynamic.piercingRaycast(ray, dynamicHits, maskBits);
+    treeBullet.piercingRaycast(ray, bulletHits, maskBits);
 
     uint32_t toCheck = staticHits.size();
     for (const auto& hit : staticHits)
@@ -732,12 +765,13 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
     return bestHit;
 }
 
-template<typename EntityId>
-std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firstHitRayCast(InfiniteRay ray, BitMaskType maskBits) const
+template<typename EntityId, PartitioningMethod Method>
+std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::firstHitRayCast(InfiniteRay ray, BitMaskType maskBits) const
 {
-    const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
-    const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
-    const auto bulletHits = treeBullet.piercingRaycast(ray, maskBits);
+    std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
+    treeStatic.piercingRaycast(ray, staticHits, maskBits);
+    treeDynamic.piercingRaycast(ray, dynamicHits, maskBits);
+    treeBullet.piercingRaycast(ray, bulletHits, maskBits);
 
     std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> bestHit;
     float bestEntryTime = std::numeric_limits<float>::max();
@@ -828,12 +862,13 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::firs
     return bestHit;
 }
 
-template<typename EntityId>
-std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(Ray ray, BitMaskType maskBits) const
+template<typename EntityId, PartitioningMethod Method>
+std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::rayCast(Ray ray, BitMaskType maskBits) const
 {
-    const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
-    const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
-    const auto bulletHits = treeBullet.piercingRaycast(ray, maskBits);
+    std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
+    treeStatic.piercingRaycast(ray, staticHits, maskBits);
+    treeDynamic.piercingRaycast(ray, dynamicHits, maskBits);
+    treeBullet.piercingRaycast(ray, bulletHits, maskBits);
 
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> hits;
 
@@ -895,12 +930,13 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(R
     return hits;
 }
 
-template<typename EntityId>
-std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(InfiniteRay ray, BitMaskType maskBits) const
+template<typename EntityId, PartitioningMethod Method>
+std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::rayCast(InfiniteRay ray, BitMaskType maskBits) const
 {
-    const auto staticHits = treeStatic.piercingRaycast(ray, maskBits);
-    const auto dynamicHits = treeDynamic.piercingRaycast(ray, maskBits);
-    const auto bulletHits = treeBullet.piercingRaycast(ray, maskBits);
+    std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
+    treeStatic.piercingRaycast(ray, staticHits, maskBits);
+    treeDynamic.piercingRaycast(ray, dynamicHits, maskBits);
+    treeBullet.piercingRaycast(ray, bulletHits, maskBits);
 
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> hits;
     
@@ -962,14 +998,14 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId>::rayCast(I
     return hits;
 }
 
-template<typename EntityId>
-size_t Registry<EntityId>::size() const
+template<typename EntityId, PartitioningMethod Method>
+size_t Registry<EntityId, Method>::size() const
 {
     return entities.size();
 }
 
-template<typename EntityId>
-void Registry<EntityId>::clear()
+template<typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::clear()
 {
     entities.clear();
     shapeEntity.clear();

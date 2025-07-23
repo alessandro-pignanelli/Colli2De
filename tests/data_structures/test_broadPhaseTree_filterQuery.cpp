@@ -40,7 +40,8 @@ TEST_CASE("BroadPhaseTree | query with mask bits filters correctly", "[BroadPhas
     SECTION("BroadPhaseTree | Query with mask for category 2")
     {
         BitMaskType only2 = 0b0100;
-        auto result = tree.query(allAABB, only2);
+        std::vector<uint32_t> result;
+        tree.query(allAABB, result, only2);
         CHECK(result.size() == 1);
         CHECK(std::find(result.begin(), result.end(), 3) != result.end()); // Should match only the proxy with category 2
     }
@@ -49,7 +50,8 @@ TEST_CASE("BroadPhaseTree | query with mask bits filters correctly", "[BroadPhas
     SECTION("BroadPhaseTree | Query with mask for category 1 and 3")
     {
         BitMaskType oneAndThree = 0b1010;
-        auto result = tree.query(allAABB, oneAndThree);
+        std::vector<uint32_t> result;
+        tree.query(allAABB, result, oneAndThree);
         CHECK(result.size() == 2);
         CHECK(std::find(result.begin(), result.end(), 2) != result.end());
         CHECK(std::find(result.begin(), result.end(), 4) != result.end());
@@ -59,7 +61,8 @@ TEST_CASE("BroadPhaseTree | query with mask bits filters correctly", "[BroadPhas
     SECTION("BroadPhaseTree | Query with mask for all categories")
     {
         BitMaskType all = 0b1111;
-        auto result = tree.query(allAABB, all);
+        std::vector<uint32_t> result;
+        tree.query(allAABB, result, all);
         CHECK(result.size() == 4);
         CHECK(std::find(result.begin(), result.end(), 1) != result.end());
         CHECK(std::find(result.begin(), result.end(), 2) != result.end());
@@ -82,7 +85,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds intersected proxies", "[BroadP
     SECTION("BroadPhaseTree | No mask - finds all")
     {
         std::set<BPTRaycastInfo> hits;
-        hits = tree.piercingRaycast(ray);
+        tree.piercingRaycast(ray, hits);
         const auto foundIds = toVectorIds(hits);
         CHECK(foundIds.size() == 10);
         for (uint32_t i = 0; i < 10; ++i)
@@ -93,7 +96,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds intersected proxies", "[BroadP
     {
         BitMaskType mask = 1ull << 2;
         std::set<BPTRaycastInfo> hits;
-        hits = tree.piercingRaycast(ray, mask);
+        tree.piercingRaycast(ray, hits, mask);
         REQUIRE(hits.size() == 1);
         CHECK(hits.begin()->id == 2);
     }
@@ -102,7 +105,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds intersected proxies", "[BroadP
     {
         BitMaskType mask = (1ull << 4) | (1ull << 7);
         std::set<BPTRaycastInfo> hits;
-        hits = tree.piercingRaycast(ray, mask);
+        tree.piercingRaycast(ray, hits, mask);
         const auto foundIds = toVectorIds(hits);
         CHECK(foundIds.size() == 2);
         CHECK(std::find(foundIds.begin(), foundIds.end(), 4) != foundIds.end());
@@ -182,9 +185,9 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds all hits with entry/exit point
     SECTION("BroadPhaseTree | No mask - finds all")
     {
         std::set<BPTRaycastInfo> hits;
-        hits = tree.piercingRaycast(ray);
+        tree.piercingRaycast(ray, hits);
         const auto foundIds = toVectorIds(hits);
-        CHECK(foundIds.size() == 3);
+        REQUIRE(foundIds.size() == 3);
         CHECK(foundIds[0] == 10);
         CHECK(foundIds[1] == 20);
         CHECK(foundIds[2] == 30);
@@ -194,7 +197,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds all hits with entry/exit point
     {
         BitMaskType mask = 0b100;
         std::set<BPTRaycastInfo> hits;
-        hits = tree.piercingRaycast(ray, mask);
+        tree.piercingRaycast(ray, hits, mask);
         const auto foundIds = toVectorIds(hits);
         REQUIRE(foundIds.size() == 1);
         CHECK(foundIds[0] == 30);
@@ -204,7 +207,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds all hits with entry/exit point
     {
         BitMaskType mask = 0b010;
         std::set<BPTRaycastInfo> hits;
-        hits = tree.piercingRaycast(ray, mask);
+        tree.piercingRaycast(ray, hits, mask);
         const auto foundIds = toVectorIds(hits);
         REQUIRE(foundIds.size() == 1);
         CHECK(foundIds[0] == 20);
@@ -276,7 +279,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds intersected 
     {
         BitMaskType mask = 1ull << 3;
         std::set<BPTRaycastInfo> hits;
-        hits = tree.piercingRaycast(ray, mask);
+        tree.piercingRaycast(ray, hits, mask);
         const auto foundIds = toVectorIds(hits);
         REQUIRE(foundIds.size() == 1);
         CHECK(foundIds[0] == 3);
@@ -286,7 +289,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds intersected 
     {
         BitMaskType mask = (1ull << 2) | (1ull << 3) | (1ull << 4) | (1ull << 5);
         std::set<BPTRaycastInfo> hits;
-        hits = tree.piercingRaycast(ray, mask);
+        tree.piercingRaycast(ray, hits, mask);
         const auto foundIds = toVectorIds(hits);
         CHECK(foundIds.size() == 4);
         for (uint32_t i = 2; i <= 5; ++i)

@@ -77,7 +77,7 @@ using namespace c2d;
 
 int main()
 {
-    // Create a registry for managing entities with `uint32_t` as the entity ID type
+    // Create a registry for managing entities with `uint32_t` as the entity ID type, no partitioning
     Registry<uint32_t> registry;
 
     // Static entity, ID 1, positioned at (0.0f, 0.0f), no rotation
@@ -140,12 +140,17 @@ The registry's methods are designed to assume that the user won't make any inval
 
 #### Creating the registry
 
-`Registry<EntityIdType>::Registry()`: creates a new registry with the default cell size of 64.
-`Registry<EntityIdType>::Registry(cellSize)`: creates a new registry with the specified cell size.
+`Registry<EntityIdType, PartitioningMethod>::Registry()`: creates a new registry with the default cell size of 64.
+`Registry<EntityIdType, PartitioningMethod::Grid>::Registry(cellSize)`: creates a new registry with the specified cell size.
 
-The `Registry` class is a templated class that takes a single template parameter, `EntityIdType`, which is the type of the entity ID. This allows for flexibility in choosing the type of entity ID, such as `int` or more complex types like `std::string` or `entt::entity` (from the [EnTT](https://github.com/skypjack/entt) library).  
-Internally, the registry uses a spatial partitioning technique to efficiently manage collisions and ray casting queries. The cell size can be adjusted to optimize performance for your specific use case, with a default value of 64.  
-The `Registry` class is not unit-agnostic, meaning you can use any unit of measurement for positions and sizes of entities and shapes. The `cellSize` parameter can then be adjusted to match the scale of your game world or application. The optimal cell size is balanced based on the scale of your entities and the density of collisions in your scene. A larger cell size leads to a faster entity movement and reduced partition overhead due to fewer cells, but slower collision detection in dense scenes due to larger internal trees.
+The `Registry` class is a templated class that takes two template parameters, `EntityIdType`, which is the type of the entity ID, and `PartitioningMethod`, which determines how the registry partitions space for efficient collision detection.  
+`EntityIdType` allows for flexibility in choosing the type of entity ID, such as `int` or more complex types like `std::string` or `entt::entity` (from the [EnTT](https://github.com/skypjack/entt) library).  
+`PartitioningMethod` can be:
+- `None`: the registry will not use any spatial partitioning, and all entities will be stored in a single list. This is suitable for small scenes with few entities, where the overhead of partitioning would be greater than the benefits.
+- `Grid`: the registry will use a grid-based partitioning method to efficiently manage collisions and ray casting queries, which is more suitable for larger scenes with many entities.  
+
+When using `Grid`, the cell size can be specified through the constructor to optimize performance for your specific use case, with a default value of 120 otherwise (thought as 120 pixels, dividing a 1920 x 1080 screen into a 16 x 9 grid).  
+The `Registry` class is not unit-agnostic, meaning you can use any unit of measurement for positions and sizes of entities and shapes, as well as for the size of the grid cells. The `cellSize` parameter can then be adjusted to match the scale of your game world or application. The optimal cell size is balanced based on the scale of your entities and the density of collisions in your scene. A larger cell size leads to a faster entity movement and reduced partition overhead due to fewer cells, but slower collision detection in dense scenes due to larger internal trees.
 
 #### Creating and removing entities
 
@@ -163,7 +168,7 @@ This method removes the entity from the registry, along with all its associated 
 
 ```cpp
 using EntityIdType = uint32_t;
-c2d::Registry<EntityIdType> registry;
+c2d::Registry<EntityIdType, c2d::PartitioningMethod::Grid> registry(1); // Registry with Grid partitioning and cell size of 1 (meter)
 
 // Create a static entity with ID 1 at position (0, 0)
 registry.createEntity(1, c2d::BodyType::Static, c2d::Transform(c2d::Vec2{0.0f, 0.0f}, c2d::Rotation{0.0f}));
@@ -670,7 +675,7 @@ const auto hits = registry.rayCast(ray, ENEMY_CATEGORY);
 
 Colli2De uses a broad-phase collision detection algorithm to quickly eliminate pairs of entities that are not colliding, followed by a narrow-phase collision detection algorithm to compute the actual collisions.  
 
-### Collision Detection Flow
+### Collision Detection Flow (Partitioned Registry)
 
 1. **Entity creation**:
     - A new entry is created inside a `std::map`, using the entity ID as the key.
@@ -695,6 +700,10 @@ Colli2De uses a broad-phase collision detection algorithm to quickly eliminate p
         - If they are overlapping, it computes the collision manifold and stores it in the `EntityCollision` structure.
         - For bullet entities, it checks for collisions at multiple positions along the movement path to ensure accurate collision detection (swept collision detection).
 
+### Collision Detection Flow (Non-Partitioned Registry)
+
+The collision detection flow for a non-partitioned registry is exactly the same as for a partitioned registry, but shapes are stored inside a single `DynamicBVH` instance instead of storing them inside a `BroadPhaseTree` containing multiple `DynamicBVH` instances.
+
 ### DynamicBVH
 
 The `DynamicBVH` class is a dynamic bounding volume hierarchy (BVH) that efficiently manages AABBs and allows for very fast collision queries. The BVH is used for broad-phase collision detection, allowing the registry to quickly eliminate pairs of entities that are not colliding based on their AABBs.
@@ -704,7 +713,7 @@ This structure is designed to be automatically rebalanced, and to support fatten
 ### Broad phase tree
 
 The `BroadPhaseTree` class wraps many DynamicBVH instances, partitioning the scene into smaller regions for more efficient collision detection. Like the `DynamicBVH`, it manages AABBs, it allows for fast collision queries and is used for broad-phase collision detection.  
-It can be constructed specifying the `cellSize`, which defines the size of each cell in the grid for spatial partitioning. The `BroadPhaseTree` automatically partitions the scene into cells, allowing for fast collision queries within each cell. The default `cellSize` is 64 pixels, which is suitable for most use cases.
+It can be constructed specifying the `cellSize`, which defines the size of each cell in the grid for spatial partitioning. The `BroadPhaseTree` automatically partitions the scene into cells, allowing for fast collision queries within each cell. The default `cellSize` is 120 (pixels).
 
 ### Narrow phase
 

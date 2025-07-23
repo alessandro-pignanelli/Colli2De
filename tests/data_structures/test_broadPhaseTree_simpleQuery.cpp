@@ -69,7 +69,7 @@ TEST_CASE("BroadPhaseTree | query finds all overlapping proxies", "[BroadPhaseTr
 
     // Query an area covering (2,2) to (4,4)
     AABB queryAABB{Vec2{2.0f, 2.0f}, Vec2{4.0f, 4.0f}};
-    foundIds = tree.query(queryAABB);
+    tree.query(queryAABB, foundIds);
 
     // Expect overlaps:
     // - {(1, 1), (2, 2)}, {(1, 2), (2, 3)}, {(1, 3), (2, 4)}, {(1, 4), (2, 5)}
@@ -85,7 +85,7 @@ TEST_CASE("BroadPhaseTree | query finds all overlapping proxies", "[BroadPhaseTr
     // Query an area that does not overlap with any proxies
     AABB nonOverlappingQuery{Vec2{6.5f, 6.5f}, Vec2{7.5f, 7.5f}};
     foundIds.clear();
-    foundIds = tree.query(nonOverlappingQuery);
+    tree.query(nonOverlappingQuery, foundIds);
 
     // Should find no ids
     CHECK(foundIds.empty());
@@ -93,7 +93,7 @@ TEST_CASE("BroadPhaseTree | query finds all overlapping proxies", "[BroadPhaseTr
     // Query an area that overlaps with a single proxy
     AABB singleOverlapQuery{Vec2{3.2f, 3.2f}, Vec2{3.8f, 3.8f}};
     foundIds.clear();
-    foundIds = tree.query(singleOverlapQuery);
+    tree.query(singleOverlapQuery, foundIds);
 
     // Should find exactly one id
     CHECK(foundIds.size() == 1);
@@ -102,7 +102,7 @@ TEST_CASE("BroadPhaseTree | query finds all overlapping proxies", "[BroadPhaseTr
     // Query an area that overlaps with every proxy
     AABB fullOverlapQuery{Vec2{0.0f, 0.0f}, Vec2{6.0f, 6.0f}};
     foundIds.clear();
-    foundIds = tree.query(fullOverlapQuery);
+    tree.query(fullOverlapQuery, foundIds);
 
     // Should find all 36 ids
     CHECK(foundIds.size() == gridSize * gridSize);
@@ -120,7 +120,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds intersected proxies", "[BroadP
     Ray ray{ Vec2{-1.0f, 0.5f }, Vec2{11.0f, 0.5f } };
     std::vector<uint32_t> foundIds;
     std::set<BPTRaycastInfo> hits;
-    hits = tree.piercingRaycast(ray);
+    tree.piercingRaycast(ray, hits);
     foundIds = toVectorIds(hits);
 
     CHECK(foundIds.size() == 10);
@@ -130,13 +130,13 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds intersected proxies", "[BroadP
     // Ray that does not intersect any AABBs
     Ray nonIntersectingRay{ Vec2{12.0f, 0.5f }, Vec2{13.0f, 0.5f } };
     hits.clear();
-    hits = tree.piercingRaycast(nonIntersectingRay);
+    tree.piercingRaycast(nonIntersectingRay, hits);
     CHECK(hits.empty());
 
     // Ray that intersects only two AABB
     Ray singleIntersectionRay{ Vec2{5.5f, 0.5f }, Vec2{6.5f, 0.5f } };
     hits.clear();
-    hits = tree.piercingRaycast(singleIntersectionRay);
+    tree.piercingRaycast(singleIntersectionRay, hits);
     foundIds = toVectorIds(hits);
     CHECK(hits.size() == 2);
     CHECK(std::find(foundIds.begin(), foundIds.end(), 5) != foundIds.end());
@@ -181,7 +181,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds all hits with entry/exit point
     // Ray passes through all three boxes
     Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
     std::set<BPTRaycastInfo> hits;
-    hits = tree.piercingRaycast(ray);
+    tree.piercingRaycast(ray, hits);
 
     CHECK(hits.size() == 3);
     for (const auto& hit : hits) {
@@ -208,14 +208,14 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds all hits with entry/exit point
     // Ray that does not hit any boxes
     Ray noHitRay{ Vec2{7,0.5f }, Vec2{8,0.5f } };
     hits.clear();
-    hits = tree.piercingRaycast(noHitRay);
+    tree.piercingRaycast(noHitRay, hits);
 
     CHECK(hits.empty());
 
     // Ray that hits only the second box
     Ray singleHitRay{ Vec2{1.5f,0.5f }, Vec2{3.5f,0.5f } };
     hits.clear();
-    hits = tree.piercingRaycast(singleHitRay);
+    tree.piercingRaycast(singleHitRay, hits);
 
     CHECK(hits.size() == 1);
     CHECK(hits.begin()->id == 20);
@@ -225,7 +225,8 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds all hits with entry/exit point
 }
 
 TEST_CASE("BroadPhaseTree | firstHitRaycast returns id, entry, and exit for closest hit", "[BroadPhaseTree][FirstHitRaycast]")
-{    BroadPhaseTree<uint32_t> tree;
+{
+    BroadPhaseTree<uint32_t> tree;
 
     tree.addProxy(101, {Vec2{1,1 }, Vec2{2,2 } });
     tree.addProxy(102, {Vec2{3,1 }, Vec2{4,2 } });
@@ -279,7 +280,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds intersected 
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
     std::vector<uint32_t> foundIds;
     std::set<BPTRaycastInfo> hits;
-    hits = tree.piercingRaycast(ray);
+    tree.piercingRaycast(ray, hits);
     foundIds = toVectorIds(hits);
 
     CHECK(foundIds.size() == 10);
@@ -289,14 +290,14 @@ TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds intersected 
     // Ray that does not intersect any AABBs
     InfiniteRay nonIntersectingRay{ Vec2{12.0f, 0.5f}, Vec2{1.0f, 0.0f} };
     hits.clear();
-    hits = tree.piercingRaycast(nonIntersectingRay);
+    tree.piercingRaycast(nonIntersectingRay, hits);
     foundIds = toVectorIds(hits);
     CHECK(foundIds.empty());
 
     // Ray that intersects only half AABB
     InfiniteRay halfIntersectionsRay{ Vec2{5.5f, 0.5f}, Vec2{1.0f, 0.0f} };
     hits.clear();
-    hits = tree.piercingRaycast(halfIntersectionsRay);
+    tree.piercingRaycast(halfIntersectionsRay, hits);
     foundIds = toVectorIds(hits);
     CHECK(foundIds.size() == 5);
     for (uint32_t i = 5; i < 10; ++i)
@@ -305,7 +306,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds intersected 
     // Ray that intersects only one AABB
     InfiniteRay oneIntersectionRay{ Vec2{9.5f, 0.5f}, Vec2{1.0f, 0.0f} };
     hits.clear();
-    hits = tree.piercingRaycast(oneIntersectionRay);
+    tree.piercingRaycast(oneIntersectionRay, hits);
     foundIds = toVectorIds(hits);
     REQUIRE(foundIds.size() == 1);
     CHECK(foundIds[0] == 9); // The last AABB at (9,0) to (10,1)
@@ -313,7 +314,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds intersected 
     // Backwards ray that hits all boxes
     InfiniteRay backwardsRay{ Vec2{11.0f, 0.5f}, Vec2{-1.0f, 0.0f} };
     hits.clear();
-    hits = tree.piercingRaycast(backwardsRay);
+    tree.piercingRaycast(backwardsRay, hits);
     foundIds = toVectorIds(hits);
     CHECK(foundIds.size() == 10);
     for (uint32_t i = 0; i < 10; ++i)
@@ -369,7 +370,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds all hits wit
     // Ray from (-1,0.5) to (+inf,0.5) passes through all AABBs
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
     std::set<BPTRaycastInfo> hits;
-    hits = tree.piercingRaycast(ray);
+    tree.piercingRaycast(ray, hits);
 
     REQUIRE(hits.size() == 10);
     for (const auto& hit : hits)
@@ -384,13 +385,13 @@ TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds all hits wit
     // Ray that does not intersect any AABBs
     InfiniteRay nonIntersectingRay{ Vec2{12.0f, 0.5f}, Vec2{1.0f, 0.0f} };
     hits.clear();
-    hits = tree.piercingRaycast(nonIntersectingRay);
+    tree.piercingRaycast(nonIntersectingRay, hits);
     CHECK(hits.empty());
 
     // Ray that intersects only half AABB
     InfiniteRay halfIntersectionsRay{ Vec2{5.5f, 0.5f}, Vec2{1.0f, 0.0f} };
     hits.clear();
-    hits = tree.piercingRaycast(halfIntersectionsRay);
+    tree.piercingRaycast(halfIntersectionsRay, hits);
     REQUIRE(hits.size() == 5);
     for (const auto& hit : hits)
     {
@@ -405,7 +406,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds all hits wit
     // Ray that intersects only one AABB
     InfiniteRay oneIntersectionRay{ Vec2{9.5f, 0.5f}, Vec2{1.0f, 0.0f} };
     hits.clear();
-    hits = tree.piercingRaycast(oneIntersectionRay);
+    tree.piercingRaycast(oneIntersectionRay, hits);
     REQUIRE(hits.size() == 1);
     CHECK(hits.begin()->id == 9); // The last AABB at (9,0) to (10,1)
     CHECK(hits.begin()->entry.x == Approx(9.5f));
@@ -416,7 +417,7 @@ TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds all hits wit
     // Backwards ray that hits all boxes
     InfiniteRay backwardsRay{ Vec2{11.0f, 0.5f}, Vec2{-1.0f, 0.0f} };
     hits.clear();
-    hits = tree.piercingRaycast(backwardsRay);
+    tree.piercingRaycast(backwardsRay, hits);
     REQUIRE(hits.size() == 10);
 
     // Check that all hits are in reverse order
@@ -505,8 +506,8 @@ TEST_CASE("BroadPhaseTree: findAllCollisions finds correct pairs", "[BroadPhaseT
     tree.addProxy(3, {Vec2{1.5f,1.5f}, Vec2{2.5f,2.5f}});
 
     std::vector<std::pair<uint32_t, uint32_t>> pairs;
-    tree.findAllCollisions([&pairs](std::vector<std::pair<uint32_t, uint32_t>> foundPairs) {
-        pairs.insert(pairs.end(), foundPairs.begin(), foundPairs.end());
+    tree.findAllCollisions([&pairs](uint32_t id1, uint32_t id2) {
+        pairs.emplace_back(id1, id2);
     });
 
     // Should find (0,1), (0,3), (1,3)
@@ -534,7 +535,8 @@ TEST_CASE("BroadPhaseTree batchQuery with multiple threads", "[BroadPhaseTree][B
         queries.emplace_back(AABB{Vec2{float(i * 10), float(i * 10)},
                                         Vec2{float((i + 1) * 10), float((i + 1) * 10)}},
                              ~0ull);
-        auto hits = tree.query(queries.back().first, queries.back().second);
+        std::vector<uint32_t> hits;
+        tree.query(queries.back().first, hits, queries.back().second);
         expectedResults.push_back(std::move(hits));
     }
 

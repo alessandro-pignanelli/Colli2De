@@ -1,4 +1,4 @@
-#include <chrono>
+#include <colli2de/internal/data_structures/BroadPhaseTree.hpp>
 #include <cstdint>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
@@ -19,28 +19,30 @@ TEST_CASE("Registry | Bulk insertion", "[Registry][Benchmark][Insert]")
     transforms.reserve(100'000);
     for(size_t i = 0; i < circles.size(); ++i)
         transforms.push_back(Transform(circles[i].center));
-
-    BENCHMARK_FUNCTION("Registry | Insert 10k entities and shapes", 15ms, [&]()
+    
+    BENCHMARK_FUNCTION("Registry | Insert 10k entities and shapes", 15ms, ([&]()
     {
-        Registry<uint32_t> reg;
+        Registry<uint32_t, PartitioningMethod::Grid> reg(64);
+
         for(uint32_t i = 0; i < 10'000; ++i)
         {
             reg.createEntity(i, BodyType::Dynamic, transforms[i]);
             reg.addShape(i, circles[i]);
         }
         return reg.size();
-    });
+    }));
 
-    BENCHMARK_FUNCTION("Registry | Insert 100k entities and shapes", 150ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Insert 100k entities and shapes", 150ms, ([&]()
     {
-        Registry<uint32_t> reg;
+        Registry<uint32_t, PartitioningMethod::Grid> reg(64);
+
         for(uint32_t i = 0; i < 100'000; ++i)
         {
             reg.createEntity(i, BodyType::Dynamic, transforms[i]);
             reg.addShape(i, circles[i]);
         }
         return reg.size();
-    });
+    }));
 }
 
 TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
@@ -49,7 +51,7 @@ TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
     std::vector<Circle> circles = generateRandomCircles(100'000, -200.0f, 200.0f, 1.0f, seed);
     std::vector<Vec2> translations = generateRandomTranslations(100'000, -4.0f, 4.0f, seed + 1);
 
-    Registry<uint32_t> reg;
+    Registry<uint32_t, PartitioningMethod::Grid> reg;
     for(uint32_t i = 0; i < 10'000; ++i)
     {
         reg.createEntity(i, BodyType::Dynamic, Transform(circles[i].center));
@@ -98,7 +100,7 @@ TEST_CASE("Registry | Collision query dynamic", "[Registry][Query][AllPairs][Ben
 {
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     std::vector<Circle> circles = generateRandomCircles(100'000, -1920.0f, 3840.0f, 12.0f, seed);
-    Registry<uint32_t> reg;
+    Registry<uint32_t, PartitioningMethod::Grid> reg;
     for(uint32_t i = 0; i < 1'000; ++i)
     {
         const bool isBullet = (i % 1000) == 0;
@@ -154,7 +156,7 @@ TEST_CASE("Registry | Collision query bullets", "[Registry][Query][AllPairs][Ben
 {
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     std::vector<Circle> circles = generateRandomCircles(100'000, -1920.0f, 3840.0f, 12.0f, seed);
-    Registry<uint32_t> reg;
+    Registry<uint32_t, PartitioningMethod::Grid> reg;
     for(uint32_t i = 0; i < 1'000; ++i)
     {
         const BodyType type = BodyType::Bullet;

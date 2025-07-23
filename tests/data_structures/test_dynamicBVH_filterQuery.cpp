@@ -28,10 +28,10 @@ TEST_CASE("DynamicBVH | query with mask bits filters correctly", "[DynamicBVH][Q
     DynamicBVH<uint32_t> bvh;
 
     // Insert proxies with distinct categories
-    bvh.createProxy({Vec2{0,0}, Vec2{1,1}}, 1, 0b0001); // Category 0
-    bvh.createProxy({Vec2{1,0}, Vec2{2,1}}, 2, 0b0010); // Category 1
-    bvh.createProxy({Vec2{2,0}, Vec2{3,1}}, 3, 0b0100); // Category 2
-    bvh.createProxy({Vec2{3,0}, Vec2{4,1}}, 4, 0b1000); // Category 3
+    bvh.addProxy(1, {Vec2{0,0}, Vec2{1,1}}, 0b0001); // Category 0
+    bvh.addProxy(2, {Vec2{1,0}, Vec2{2,1}}, 0b0010); // Category 1
+    bvh.addProxy(3, {Vec2{2,0}, Vec2{3,1}}, 0b0100); // Category 2
+    bvh.addProxy(4, {Vec2{3,0}, Vec2{4,1}}, 0b1000); // Category 3
 
     // Query AABB covering all
     AABB allAABB{Vec2{0,0}, Vec2{4,1}};
@@ -78,7 +78,7 @@ TEST_CASE("DynamicBVH | piercingRaycast finds intersected proxies", "[DynamicBVH
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10, with unique categoryBits (bit i)
     for (uint32_t i = 0; i < 10; ++i)
-        bvh.createProxy(AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, i, 1ull << i);
+        bvh.addProxy(i, AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, 1ull << i);
 
     // Ray from (-1,0.5) to (11,0.5) passes through all AABBs
     Ray ray{ Vec2{-1.0f, 0.5f}, Vec2{11.0f, 0.5f} };
@@ -119,9 +119,9 @@ TEST_CASE("DynamicBVH | firstHitRaycast finds the nearest hit", "[DynamicBVH][Fi
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
 
-    bvh.createProxy({Vec2{0,0}, Vec2{1,1}}, 1, 0b001); // cat 0
-    bvh.createProxy({Vec2{2,0}, Vec2{3,1}}, 2, 0b010); // cat 1
-    bvh.createProxy({Vec2{4,0}, Vec2{5,1}}, 3, 0b100); // cat 2
+    bvh.addProxy(1, {Vec2{0,0}, Vec2{1,1}}, 0b0001); // cat 0
+    bvh.addProxy(2, {Vec2{2,0}, Vec2{3,1}}, 0b0010); // cat 1
+    bvh.addProxy(3, {Vec2{4,0}, Vec2{5,1}}, 0b0100); // cat 2
 
     Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
 
@@ -179,9 +179,9 @@ TEST_CASE("DynamicBVH | piercingRaycast finds all hits with entry/exit points", 
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
 
-    bvh.createProxy({Vec2{0,0 }, Vec2{1,1 } }, 10, 0b001); // cat 0
-    bvh.createProxy({Vec2{2,0 }, Vec2{3,1 } }, 20, 0b010); // cat 1
-    bvh.createProxy({Vec2{4,0 }, Vec2{5,1 } }, 30, 0b100); // cat 2
+    bvh.addProxy(10, {Vec2{0,0 }, Vec2{1,1 } }, 0b0001); // cat 0
+    bvh.addProxy(20, {Vec2{2,0 }, Vec2{3,1 } }, 0b0010); // cat 1
+    bvh.addProxy(30, {Vec2{4,0 }, Vec2{5,1 } }, 0b0100); // cat 2
 
     Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
 
@@ -190,7 +190,7 @@ TEST_CASE("DynamicBVH | piercingRaycast finds all hits with entry/exit points", 
         std::set<RaycastInfo> hits;
         bvh.piercingRaycast(ray, hits);
         const auto foundIds = toVectorIds(hits);
-        CHECK(foundIds.size() == 3);
+        REQUIRE(foundIds.size() == 3);
         CHECK(foundIds[0] == 10);
         CHECK(foundIds[1] == 20);
         CHECK(foundIds[2] == 30);
@@ -222,9 +222,9 @@ TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest 
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
 
-    bvh.createProxy({Vec2{1,1 }, Vec2{2,2 } }, 101, 0b001); // cat 0
-    bvh.createProxy({Vec2{3,1 }, Vec2{4,2 } }, 102, 0b010); // cat 1
-    bvh.createProxy({Vec2{5,1 }, Vec2{6,2 } }, 103, 0b100); // cat 2
+    bvh.addProxy(101, {Vec2{1,1 }, Vec2{2,2 } }, 0b0001); // cat 0
+    bvh.addProxy(102, {Vec2{3,1 }, Vec2{4,2 } }, 0b0010); // cat 1
+    bvh.addProxy(103, {Vec2{5,1 }, Vec2{6,2 } }, 0b0100); // cat 2
 
     Ray ray{Vec2{0,1.5f}, Vec2{5,1.5f}};
 
@@ -275,7 +275,7 @@ TEST_CASE("DynamicBVH | piercingRaycast with infinite ray finds intersected prox
     DynamicBVH<uint32_t> bvh(0.0f);
 
     for (uint32_t i = 0; i < 10; ++i)
-        bvh.createProxy(AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, i, 1ull << i);
+        bvh.addProxy(i, AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, 1ull << i);
 
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
 

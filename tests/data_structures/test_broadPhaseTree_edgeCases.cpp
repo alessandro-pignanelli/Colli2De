@@ -22,7 +22,8 @@ TEST_CASE("BroadPhaseTree | query handles degenerate and thin AABBs", "[BroadPha
 
     // Query covering all
     AABB query{Vec2{0,0}, Vec2{6,11}};
-    auto hits = tree.query(query);
+    std::vector<uint32_t> hits;
+    tree.query(query, hits);
 
     REQUIRE(hits.size() == 3);
     REQUIRE(std::find(hits.begin(), hits.end(), 1) != hits.end());

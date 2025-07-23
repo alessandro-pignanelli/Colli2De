@@ -62,7 +62,7 @@ template<typename IdType>
 class BroadPhaseTree
 {
 public:
-    BroadPhaseTree(int32_t cellSize = 64) : cellSize(cellSize)
+    BroadPhaseTree(int32_t cellSize = 120) : cellSize(cellSize)
     {
         proxies.reserve(32);
     }
@@ -73,18 +73,18 @@ public:
     void moveProxy(BroadPhaseTreeHandle handle, AABB aabb);
 
     // AABB queries
-    std::vector<IdType> query(AABB queryAABB, BitMaskType maskBits = ~0ull) const;
+    void query(AABB queryAABB, std::vector<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
     void batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
                     const std::function<void(size_t, std::vector<IdType>)>& callback) const;
-    void findAllCollisions(const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const;
+    void findAllCollisions(const std::function<void(IdType, IdType)>& callback) const;
     void findAllCollisions(const BroadPhaseTree<IdType>& other,
-                           const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const;
+                           const std::function<void(IdType, IdType)>& callback) const;
 
     // Raycast queries
     std::optional<RaycastInfo<IdType>> firstHitRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;
-    std::set<RaycastInfo<IdType>> piercingRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;
+    void piercingRaycast(Ray ray, std::set<RaycastInfo<IdType>>& hits, BitMaskType maskBits = ~0ull) const;
     std::optional<RaycastInfo<IdType>> firstHitRaycast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
-    std::set<RaycastInfo<IdType>> piercingRaycast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
+    void piercingRaycast(InfiniteRay ray, std::set<RaycastInfo<IdType>>& hits, BitMaskType maskBits = ~0ull) const;
 
     // For debugging/statistics
     std::size_t size() const { return proxies.size() - proxiesFreeList.size(); }
@@ -101,8 +101,8 @@ private:
         std::map<GridCell, NodeIndex> bvhHandles;
         IdType entityId;
         AABB aabb;
-        BitMaskType categoryBits;           // For collision filtering
-        BitMaskType maskBits;               // For collision filtering
+        BitMaskType categoryBits;    // For collision filtering
+        BitMaskType maskBits;        // For collision filtering
     };
 
     const int32_t cellSize;                                     // Size of each grid cell for spatial partitioning
@@ -139,10 +139,10 @@ BroadPhaseTreeHandle BroadPhaseTree<IdType>::addProxy(IdType entityId, AABB aabb
     forEachCell(aabb, cellSize, [&](GridCell cell)
     {
         size_t bvhIndex = getBVHIndexForCell(cell);
-        auto& bvh = bvhs[bvhIndex].second;
+        DynamicBVH<IdType>& bvh = bvhs[bvhIndex].second;
 
         // Proxy stores the BVH handle for each cell (region) it belongs to
-        const auto bvhHandle = bvh.createProxy(aabb, entityId, categoryBits, maskBits);
+        const auto bvhHandle = bvh.addProxy(entityId, aabb, categoryBits, maskBits);
         proxy.bvhHandles.emplace(cell, bvhHandle);
     });
 
@@ -155,13 +155,13 @@ void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
     assert(isValidHandle(handle));
 
     Proxy& proxy = proxies.at(handle);
-
+    
     // Remove the proxy from all regions it belongs to
     for (const auto& [cell, bvhHandle] : proxy.bvhHandles)
     {
         size_t bvhIndex = regions.at(cell);
         auto& bvh = bvhs[bvhIndex].second;
-        bvh.destroyProxy(bvhHandle);
+        bvh.removeProxy(bvhHandle);
 
         if (bvh.size() == 0)
         {
@@ -182,7 +182,7 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 
     if (proxy.aabb.contains(aabb))
         return;
-
+    
     const auto oldMinCell = getCellFor(proxy.aabb.min, cellSize);
     const auto oldMaxCell = getCellFor(proxy.aabb.max, cellSize);
     const auto newMinCell = getCellFor(aabb.min, cellSize);
@@ -209,7 +209,7 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 
         // Proxy stores the BVH handle for each cell (region) it belongs to
         auto& proxy = proxies.at(handle);
-        const auto bvhHandle = bvh.createProxy(aabb, proxy.entityId, proxy.categoryBits, proxy.maskBits);
+        const auto bvhHandle = bvh.addProxy(proxy.entityId, aabb, proxy.categoryBits, proxy.maskBits);
         proxy.bvhHandles.emplace(cell, bvhHandle);
     };
     const auto removeFromCell = [this, handle](GridCell cell)
@@ -222,7 +222,7 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
         auto& proxy = proxies.at(handle);
         const auto bvhHandleInRegion = proxy.bvhHandles.find(cell);
         assert(bvhHandleInRegion != proxy.bvhHandles.end());
-        bvh.destroyProxy(bvhHandleInRegion->second);
+        bvh.removeProxy(bvhHandleInRegion->second);
         proxy.bvhHandles.erase(bvhHandleInRegion);
 
         if (bvh.size() == 0)
@@ -263,10 +263,8 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 
 // AABB queries
 template<typename IdType>
-std::vector<IdType> BroadPhaseTree<IdType>::query(AABB queryAABB, BitMaskType maskBits) const
+void BroadPhaseTree<IdType>::query(AABB queryAABB, std::vector<IdType>& intersections, BitMaskType maskBits) const
 {
-    std::vector<IdType> intersections;
-
     forEachCell(queryAABB, cellSize, [&](GridCell cell)
     {
         const auto regionIt = regions.find(cell);
@@ -276,8 +274,6 @@ std::vector<IdType> BroadPhaseTree<IdType>::query(AABB queryAABB, BitMaskType ma
         const auto& bvh = bvhs[regionIt->second].second;
         bvh.query(queryAABB, intersections, maskBits);
     });
-
-    return intersections;
 }
 
 template<typename IdType>
@@ -286,34 +282,27 @@ void BroadPhaseTree<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMas
 {
     C2D_PARALLEL_FOR(0, queries.size(), [&](size_t i)
     {
-        auto hits = query(queries[i].first, queries[i].second);
+        std::vector<IdType> hits;
+        query(queries[i].first, hits, queries[i].second);
         if (!hits.empty())
             callback(i, std::move(hits));
     });
 }
 
 template<typename IdType>
-void BroadPhaseTree<IdType>::findAllCollisions(const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const
+void BroadPhaseTree<IdType>::findAllCollisions(const std::function<void(IdType, IdType)>& callback) const
 {
-    std::vector<std::pair<IdType, IdType>> collisions;
-    collisions.reserve(proxies.size() << 2);
-
     for (size_t i = 0; i < bvhs.size(); i++)
     {
         const auto& bvh = bvhs[i].second;
-        bvh.findAllCollisions(collisions);
+        bvh.findAllCollisions(callback);
     }
-    
-    if (!collisions.empty())
-        callback(std::move(collisions));
 }
 
 template<typename IdType>
 void BroadPhaseTree<IdType>::findAllCollisions(const BroadPhaseTree<IdType>& other,
-                                               const std::function<void(std::vector<std::pair<IdType, IdType>>)>& callback) const
+                                               const std::function<void(IdType, IdType)>& callback) const
 {
-    std::vector<std::pair<IdType, IdType>> collisions;
-
     for (size_t i = 0; i < bvhs.size(); ++i)
     {
         const auto& cell = bvhs[i].first;
@@ -325,11 +314,8 @@ void BroadPhaseTree<IdType>::findAllCollisions(const BroadPhaseTree<IdType>& oth
             continue;
 
         const auto& otherBvh = other.bvhs[otherIt->second].second;
-        bvh.findAllCollisions(otherBvh, collisions);
+        bvh.findAllCollisions(otherBvh, callback);
     }
-
-    if (!collisions.empty())
-        callback(std::move(collisions));
 }
 
 // Raycast queries
@@ -348,7 +334,7 @@ std::optional<RaycastInfo<IdType>> BroadPhaseTree<IdType>::firstHitRaycast(Ray r
     auto currentPoint = ray.start;
 
     while (currentCell.x * directionX <= lastCell.x * directionX &&
-           currentCell.y * directionY <= lastCell.y * directionY)
+        currentCell.y * directionY <= lastCell.y * directionY)
     {
         if (const auto regionIt = regions.find(currentCell); regionIt != regions.end())
         {
@@ -398,11 +384,14 @@ std::optional<RaycastInfo<IdType>> BroadPhaseTree<IdType>::firstHitRaycast(Ray r
 template<typename IdType>
 std::optional<RaycastInfo<IdType>> BroadPhaseTree<IdType>::firstHitRaycast(InfiniteRay ray, BitMaskType maskBits) const
 {
-    return firstHitRaycast(Ray{ray.start, ray.start + ray.direction.normalize() * cellSize * 50}, maskBits);
+    return firstHitRaycast(Ray{ray.start, ray.start + ray.direction.normalize() * cellSize * INFINITE_RAY_CELL_SPAN},
+                           maskBits);
 }
 
 template<typename IdType>
-std::set<RaycastInfo<IdType>> BroadPhaseTree<IdType>::piercingRaycast(Ray ray, BitMaskType maskBits) const
+void BroadPhaseTree<IdType>::piercingRaycast(Ray ray,
+                                             std::set<RaycastInfo<IdType>>& hits,
+                                             BitMaskType maskBits) const
 {
     const auto direction = ray.end - ray.start;
     const int32_t directionX = (direction.x > 0 ? cellSize : -cellSize);
@@ -414,8 +403,6 @@ std::set<RaycastInfo<IdType>> BroadPhaseTree<IdType>::piercingRaycast(Ray ray, B
     const GridCell lastCell = getCellFor(ray.end, cellSize);
     auto currentCell = getCellFor(ray.start, cellSize);
     auto currentPoint = ray.start;
-
-    std::set<RaycastInfo<IdType>> hits;
 
     while (currentCell.x * directionX <= lastCell.x * directionX &&
            currentCell.y * directionY <= lastCell.y * directionY)
@@ -459,16 +446,15 @@ std::set<RaycastInfo<IdType>> BroadPhaseTree<IdType>::piercingRaycast(Ray ray, B
             currentCell.y += directionY;
         }
     }
-
-    return hits;
 }
 
 template<typename IdType>
-std::set<RaycastInfo<IdType>> BroadPhaseTree<IdType>::piercingRaycast(InfiniteRay ray, BitMaskType maskBits) const
+void BroadPhaseTree<IdType>::piercingRaycast(InfiniteRay ray,
+                                             std::set<RaycastInfo<IdType>>& hits,
+                                             BitMaskType maskBits) const
 {
-    return piercingRaycast(Ray{ray.start,
-                               ray.start + ray.direction.normalize() * cellSize * INFINITE_RAY_CELL_SPAN},
-                           maskBits);
+    piercingRaycast(Ray{ray.start, ray.start + ray.direction.normalize() * cellSize * INFINITE_RAY_CELL_SPAN},
+                    hits, maskBits);
 }
 
 template<typename IdType>

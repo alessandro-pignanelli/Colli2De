@@ -29,3 +29,7 @@ inline constexpr bool float_equals(double val1, double val2, double epsilon = 1e
 }
 
 #endif
+
+struct Empty {};
+#define CONDITIONAL(condition, type) \
+	[[no_unique_address]] std::conditional_t<(condition), type, Empty>

@@ -14,11 +14,11 @@ TEST_CASE("DynamicBVH | query handles degenerate and thin AABBs", "[DynamicBVH][
     DynamicBVH<uint32_t> bvh(margin);
 
     // Zero-width box
-    bvh.createProxy({Vec2{5,5}, Vec2{5,10}}, 1);
+    bvh.addProxy(1, {Vec2{5,5}, Vec2{5,10}});
     // Zero-height box
-    bvh.createProxy({Vec2{1,3}, Vec2{4,3}}, 2);
+    bvh.addProxy(2, {Vec2{1,3}, Vec2{4,3}});
     // Normal box
-    bvh.createProxy({Vec2{2,2}, Vec2{4,4}}, 3);
+    bvh.addProxy(3, {Vec2{2,2}, Vec2{4,4}});
 
     // Query covering all
     AABB query{Vec2{0,0}, Vec2{6,11}};
@@ -34,7 +34,7 @@ TEST_CASE("DynamicBVH | query handles degenerate and thin AABBs", "[DynamicBVH][
 TEST_CASE("DynamicBVH | raycastFirstHit detects grazing rays", "[DynamicBVH][Advanced][RayGrazing]")
 {
     DynamicBVH<uint32_t> bvh;
-    bvh.createProxy({Vec2{2,2}, Vec2{4,4}}, 1);
+    bvh.addProxy(1, {Vec2{2,2}, Vec2{4,4}});
 
     // Ray just touches the lower-left corner
     Ray ray1{Vec2{0,0}, Vec2{2,2}};

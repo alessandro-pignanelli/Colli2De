@@ -88,11 +88,11 @@ TEST_CASE("DynamicBVH | Create proxy inserts node into tree", "[DynamicBVH]")
 
     const std::string id1 = "proxy1";
     AABB aabb1(Vec2{0.0f, 0.0f}, Vec2{1.0f, 1.0f});
-    int32_t index1 = bvh.createProxy(aabb1, id1);
+    int32_t index1 = bvh.addProxy(id1, aabb1);
 
     const std::string id2 = "proxy2";
     AABB aabb2(Vec2{2.0f, 2.0f}, Vec2{3.0f, 3.0f});
-    int32_t index2 = bvh.createProxy(aabb2, id2);
+    int32_t index2 = bvh.addProxy(id2, aabb2);
 
     // Sanity: indices should be distinct
     REQUIRE(index1 != index2);
@@ -128,7 +128,7 @@ TEST_CASE("DynamicBVH | balancing: height after sequential insertions", "[Dynami
     {
         float f = static_cast<float>(i);
         AABB aabb{ Vec2{f, f}, Vec2{f + 1.0f, f + 1.0f} };
-        bvh.createProxy(aabb, i);
+        bvh.addProxy(i, aabb);
     }
 
     // Check: height should be at most log2(100) * 2 ~= 13 (AVL-like)
@@ -174,7 +174,7 @@ TEST_CASE("DynamicBVH | balancing: tree remains valid after zigzag insertions", 
     {
         float f = static_cast<float>(i % 2 == 0 ? i : 100 - i);
         AABB aabb{ Vec2{f, f}, Vec2{f + 1.0f, f + 1.0f} };
-        bvh.createProxy(aabb, i);
+        bvh.addProxy(i, aabb);
     }
 
     // Check tree height is not degenerate
@@ -207,13 +207,13 @@ TEST_CASE("DynamicBVH | removes proxies and maintains balance", "[DynamicBVH][Re
     for (uint32_t i = 0; i < 20; ++i)
     {
         float f = static_cast<float>(i);
-        proxies.push_back(bvh.createProxy({{f, f}, {f+1, f+1}}, i));
+        proxies.push_back(bvh.addProxy(i, {{f, f}, {f+1, f+1}}));
     }
 
     // Remove every other proxy
     for (size_t i = 0; i < proxies.size(); i += 2)
     {
-        bvh.destroyProxy(proxies[i]);
+        bvh.removeProxy(proxies[i]);
     }
 
     // Check remaining leaves == 10
@@ -249,7 +249,7 @@ TEST_CASE("DynamicBVH | uses fattened AABB for proxies", "[DynamicBVH][Fattened]
     DynamicBVH<uint32_t> bvh(margin);
 
     AABB aabb{ Vec2{2.0f, 3.0f}, Vec2{5.0f, 7.0f} };
-    NodeIndex idx = bvh.createProxy(aabb, 123);
+    NodeIndex idx = bvh.addProxy(123, aabb);
 
     const auto& node = bvh.getNode(idx);
     REQUIRE(node.aabb.min.x == Approx(aabb.min.x - margin));
@@ -262,7 +262,7 @@ TEST_CASE("DynamicBVH | proxy update skips tree change for small moves", "[Dynam
     DynamicBVH<uint32_t> bvh(margin);
 
     AABB original{ Vec2{0.0f, 0.0f}, Vec2{2.0f, 2.0f} };
-    NodeIndex nodeId = bvh.createProxy(original, 42);
+    NodeIndex nodeId = bvh.addProxy(42, original);
 
     // Small move: stays within fattened box
     AABB smallMove = original.translated(Vec2{ margin, margin });
@@ -285,7 +285,7 @@ TEST_CASE("DynamicBVH | handles moving proxies with remove and reinsert", "[Dyna
     constexpr float margin = 0.1f;
     DynamicBVH<uint32_t> bvh(0.1f);
 
-    NodeIndex idx = bvh.createProxy({Vec2{0,0}, Vec2{1,1}}, 5);
+    NodeIndex idx = bvh.addProxy(5, {Vec2{0,0}, Vec2{1,1}});
 
     // Move proxy far away (should require removal and reinsertion)
     bool moved = bvh.moveProxy(idx, {Vec2{10,10}, Vec2{11,11}});
@@ -312,7 +312,7 @@ TEST_CASE("DynamicBVH | can serialize and deserialize correctly", "[DynamicBVH][
     for (uint32_t i = 0; i < 100; ++i)
     {
         boxes.push_back(AABB{Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}});
-        bvh.createProxy(boxes.back(), i);
+        bvh.addProxy(i, boxes.back());
     }
 
     // 2. Serialize to memory
@@ -352,7 +352,7 @@ TEST_CASE("DynamicBVH | iterator", "[DynamicBVH][Iterator]")
     std::set<uint32_t> ids;
     for (uint32_t i = 0; i < 10; ++i)
     {
-        bvh.createProxy({Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}}, i);
+        bvh.addProxy(i, {Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}});
         ids.insert(i);
     }
 
@@ -375,7 +375,7 @@ TEST_CASE("DynamicBVH | data()", "[DynamicBVH][Data]")
     std::set<uint32_t> ids;
     for (uint32_t i = 0; i < 10; ++i)
     {
-        bvh.createProxy({Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}}, i);
+        bvh.addProxy(i, {Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}});
         ids.insert(i);
     }
 
@@ -399,7 +399,7 @@ TEST_CASE("DynamicBVH | range view", "[DynamicBVH][RangeView]")
     std::set<uint32_t> ids;
     for (uint32_t i = 0; i < 10; ++i)
     {
-        bvh.createProxy({Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}}, i);
+        bvh.addProxy(i, {Vec2{float(i), float(i)}, Vec2{float(i+1), float(i+1)}});
         ids.insert(i);
     }
 

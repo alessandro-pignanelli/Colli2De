@@ -17,12 +17,15 @@ TEST_CASE("BroadPhaseTree | proxies can be added and queried", "[BroadPhaseTree]
 
     REQUIRE(tree.size() == 2);
 
-    auto hits = tree.query({{0,0}, {3,3}});
+    std::vector<uint32_t> hits;
+    tree.query({{0,0}, {3,3}}, hits);
     CHECK(std::find(hits.begin(), hits.end(), 1) != hits.end());
     CHECK(std::find(hits.begin(), hits.end(), 2) != hits.end());
 
+    hits.clear();
+
     tree.removeProxy(h1);
-    hits = tree.query({{0,0}, {3,3}});
+    tree.query({{0,0}, {3,3}}, hits);
     CHECK(std::find(hits.begin(), hits.end(), 1) == hits.end());
     CHECK(std::find(hits.begin(), hits.end(), 2) != hits.end());
     REQUIRE(tree.size() == 1);
@@ -31,12 +34,15 @@ TEST_CASE("BroadPhaseTree | proxies can be added and queried", "[BroadPhaseTree]
 TEST_CASE("BroadPhaseTree | moveProxy updates location", "[BroadPhaseTree]")
 {
     BroadPhaseTree<uint32_t> tree;
+    std::vector<uint32_t> hits;
     auto h = tree.addProxy(1, {{0,0}, {1,1}});
 
     tree.moveProxy(h, {{5,5}, {6,6}});
-    auto hits = tree.query({{5,5}, {6,6}});
+    tree.query({{5,5}, {6,6}}, hits);
     CHECK(std::find(hits.begin(), hits.end(), 1) != hits.end());
-    hits = tree.query({{0,0}, {1,1}});
+
+    hits.clear();
+    tree.query({{0,0}, {1,1}}, hits);
     CHECK(hits.empty());
 }
 
@@ -49,8 +55,8 @@ TEST_CASE("BroadPhaseTree | findAllCollisions detects overlaps", "[BroadPhaseTre
     tree.addProxy(3, {{1.5f,1.5f}, {2.5f,2.5f}});
 
     std::vector<std::pair<uint32_t, uint32_t>> pairs;
-    tree.findAllCollisions([&pairs](auto collisionPairs) {
-        pairs = std::move(collisionPairs);
+    tree.findAllCollisions([&pairs](uint32_t id1, uint32_t id2) {
+        pairs.emplace_back(id1, id2);
     });
     std::vector<std::pair<uint32_t, uint32_t>> expected{{0,1},{0,3},{1,3}};
     REQUIRE(pairs.size() == expected.size());

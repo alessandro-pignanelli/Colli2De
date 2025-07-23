@@ -59,7 +59,7 @@ TEST_CASE("DynamicBVH | query finds all overlapping proxies", "[DynamicBVH][Quer
                 ) != expectedOverlaps.end();
 
             const auto customId = i * gridSize + j;
-            NodeIndex nodeIndex = bvh.createProxy(aabb, customId);
+            NodeIndex nodeIndex = bvh.addProxy(customId, aabb);
             if (isExpectedOverlap)
                 expectedIds.insert(customId);
         }
@@ -115,7 +115,7 @@ TEST_CASE("DynamicBVH | piercingRaycast finds intersected proxies", "[DynamicBVH
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10
     for (uint32_t i = 0; i < 10; ++i)
-        bvh.createProxy(AABB{ Vec2{float(i), 0.0f }, Vec2{float(i + 1), 1.0f } }, i);
+        bvh.addProxy(i, AABB{ Vec2{float(i), 0.0f }, Vec2{float(i + 1), 1.0f } });
 
     // Ray from (-1,0.5) to (11,0.5) passes through all AABBs
     Ray ray{ Vec2{-1.0f, 0.5f }, Vec2{11.0f, 0.5f } };
@@ -150,9 +150,9 @@ TEST_CASE("DynamicBVH | firstHitRaycast finds the nearest hit", "[DynamicBVH][Fi
     DynamicBVH<uint32_t> bvh(margin);
 
     // Insert 3 boxes at (0,0)-(1,1), (2,0)-(3,1), (4,0)-(5,1)
-    bvh.createProxy({Vec2{0,0}, Vec2{1,1}}, 1);
-    bvh.createProxy({Vec2{2,0}, Vec2{3,1}}, 2);
-    bvh.createProxy({Vec2{4,0}, Vec2{5,1}}, 3);
+    bvh.addProxy(1, {Vec2{0,0}, Vec2{1,1}});
+    bvh.addProxy(2, {Vec2{2,0}, Vec2{3,1}});
+    bvh.addProxy(3, {Vec2{4,0}, Vec2{5,1}});
 
     // Ray from (-1,0.5) to (6,0.5) should hit ID=1 first
     Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
@@ -177,9 +177,9 @@ TEST_CASE("DynamicBVH | piercingRaycast finds all hits with entry/exit points", 
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
 
-    bvh.createProxy({Vec2{0,0 }, Vec2{1,1 } }, 10);
-    bvh.createProxy({Vec2{2,0 }, Vec2{3,1 } }, 20);
-    bvh.createProxy({Vec2{4,0 }, Vec2{5,1 } }, 30);
+    bvh.addProxy(10, {Vec2{0,0 }, Vec2{1,1 } });
+    bvh.addProxy(20, {Vec2{2,0 }, Vec2{3,1 } });
+    bvh.addProxy(30, {Vec2{4,0 }, Vec2{5,1 } });
 
     // Ray passes through all three boxes
     Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
@@ -232,9 +232,9 @@ TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest 
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
 
-    bvh.createProxy({Vec2{1,1 }, Vec2{2,2 } }, 101);
-    bvh.createProxy({Vec2{3,1 }, Vec2{4,2 } }, 102);
-    bvh.createProxy({Vec2{5,1 }, Vec2{6,2 } }, 103);
+    bvh.addProxy(101, {Vec2{1,1 }, Vec2{2,2 } });
+    bvh.addProxy(102, {Vec2{3,1 }, Vec2{4,2 } });
+    bvh.addProxy(103, {Vec2{5,1 }, Vec2{6,2 } });
 
     // Ray from (0, 1.5) to (5, 1.5) hits 101 first, then 102
     Ray ray{Vec2{0,1.5f}, Vec2{5,1.5f}};
@@ -280,7 +280,7 @@ TEST_CASE("DynamicBVH | piercingRaycast with infinite ray finds intersected prox
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10
     for (uint32_t i = 0; i < 10; ++i)
-        bvh.createProxy(AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, i);
+        bvh.addProxy(i, AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} });
 
     // Ray from (-1,0.5) to (+inf,0.5) passes through all AABBs
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
@@ -334,7 +334,7 @@ TEST_CASE("DynamicBVH | firstHitRaycast with infinite ray finds the nearest hit"
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10
     for (uint32_t i = 0; i < 10; ++i)
-        bvh.createProxy(AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, i);
+        bvh.addProxy(i, AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} });
 
     // Ray from (-1,0.5) to (+inf,0.5) passes through all AABBs
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
@@ -375,7 +375,7 @@ TEST_CASE("DynamicBVH | piercingRaycast with infinite ray finds all hits with en
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10
     for (uint32_t i = 0; i < 10; ++i)
-        bvh.createProxy(AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, i);
+        bvh.addProxy(i, AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} });
 
     // Ray from (-1,0.5) to (+inf,0.5) passes through all AABBs
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
@@ -453,7 +453,7 @@ TEST_CASE("DynamicBVH | firstHitRaycast with infinite ray returns id, entry, and
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10
     for (uint32_t i = 0; i < 10; ++i)
-        bvh.createProxy(AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, i);
+        bvh.addProxy(i, AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} });
 
     // Ray from (-1,0.5) to (+inf,0.5) passes through all AABBs
     InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
@@ -512,13 +512,15 @@ TEST_CASE("DynamicBVH | findAllCollisions finds correct pairs", "[DynamicBVH][Br
     // 1: (1,1)-(3,3)   (overlaps with 0)
     // 2: (4,4)-(5,5)   (no overlap)
     // 3: (1.5,1.5)-(2.5,2.5) (overlaps with 0 and 1)
-    bvh.createProxy({Vec2{0,0}, Vec2{2,2}}, 0);
-    bvh.createProxy({Vec2{1,1}, Vec2{3,3}}, 1);
-    bvh.createProxy({Vec2{4,4}, Vec2{5,5}}, 2);
-    bvh.createProxy({Vec2{1.5f,1.5f}, Vec2{2.5f,2.5f}}, 3);
+    bvh.addProxy(0, {Vec2{0,0}, Vec2{2,2}});
+    bvh.addProxy(1, {Vec2{1,1}, Vec2{3,3}});
+    bvh.addProxy(2, {Vec2{4,4}, Vec2{5,5}});
+    bvh.addProxy(3, {Vec2{1.5f,1.5f}, Vec2{2.5f,2.5f}});
 
     std::vector<std::pair<uint32_t, uint32_t>> pairs;
-    bvh.findAllCollisions(pairs);
+    bvh.findAllCollisions([&](uint32_t id1, uint32_t id2) {
+        pairs.emplace_back(id1, id2);
+    });
 
     // Should find (0,1), (0,3), (1,3)
     std::set<std::pair<uint32_t, uint32_t>> expected {

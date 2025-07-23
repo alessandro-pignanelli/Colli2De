@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sstream>
 #include <colli2de/Vec2.hpp>
 
 namespace c2d
@@ -90,6 +91,54 @@ struct RaycastHit
     {
         return entryTime > other.entryTime || (entryTime == other.entryTime && exitTime > other.exitTime);
     }
+    bool operator<=(const RaycastHit<IdType>& other) const
+    {
+        return !(*this > other);
+    }
+    bool operator>=(const RaycastHit<IdType>& other) const
+    {
+        return !(*this < other);
+    }
 };
 
 }
+
+// Specialization for std::formatter to allow formatted output of Ray
+template<>
+struct std::formatter<c2d::Ray> : std::formatter<std::string>
+{
+    template<typename FormatContext>
+    auto format(c2d::Ray ray, FormatContext& ctx) const
+    {
+        std::stringstream ss;
+        ss << "Ray(start: " << ray.start << ", end: " << ray.end << ")";
+        return std::formatter<std::string>::format(ss.str(), ctx);
+    }
+};
+
+// Specialization for std::formatter to allow formatted output of InfiniteRay
+template<>
+struct std::formatter<c2d::InfiniteRay> : std::formatter<std::string>
+{
+    template<typename FormatContext>
+    auto format(c2d::InfiniteRay ray, FormatContext& ctx) const
+    {
+        std::stringstream ss;
+        ss << "InfiniteRay(start: " << ray.start << ", direction: " << ray.direction << ")";
+        return std::formatter<std::string>::format(ss.str(), ctx);
+    }
+};
+
+// Specialization for std::formatter to allow formatted output of RaycastHit
+template<typename IdType>
+struct std::formatter<c2d::RaycastHit<IdType>> : std::formatter<std::string>
+{
+    template<typename FormatContext>
+    auto format(c2d::RaycastHit<IdType> hit, FormatContext& ctx) const
+    {
+        std::stringstream ss;
+        ss << "RaycastHit(id: " << hit.id << ", entry: " << hit.entry << ", exit: " << hit.exit
+           << ", entryTime: " << hit.entryTime << ", exitTime: " << hit.exitTime << ")";
+        return std::formatter<std::string>::format(ss.str(), ctx);
+    }
+};

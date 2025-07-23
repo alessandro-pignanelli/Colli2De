@@ -71,7 +71,7 @@ uint32_t insertRemoveAndCheckBalancing(const std::vector<AABB>& aabbs)
 
     for (int i = 0; i < aabbs.size(); ++i)
     {
-        const auto index = bvh.createProxy(aabbs[i], i);
+        const auto index = bvh.addProxy(i, aabbs[i]);
         nodeIndices.push_back(index);
         ids.push_back(i);
     }
@@ -82,7 +82,7 @@ uint32_t insertRemoveAndCheckBalancing(const std::vector<AABB>& aabbs)
 
     // Remove half the proxies
     for (size_t i = 0; i < nodeIndices.size(); i += 2)
-        bvh.destroyProxy(nodeIndices[i]);
+        bvh.removeProxy(nodeIndices[i]);
     CHECK(bvh.proxies() == aabbs.size() / 2);
 
     checkBalancing();
@@ -90,7 +90,7 @@ uint32_t insertRemoveAndCheckBalancing(const std::vector<AABB>& aabbs)
 
     // Add back the removed proxies
     for (size_t i = 0; i < nodeIndices.size(); i += 2)
-        bvh.createProxy(aabbs[i], ids[i]);
+        bvh.addProxy(ids[i], aabbs[i]);
     CHECK(bvh.proxies() == aabbs.size());
 
     checkBalancing();
@@ -108,7 +108,7 @@ TEST_CASE("DynamicBVH | handle many proxies", "[DynamicBVH][Stress]")
     for (int i = 0; i < N; ++i)
     {
         float x = static_cast<float>(i) * 0.1f;
-        bvh.createProxy({Vec2{x,0}, Vec2{x+0.05f,1}}, i);
+        bvh.addProxy(i, {Vec2{x,0}, Vec2{x+0.05f,1}});
     }
 
     // Query a range covering many
