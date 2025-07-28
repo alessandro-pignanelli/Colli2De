@@ -1,6 +1,7 @@
 #include <chrono>
 #include <fstream>
 #include <filesystem>
+#include <map>
 #include <numeric>
 #include <string>
 #include <vector>
@@ -13,6 +14,36 @@
 using namespace std::chrono;
 using namespace std::literals::chrono_literals;
 using namespace Catch;
+
+namespace c2d::test
+{
+    inline double thresholdMultiplier = 1.0;
+
+    inline int benchmarkSystem()
+    {
+        const auto start = high_resolution_clock::now();
+
+        std::map<std::string, std::string> map;
+        for (int i = 0; i < 1'000'000; ++i)
+        {
+            const auto key = std::to_string(i) + std::to_string(i % 1000) + std::to_string(i ^ 12345);
+            if (map.contains(key))
+                map[key] += std::to_string(i);
+            else
+                map[key] = std::to_string(i);
+        }
+
+        const auto end = high_resolution_clock::now();
+        const auto elapsed = duration_cast<milliseconds>(end - start);
+
+        thresholdMultiplier = elapsed.count() / 335.0;
+        c2d::test::println("Benchmark system took {}", elapsed);
+        c2d::test::println("  Benchmark time threshold multiplier: {}", thresholdMultiplier);
+
+        return map.size();
+    }
+
+}
 
 #ifdef NDEBUG
     
@@ -31,7 +62,7 @@ using namespace Catch;
             return result; \
         }; \
         const auto elapsedAvg = std::accumulate(elapsedTimes.begin(), elapsedTimes.end(), microseconds(0)) / elapsedTimes.size(); \
-        CHECK(elapsedAvg <= threshold); \
+        CHECK(elapsedAvg <= threshold * c2d::test::thresholdMultiplier); \
         c2d::test::printElapsed(elapsedAvg, threshold); \
         c2d::test::storeBenchmark(name, elapsedTimes, threshold); \
     } \

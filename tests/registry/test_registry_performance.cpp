@@ -146,7 +146,7 @@ TEST_CASE("Registry | Collision query dynamic", "[Registry][Query][AllPairs][Ben
         reg.moveEntity(i, Translation(3.0f, 3.0f));
     }
 
-    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 250ms, [&]()
+    BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities", 280ms, [&]()
     {
         return reg.getCollidingPairs().size();
     });

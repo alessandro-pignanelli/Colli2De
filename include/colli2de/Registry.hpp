@@ -104,7 +104,7 @@ private:
     TreeType treeDynamic;
     TreeType treeBullet;
     std::map<EntityId, Transform> bulletPreviousTransforms;
-    uint32_t previousAllCollisionsCount = 1000;
+    uint32_t previousAllCollisionsCount = 1024;
 
     constexpr TreeType& treeFor(BodyType type);
 

@@ -32,6 +32,8 @@ void parseCustomArgs(int& argc, char* argv[])
 int main(int argc, char* argv[])
 {
     parseCustomArgs(argc, argv);
+    c2d::test::benchmarkSystem();
+
     int result = Catch::Session().run(argc - 1, argv);
 
     const auto dateTime = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now());
