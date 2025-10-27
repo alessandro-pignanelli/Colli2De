@@ -1,9 +1,9 @@
-#include <cstdint>
-#include <catch2/catch_approx.hpp>
-#include <catch2/catch_test_macros.hpp>
-
 #include <colli2de/internal/data_structures/BroadPhaseTree.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
+
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <cstdint>
 
 using namespace c2d;
 using namespace Catch;
@@ -14,14 +14,14 @@ TEST_CASE("BroadPhaseTree | query handles degenerate and thin AABBs", "[BroadPha
     BroadPhaseTree<uint32_t> tree;
 
     // Zero-width box
-    tree.addProxy(1, {Vec2{5,5}, Vec2{5,10}});
+    tree.addProxy(1, {Vec2{5, 5}, Vec2{5, 10}});
     // Zero-height box
-    tree.addProxy(2, {Vec2{1,3}, Vec2{4,3}});
+    tree.addProxy(2, {Vec2{1, 3}, Vec2{4, 3}});
     // Normal box
-    tree.addProxy(3, {Vec2{2,2}, Vec2{4,4}});
+    tree.addProxy(3, {Vec2{2, 2}, Vec2{4, 4}});
 
     // Query covering all
-    AABB query{Vec2{0,0}, Vec2{6,11}};
+    AABB query{Vec2{0, 0}, Vec2{6, 11}};
     std::vector<uint32_t> hits;
     tree.query(query, hits);
 
@@ -34,16 +34,16 @@ TEST_CASE("BroadPhaseTree | query handles degenerate and thin AABBs", "[BroadPha
 TEST_CASE("BroadPhaseTree | raycastFirstHit detects grazing rays", "[BroadPhaseTree][Advanced][RayGrazing]")
 {
     BroadPhaseTree<uint32_t> tree;
-    tree.addProxy(1, {Vec2{2,2}, Vec2{4,4}});
+    tree.addProxy(1, {Vec2{2, 2}, Vec2{4, 4}});
 
     // Ray just touches the lower-left corner
-    Ray ray1{Vec2{0,0}, Vec2{2,2}};
+    Ray ray1{Vec2{0, 0}, Vec2{2, 2}};
     auto hit1 = tree.firstHitRaycast(ray1);
     REQUIRE(hit1.has_value());
     REQUIRE(hit1->id == 1);
 
     // Ray along the bottom edge
-    Ray ray2{Vec2{2,2}, Vec2{4,2}};
+    Ray ray2{Vec2{2, 2}, Vec2{4, 2}};
     auto hit2 = tree.firstHitRaycast(ray2);
     REQUIRE(hit2.has_value());
     REQUIRE(hit2->id == 1);

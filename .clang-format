@@ -1,0 +1,36 @@
+Language:        Cpp
+BasedOnStyle:    Microsoft
+IndentWidth:     4
+ColumnLimit:     120
+BreakBeforeBraces: Allman
+AllowShortFunctionsOnASingleLine: Empty
+PointerAlignment: Left
+SortIncludes:    true
+SpaceBeforeParens: ControlStatements
+NamespaceIndentation: None
+MaxEmptyLinesToKeep: 3
+AlignAfterOpenBracket: Align
+BinPackParameters: OnePerLine
+BinPackArguments: false
+BinPackLongBracedList: false
+PackConstructorInitializers: CurrentLine
+RequiresClausePosition: WithPreceding
+RequiresExpressionIndentation: Keyword
+SeparateDefinitionBlocks: Always
+SortUsingDeclarations: Lexicographic
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:           '^"'
+    Priority:        1
+  - Regex:           '^<colli2de/'
+    Priority:        2
+    SortPriority:    2
+  - Regex:           '^<.*/'
+    Priority:        3
+    SortPriority:    3
+  - Regex:           '^<'
+    Priority:        3
+    SortPriority:    4
+  - Regex:           '.*'
+    Priority:        4
+    SortPriority:    5

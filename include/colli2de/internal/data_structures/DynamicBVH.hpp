@@ -1,5 +1,9 @@
 #pragma once
 
+#include <colli2de/Ray.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
+#include <colli2de/internal/utils/Methods.hpp>
+
 #include <algorithm>
 #include <cstdint>
 #include <functional>
@@ -8,26 +12,20 @@
 #include <utility>
 #include <vector>
 
-#include <colli2de/Ray.hpp>
-#include <colli2de/internal/geometry/AABB.hpp>
-#include <colli2de/internal/utils/Methods.hpp>
-
 namespace
 {
-    constexpr float displacementFactor = 2.2f; // Factor to adjust the displacement for fattening AABBs
+constexpr float displacementFactor = 2.2f; // Factor to adjust the displacement for fattening AABBs
 
-    template<typename T>
-    void write_pod(std::ostream& out, const T& v)
-    {
-        out.write(reinterpret_cast<const char*>(&v), sizeof(T));
-    
-    }
-    template<typename T>
-    void read_pod(std::istream& in, T& v)
-    {
-        in.read(reinterpret_cast<char*>(&v), sizeof(T));
-    }
+template <typename T> void write_pod(std::ostream& out, const T& v)
+{
+    out.write(reinterpret_cast<const char*>(&v), sizeof(T));
 }
+
+template <typename T> void read_pod(std::istream& in, T& v)
+{
+    in.read(reinterpret_cast<char*>(&v), sizeof(T));
+}
+} // namespace
 
 namespace c2d
 {
@@ -36,8 +34,7 @@ using BitMaskType = uint64_t;
 using NodeIndex = int32_t;
 static constexpr NodeIndex INVALID_NODE_INDEX = -99;
 
-template<typename IdType>
-struct BVHNode
+template <typename IdType> struct BVHNode
 {
     AABB aabb;
     BitMaskType categoryBits = 1;      // for collision filtering
@@ -51,55 +48,97 @@ struct BVHNode
 
     IdType id{}; // stored payload (instead of void*)
 
-    bool isLeaf() const { return child1Index == -1; }
-    bool matchesMask(BitMaskType mask) const { return (categoryBits & mask) != 0; }
+    bool isLeaf() const
+    {
+        return child1Index == -1;
+    }
+
+    bool matchesMask(BitMaskType mask) const
+    {
+        return (categoryBits & mask) != 0;
+    }
 };
 
-template<typename IdType>
-class DynamicBVH
+template <typename IdType> class DynamicBVH
 {
-public:
+  public:
     class LeafConstIterator;
     static constexpr uint32_t initialCapacity = 64;
     using RaycastInfo = RaycastHit<IdType>;
     using const_iterator = LeafConstIterator;
     using value_type = BVHNode<IdType>;
-    
+
     const float fatAABBMargin = 0.0f;
 
     DynamicBVH(float fatAABBMargin = 0.0f);
 
     NodeIndex createNode();
     void destroyNode(NodeIndex nodeId);
-    
-    // Inserts a new object {aabb, id} into the BVH and returns the index of the created node
+
+    // Inserts a new object {aabb, id} into the BVH and returns the index of the
+    // created node
     NodeIndex addProxy(IdType id, AABB aabb, BitMaskType categoryBits = 1, BitMaskType isHittingBits = ~0ull);
     void removeProxy(NodeIndex leafIndex);
-    // Moves the proxy to a new AABB, returns true if the tree structure has changed
+    // Moves the proxy to a new AABB, returns true if the tree structure has
+    // changed
     bool moveProxy(NodeIndex nodeIndex, AABB aabb);
 
     void clear();
-    size_t size() const { return nodeCount; }
-    size_t capacity() const { return nodes.size(); }
-    size_t proxies() const { return proxyCount; }
-    
-    NodeIndex getRootIndex() const { return rootIndex; }
-    const BVHNode<IdType>& getNode(NodeIndex index) const { return nodes[index]; }
+
+    size_t size() const
+    {
+        return nodeCount;
+    }
+
+    size_t capacity() const
+    {
+        return nodes.size();
+    }
+
+    size_t proxies() const
+    {
+        return proxyCount;
+    }
+
+    NodeIndex getRootIndex() const
+    {
+        return rootIndex;
+    }
+
+    const BVHNode<IdType>& getNode(NodeIndex index) const
+    {
+        return nodes[index];
+    }
 
     std::vector<std::pair<IdType, AABB>> data() const;
     auto leavesView() const;
-    LeafConstIterator begin() const { return LeafConstIterator(nodes, 0); }
-    LeafConstIterator end() const { return LeafConstIterator(nodes, nodes.size()); }
-    LeafConstIterator cbegin() const { return LeafConstIterator(nodes, 0); }
-    LeafConstIterator cend() const { return LeafConstIterator(nodes, nodes.size()); }
+
+    LeafConstIterator begin() const
+    {
+        return LeafConstIterator(nodes, 0);
+    }
+
+    LeafConstIterator end() const
+    {
+        return LeafConstIterator(nodes, nodes.size());
+    }
+
+    LeafConstIterator cbegin() const
+    {
+        return LeafConstIterator(nodes, 0);
+    }
+
+    LeafConstIterator cend() const
+    {
+        return LeafConstIterator(nodes, nodes.size());
+    }
 
     // AABB queries
     void query(AABB queryAABB, std::vector<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
     void batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
                     const std::function<void(size_t, std::vector<IdType>)>& callback) const;
     void findAllCollisions(const std::function<void(IdType, IdType)>& callback) const;
-    void findAllCollisions(const DynamicBVH<IdType>& other,
-                           const std::function<void(IdType, IdType)>& callback) const;
+    void findAllCollisions(const DynamicBVH<IdType>& other, const std::function<void(IdType, IdType)>& callback) const;
 
     // Finite raycast queries
     std::optional<RaycastInfo> firstHitRaycast(Ray ray, BitMaskType maskBits = ~0ull) const;
@@ -114,7 +153,7 @@ public:
 
     bool operator==(const DynamicBVH<IdType>& other) const;
 
-private:
+  private:
     std::vector<BVHNode<IdType>> nodes;
     uint32_t nodeCount = 0;
     uint32_t proxyCount = 0;
@@ -134,15 +173,15 @@ private:
                           NodeIndex nodeAIdx,
                           NodeIndex nodeBIdx,
                           const std::function<void(IdType, IdType)>& callback) const;
-    void findAllCollisionsRecursive(NodeIndex nodeIdx,
-                                    const std::function<void(IdType, IdType)>& callback) const;
+    void findAllCollisionsRecursive(NodeIndex nodeIdx, const std::function<void(IdType, IdType)>& callback) const;
 
     NodeIndex findBestSiblingIndex(AABB leaf) const;
     NodeIndex balance(NodeIndex index);
 
-public:
-    class LeafConstIterator {
-    public:
+  public:
+    class LeafConstIterator
+    {
+      public:
         using iterator_category = std::forward_iterator_tag;
         using value_type = std::pair<IdType, AABB>;
         using difference_type = std::ptrdiff_t;
@@ -150,7 +189,8 @@ public:
         using reference = const std::pair<IdType, AABB>&;
 
         LeafConstIterator(const std::vector<BVHNode<IdType>>& nodes, uint32_t nodeIndex)
-            : nodes(nodes), m_nodeIndex(nodeIndex)
+            : nodes(nodes),
+              m_nodeIndex(nodeIndex)
         {
             if (m_nodeIndex < nodes.size() && !nodes[m_nodeIndex].isLeaf())
                 next();
@@ -161,6 +201,7 @@ public:
             cache = std::make_pair(nodes[m_nodeIndex].id, nodes[m_nodeIndex].aabb);
             return cache;
         }
+
         pointer operator->() const
         {
             cache = std::make_pair(nodes[m_nodeIndex].id, nodes[m_nodeIndex].aabb);
@@ -180,10 +221,17 @@ public:
             return tmp;
         }
 
-        bool operator==(const LeafConstIterator& other) const { return m_nodeIndex == other.m_nodeIndex; }
-        bool operator!=(const LeafConstIterator& other) const { return !(*this == other); }
+        bool operator==(const LeafConstIterator& other) const
+        {
+            return m_nodeIndex == other.m_nodeIndex;
+        }
 
-    private:
+        bool operator!=(const LeafConstIterator& other) const
+        {
+            return !(*this == other);
+        }
+
+      private:
         const std::vector<BVHNode<IdType>>& nodes;
         NodeIndex m_nodeIndex;
         mutable value_type cache;
@@ -196,18 +244,15 @@ public:
         }
     };
 };
+
 static_assert(std::is_trivially_copyable_v<BVHNode<uint32_t>>, "BVHNode must be trivially copyable");
 
-
-
-template<typename IdType>
-DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin) : fatAABBMargin(fatAABBMargin)
+template <typename IdType> DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin) : fatAABBMargin(fatAABBMargin)
 {
     allocateNodes(initialCapacity);
 }
 
-template<typename IdType>
-void DynamicBVH<IdType>::allocateNodes(int32_t capacity)
+template <typename IdType> void DynamicBVH<IdType>::allocateNodes(int32_t capacity)
 {
     nodes.resize(capacity);
 
@@ -221,8 +266,7 @@ void DynamicBVH<IdType>::allocateNodes(int32_t capacity)
     nodeCount = 0;
 }
 
-template<typename IdType>
-void DynamicBVH<IdType>::doubleCapacity()
+template <typename IdType> void DynamicBVH<IdType>::doubleCapacity()
 {
     assert(nextAvailableIndex == INVALID_NODE_INDEX);
 
@@ -231,16 +275,15 @@ void DynamicBVH<IdType>::doubleCapacity()
 
     const size_t newCapacity = currentCapacity <= 4096 ? currentCapacity << 1 : currentCapacity << 1;
     nodes.resize(newCapacity);
-    
+
     for (NodeIndex i = currentCapacity - 1; i < static_cast<int32_t>(newCapacity) - 1; ++i)
         nodes[i].parentIndex = i + 1;
     nodes[newCapacity - 1].parentIndex = INVALID_NODE_INDEX;
-    
+
     nextAvailableIndex = currentCapacity;
 }
 
-template<typename IdType>
-NodeIndex DynamicBVH<IdType>::createNode()
+template <typename IdType> NodeIndex DynamicBVH<IdType>::createNode()
 {
     if (nextAvailableIndex == INVALID_NODE_INDEX)
         doubleCapacity();
@@ -259,8 +302,7 @@ NodeIndex DynamicBVH<IdType>::createNode()
     return nodeId;
 }
 
-template<typename IdType>
-void DynamicBVH<IdType>::destroyNode(NodeIndex nodeId)
+template <typename IdType> void DynamicBVH<IdType>::destroyNode(NodeIndex nodeId)
 {
     assert(0 <= nodeId && nodeId < static_cast<NodeIndex>(nodes.size()));
     BVHNode<IdType>& node = nodes[nodeId];
@@ -275,7 +317,7 @@ void DynamicBVH<IdType>::destroyNode(NodeIndex nodeId)
     --nodeCount;
 }
 
-template<typename IdType>
+template <typename IdType>
 NodeIndex DynamicBVH<IdType>::addProxy(IdType id, AABB aabb, BitMaskType categoryBits, BitMaskType isHittingBits)
 {
     const NodeIndex nodeId = createNode();
@@ -291,16 +333,14 @@ NodeIndex DynamicBVH<IdType>::addProxy(IdType id, AABB aabb, BitMaskType categor
     return nodeId;
 }
 
-template<typename IdType>
-void DynamicBVH<IdType>::removeProxy(NodeIndex leafIndex)
+template <typename IdType> void DynamicBVH<IdType>::removeProxy(NodeIndex leafIndex)
 {
     --proxyCount;
     removeLeaf(leafIndex);
     destroyNode(leafIndex);
 }
 
-template <typename IdType>
-void DynamicBVH<IdType>::clear()
+template <typename IdType> void DynamicBVH<IdType>::clear()
 {
     nodes.clear();
     nodeCount = 0;
@@ -309,10 +349,10 @@ void DynamicBVH<IdType>::clear()
     allocateNodes(initialCapacity);
 }
 
-template<typename IdType>
-bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB)
+template <typename IdType> bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB)
 {
-    // If the current fattened AABB contains the new AABB, no need to update the tree
+    // If the current fattened AABB contains the new AABB, no need to update the
+    // tree
     if (nodes[nodeIndex].aabb.contains(newAABB))
         return false;
 
@@ -339,8 +379,7 @@ bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB)
     return true;
 }
 
-template<typename IdType>
-void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
+template <typename IdType> void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
 {
     if (rootIndex == INVALID_NODE_INDEX)
     {
@@ -398,8 +437,7 @@ void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
     }
 }
 
-template<typename IdType>
-void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
+template <typename IdType> void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
 {
     if (leafIndex == rootIndex)
     {
@@ -410,9 +448,8 @@ void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
 
     const NodeIndex parentIndex = nodes[leafIndex].parentIndex;
     const NodeIndex grandParentIndex = nodes[parentIndex].parentIndex;
-    const NodeIndex siblingIndex = (nodes[parentIndex].child1Index == leafIndex)
-                                 ? nodes[parentIndex].child2Index
-                                 : nodes[parentIndex].child1Index;
+    const NodeIndex siblingIndex =
+        (nodes[parentIndex].child1Index == leafIndex) ? nodes[parentIndex].child2Index : nodes[parentIndex].child1Index;
 
     // Connect sibling to grandparent
     if (grandParentIndex != INVALID_NODE_INDEX)
@@ -449,8 +486,7 @@ void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
     }
 }
 
-template<typename IdType>
-NodeIndex DynamicBVH<IdType>::findBestSiblingIndex(AABB leaf) const
+template <typename IdType> NodeIndex DynamicBVH<IdType>::findBestSiblingIndex(AABB leaf) const
 {
     NodeIndex index = rootIndex;
 
@@ -466,13 +502,13 @@ NodeIndex DynamicBVH<IdType>::findBestSiblingIndex(AABB leaf) const
 
         const auto child1LeafCombined = AABB::combine(leaf, nodes[child1Index].aabb);
         const float cost1 = nodes[child1Index].isLeaf()
-            ? child1LeafCombined.perimeter() + inheritedCost
-            : child1LeafCombined.perimeter() - nodes[child1Index].aabb.perimeter() + inheritedCost;
+                                ? child1LeafCombined.perimeter() + inheritedCost
+                                : child1LeafCombined.perimeter() - nodes[child1Index].aabb.perimeter() + inheritedCost;
 
         const auto child2LeafCombined = AABB::combine(leaf, nodes[child2Index].aabb);
         const float cost2 = nodes[child2Index].isLeaf()
-            ? child2LeafCombined.perimeter() + inheritedCost
-            : child2LeafCombined.perimeter() - nodes[child2Index].aabb.perimeter() + inheritedCost;
+                                ? child2LeafCombined.perimeter() + inheritedCost
+                                : child2LeafCombined.perimeter() - nodes[child2Index].aabb.perimeter() + inheritedCost;
 
         index = (cost1 < cost2) ? child1Index : child2Index;
     }
@@ -480,8 +516,7 @@ NodeIndex DynamicBVH<IdType>::findBestSiblingIndex(AABB leaf) const
     return index;
 }
 
-template<typename IdType>
-NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
+template <typename IdType> NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 {
     BVHNode<IdType>& node = nodes[index];
 
@@ -592,8 +627,7 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
     return movingUpChildIndex;
 }
 
-template<typename IdType>
-std::vector<std::pair<IdType, AABB>> DynamicBVH<IdType>::data() const
+template <typename IdType> std::vector<std::pair<IdType, AABB>> DynamicBVH<IdType>::data() const
 {
     if (rootIndex == INVALID_NODE_INDEX)
         return {};
@@ -610,15 +644,13 @@ std::vector<std::pair<IdType, AABB>> DynamicBVH<IdType>::data() const
     return result;
 }
 
-template<typename IdType>
-auto DynamicBVH<IdType>::leavesView() const
+template <typename IdType> auto DynamicBVH<IdType>::leavesView() const
 {
-    return nodes
-        | std::views::filter([](const auto& node) { return node.isLeaf(); })
-        | std::views::transform([](const auto& node) { return std::pair<IdType, AABB>{node.id, node.aabb}; });
+    return nodes | std::views::filter([](const auto& node) { return node.isLeaf(); }) |
+           std::views::transform([](const auto& node) { return std::pair<IdType, AABB>{node.id, node.aabb}; });
 }
 
-template<typename IdType>
+template <typename IdType>
 void DynamicBVH<IdType>::query(AABB queryAABB, std::vector<IdType>& intersections, BitMaskType maskBits) const
 {
     if (rootIndex == INVALID_NODE_INDEX)
@@ -652,23 +684,23 @@ void DynamicBVH<IdType>::query(AABB queryAABB, std::vector<IdType>& intersection
     }
 }
 
-template<typename IdType>
+template <typename IdType>
 void DynamicBVH<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
                                     const std::function<void(size_t, std::vector<IdType>)>& callback) const
 {
-    C2D_PARALLEL_FOR(0, queries.size(), [&](size_t i)
-    {
-        std::vector<IdType> hits;
-        query(queries[i].first, hits, queries[i].second);
-        if (!hits.empty())
-            callback(i, std::move(hits));
-    });
+    C2D_PARALLEL_FOR(0,
+                     queries.size(),
+                     [&](size_t i)
+                     {
+                         std::vector<IdType> hits;
+                         query(queries[i].first, hits, queries[i].second);
+                         if (!hits.empty())
+                             callback(i, std::move(hits));
+                     });
 }
 
-template<typename IdType>
-void DynamicBVH<IdType>::piercingRaycast(Ray ray,
-                                         std::set<RaycastInfo>& hits,
-                                         BitMaskType maskBits) const
+template <typename IdType>
+void DynamicBVH<IdType>::piercingRaycast(Ray ray, std::set<RaycastInfo>& hits, BitMaskType maskBits) const
 {
     if (rootIndex == INVALID_NODE_INDEX)
         return;
@@ -702,7 +734,7 @@ void DynamicBVH<IdType>::piercingRaycast(Ray ray,
     }
 }
 
-template<typename IdType>
+template <typename IdType>
 std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firstHitRaycast(Ray ray,
                                                                                             BitMaskType maskBits) const
 {
@@ -747,10 +779,8 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
     return firstHit;
 }
 
-template<typename IdType>
-void DynamicBVH<IdType>::piercingRaycast(InfiniteRay ray,
-                                         std::set<RaycastInfo>& hits,
-                                         BitMaskType maskBits) const
+template <typename IdType>
+void DynamicBVH<IdType>::piercingRaycast(InfiniteRay ray, std::set<RaycastInfo>& hits, BitMaskType maskBits) const
 {
     if (rootIndex == INVALID_NODE_INDEX)
         return;
@@ -784,7 +814,7 @@ void DynamicBVH<IdType>::piercingRaycast(InfiniteRay ray,
     }
 }
 
-template<typename IdType>
+template <typename IdType>
 std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firstHitRaycast(InfiniteRay ray,
                                                                                             BitMaskType maskBits) const
 {
@@ -829,20 +859,20 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
     return firstHit;
 }
 
-template<typename IdType>
+template <typename IdType>
 void DynamicBVH<IdType>::findAllCollisions(const std::function<void(IdType, IdType)>& callback) const
 {
     findAllCollisionsRecursive(rootIndex, callback);
 }
 
-template<typename IdType>
+template <typename IdType>
 void DynamicBVH<IdType>::findAllCollisions(const DynamicBVH<IdType>& other,
                                            const std::function<void(IdType, IdType)>& callback) const
 {
     findPairsBetween(other, rootIndex, other.rootIndex, callback);
 }
 
-template<typename IdType>
+template <typename IdType>
 void DynamicBVH<IdType>::findPairsBetween(NodeIndex nodeAIdx,
                                           NodeIndex nodeBIdx,
                                           const std::function<void(IdType, IdType)>& callback) const
@@ -878,7 +908,7 @@ void DynamicBVH<IdType>::findPairsBetween(NodeIndex nodeAIdx,
     }
 }
 
-template<typename IdType>
+template <typename IdType>
 void DynamicBVH<IdType>::findPairsBetween(const DynamicBVH<IdType>& other,
                                           NodeIndex nodeAIdx,
                                           NodeIndex nodeBIdx,
@@ -913,7 +943,7 @@ void DynamicBVH<IdType>::findPairsBetween(const DynamicBVH<IdType>& other,
     }
 }
 
-template<typename IdType>
+template <typename IdType>
 void DynamicBVH<IdType>::findAllCollisionsRecursive(NodeIndex nodeIdx,
                                                     const std::function<void(IdType, IdType)>& callback) const
 {
@@ -932,8 +962,7 @@ void DynamicBVH<IdType>::findAllCollisionsRecursive(NodeIndex nodeIdx,
     findAllCollisionsRecursive(node.child2Index, callback);
 }
 
-template<typename IdType>
-void DynamicBVH<IdType>::serialize(std::ostream& out) const
+template <typename IdType> void DynamicBVH<IdType>::serialize(std::ostream& out) const
 {
     write_pod(out, fatAABBMargin);
     write_pod(out, rootIndex);
@@ -947,8 +976,10 @@ void DynamicBVH<IdType>::serialize(std::ostream& out) const
     // Write nodes
     for (const auto& node : nodes)
     {
-        write_pod(out, node.aabb.min.x); write_pod(out, node.aabb.min.y);
-        write_pod(out, node.aabb.max.x); write_pod(out, node.aabb.max.y);
+        write_pod(out, node.aabb.min.x);
+        write_pod(out, node.aabb.min.y);
+        write_pod(out, node.aabb.max.x);
+        write_pod(out, node.aabb.max.y);
         write_pod(out, node.parentIndex);
         write_pod(out, node.child1Index);
         write_pod(out, node.child2Index);
@@ -957,8 +988,7 @@ void DynamicBVH<IdType>::serialize(std::ostream& out) const
     }
 }
 
-template<typename IdType>
-DynamicBVH<IdType> DynamicBVH<IdType>::deserialize(std::istream& in)
+template <typename IdType> DynamicBVH<IdType> DynamicBVH<IdType>::deserialize(std::istream& in)
 {
     float fatAABBMargin;
     read_pod(in, fatAABBMargin);
@@ -974,8 +1004,10 @@ DynamicBVH<IdType> DynamicBVH<IdType>::deserialize(std::istream& in)
 
     for (auto& node : bvh.nodes)
     {
-        read_pod(in, node.aabb.min.x); read_pod(in, node.aabb.min.y);
-        read_pod(in, node.aabb.max.x); read_pod(in, node.aabb.max.y);
+        read_pod(in, node.aabb.min.x);
+        read_pod(in, node.aabb.min.y);
+        read_pod(in, node.aabb.max.x);
+        read_pod(in, node.aabb.max.y);
         read_pod(in, node.parentIndex);
         read_pod(in, node.child1Index);
         read_pod(in, node.child2Index);
@@ -986,8 +1018,7 @@ DynamicBVH<IdType> DynamicBVH<IdType>::deserialize(std::istream& in)
     return bvh;
 }
 
-template<typename IdType>
-bool DynamicBVH<IdType>::operator==(const DynamicBVH<IdType>& other) const
+template <typename IdType> bool DynamicBVH<IdType>::operator==(const DynamicBVH<IdType>& other) const
 {
     if (!float_equals(fatAABBMargin, other.fatAABBMargin))
         return false;

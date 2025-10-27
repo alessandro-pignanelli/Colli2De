@@ -1,9 +1,9 @@
-#include <cstdint>
-#include <catch2/catch_approx.hpp>
-#include <catch2/catch_test_macros.hpp>
-
 #include <colli2de/internal/data_structures/DynamicBVH.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
+
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <cstdint>
 
 using namespace c2d;
 using namespace Catch;
@@ -14,14 +14,14 @@ TEST_CASE("DynamicBVH | query handles degenerate and thin AABBs", "[DynamicBVH][
     DynamicBVH<uint32_t> bvh(margin);
 
     // Zero-width box
-    bvh.addProxy(1, {Vec2{5,5}, Vec2{5,10}});
+    bvh.addProxy(1, {Vec2{5, 5}, Vec2{5, 10}});
     // Zero-height box
-    bvh.addProxy(2, {Vec2{1,3}, Vec2{4,3}});
+    bvh.addProxy(2, {Vec2{1, 3}, Vec2{4, 3}});
     // Normal box
-    bvh.addProxy(3, {Vec2{2,2}, Vec2{4,4}});
+    bvh.addProxy(3, {Vec2{2, 2}, Vec2{4, 4}});
 
     // Query covering all
-    AABB query{Vec2{0,0}, Vec2{6,11}};
+    AABB query{Vec2{0, 0}, Vec2{6, 11}};
     std::vector<uint32_t> hits;
     bvh.query(query, hits);
 
@@ -34,10 +34,10 @@ TEST_CASE("DynamicBVH | query handles degenerate and thin AABBs", "[DynamicBVH][
 TEST_CASE("DynamicBVH | raycastFirstHit detects grazing rays", "[DynamicBVH][Advanced][RayGrazing]")
 {
     DynamicBVH<uint32_t> bvh;
-    bvh.addProxy(1, {Vec2{2,2}, Vec2{4,4}});
+    bvh.addProxy(1, {Vec2{2, 2}, Vec2{4, 4}});
 
     // Ray just touches the lower-left corner
-    Ray ray1{Vec2{0,0}, Vec2{2,2}};
+    Ray ray1{Vec2{0, 0}, Vec2{2, 2}};
     auto hit1 = bvh.firstHitRaycast(ray1);
     REQUIRE(hit1.has_value());
     REQUIRE(hit1->id == 1);
@@ -49,7 +49,7 @@ TEST_CASE("DynamicBVH | raycastFirstHit detects grazing rays", "[DynamicBVH][Adv
     CHECK(hit1->exitTime == Approx(1.0f));
 
     // Ray along the bottom edge
-    Ray ray2{Vec2{2,2}, Vec2{4,2}};
+    Ray ray2{Vec2{2, 2}, Vec2{4, 2}};
     auto hit2 = bvh.firstHitRaycast(ray2);
     REQUIRE(hit2.has_value());
     REQUIRE(hit2->id == 1);

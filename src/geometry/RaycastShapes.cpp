@@ -1,17 +1,14 @@
+#include <colli2de/internal/geometry/AABB.hpp>
 #include <colli2de/internal/geometry/RaycastShapes.hpp>
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-#include <colli2de/internal/geometry/AABB.hpp>
-
 namespace c2d
 {
 
-std::optional<std::pair<float, float>> raycast(const Circle& circle,
-                                               Transform transform,
-                                               Ray ray)
+std::optional<std::pair<float, float>> raycast(const Circle& circle, Transform transform, Ray ray)
 {
     const Vec2 center = transform.apply(circle.center);
     const Vec2 rayDirection = ray.end - ray.start;
@@ -19,8 +16,7 @@ std::optional<std::pair<float, float>> raycast(const Circle& circle,
 
     const float directionLengthSq = rayDirection.dot(rayDirection);
     const float startProjection = fromStartToCenter.dot(rayDirection);
-    const float startDistanceSq = fromStartToCenter.dot(fromStartToCenter) -
-                                   circle.radius * circle.radius;
+    const float startDistanceSq = fromStartToCenter.dot(fromStartToCenter) - circle.radius * circle.radius;
 
     if (directionLengthSq <= 0.0f)
     {
@@ -32,8 +28,7 @@ std::optional<std::pair<float, float>> raycast(const Circle& circle,
     if (startDistanceSq > 0.0f && startProjection > 0.0f)
         return std::nullopt;
 
-    const float discriminant = startProjection * startProjection -
-                               directionLengthSq * startDistanceSq;
+    const float discriminant = startProjection * startProjection - directionLengthSq * startDistanceSq;
     if (discriminant < 0.0f)
         return std::nullopt;
 
@@ -55,9 +50,7 @@ std::optional<std::pair<float, float>> raycast(const Circle& circle,
     return std::make_pair(entry, exit);
 }
 
-std::optional<std::pair<float, float>> raycast(const Circle& circle,
-                                               Transform transform,
-                                               InfiniteRay ray)
+std::optional<std::pair<float, float>> raycast(const Circle& circle, Transform transform, InfiniteRay ray)
 {
     const Vec2 center = transform.apply(circle.center);
     const Vec2 rayDirection = ray.direction;
@@ -65,8 +58,7 @@ std::optional<std::pair<float, float>> raycast(const Circle& circle,
 
     const float directionLengthSq = rayDirection.dot(rayDirection);
     const float startProjection = fromStartToCenter.dot(rayDirection);
-    const float startDistanceSq = fromStartToCenter.dot(fromStartToCenter) -
-                                   circle.radius * circle.radius;
+    const float startDistanceSq = fromStartToCenter.dot(fromStartToCenter) - circle.radius * circle.radius;
 
     if (directionLengthSq <= 0.0f)
     {
@@ -78,8 +70,7 @@ std::optional<std::pair<float, float>> raycast(const Circle& circle,
     if (startDistanceSq > 0.0f && startProjection > 0.0f)
         return std::nullopt;
 
-    const float discriminant = startProjection * startProjection -
-                               directionLengthSq * startDistanceSq;
+    const float discriminant = startProjection * startProjection - directionLengthSq * startDistanceSq;
     if (discriminant < 0.0f)
         return std::nullopt;
 
@@ -96,9 +87,7 @@ std::optional<std::pair<float, float>> raycast(const Circle& circle,
     return std::make_pair(entry, exit);
 }
 
-std::optional<std::pair<float, float>> raycast(const Segment& segment,
-                                               Transform transform,
-                                               Ray ray)
+std::optional<std::pair<float, float>> raycast(const Segment& segment, Transform transform, Ray ray)
 {
     const Vec2 point1 = transform.apply(segment.start);
     const Vec2 point2 = transform.apply(segment.end);
@@ -121,9 +110,7 @@ std::optional<std::pair<float, float>> raycast(const Segment& segment,
     return std::nullopt;
 }
 
-std::optional<std::pair<float, float>> raycast(const Segment& segment,
-                                               Transform transform,
-                                               InfiniteRay ray)
+std::optional<std::pair<float, float>> raycast(const Segment& segment, Transform transform, InfiniteRay ray)
 {
     const Vec2 point1 = transform.apply(segment.start);
     const Vec2 point2 = transform.apply(segment.end);
@@ -146,9 +133,7 @@ std::optional<std::pair<float, float>> raycast(const Segment& segment,
     return std::nullopt;
 }
 
-std::optional<std::pair<float, float>> raycast(const Polygon& polygon,
-                                               Transform transform,
-                                               Ray ray)
+std::optional<std::pair<float, float>> raycast(const Polygon& polygon, Transform transform, Ray ray)
 {
     const Vec2 rayDirection = ray.end - ray.start;
 
@@ -184,9 +169,7 @@ std::optional<std::pair<float, float>> raycast(const Polygon& polygon,
     return std::make_pair(lower, upper);
 }
 
-std::optional<std::pair<float, float>> raycast(const Polygon& polygon,
-                                               Transform transform,
-                                               InfiniteRay ray)
+std::optional<std::pair<float, float>> raycast(const Polygon& polygon, Transform transform, InfiniteRay ray)
 {
     const Vec2 rayDirection = ray.direction;
 
@@ -222,9 +205,7 @@ std::optional<std::pair<float, float>> raycast(const Polygon& polygon,
     return std::make_pair(lower, upper);
 }
 
-std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
-                                               Transform transform,
-                                               Ray ray)
+std::optional<std::pair<float, float>> raycast(const Capsule& capsule, Transform transform, Ray ray)
 {
     const Vec2 worldStart = transform.apply(capsule.center1);
     const Vec2 worldEnd = transform.apply(capsule.center2);
@@ -238,16 +219,16 @@ std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
         return raycast(circle, Transform{}, ray);
     }
     const Vec2 axisUnit = axis * (1.0f / length);
-    const Vec2 side{ -axisUnit.y, axisUnit.x };
+    const Vec2 side{-axisUnit.y, axisUnit.x};
 
     const auto toLocal = [&](Vec2 point) -> Vec2
     {
         const Vec2 diff = point - worldStart;
-        return Vec2{ diff.dot(axisUnit), diff.dot(side) };
+        return Vec2{diff.dot(axisUnit), diff.dot(side)};
     };
 
-    Ray localRay{ toLocal(ray.start), toLocal(ray.end) };
-    AABB core{ Vec2{0.0f, -radius}, Vec2{length, radius} };
+    Ray localRay{toLocal(ray.start), toLocal(ray.end)};
+    AABB core{Vec2{0.0f, -radius}, Vec2{length, radius}};
 
     float entryTime = std::numeric_limits<float>::max();
     float exitTime = std::numeric_limits<float>::min();
@@ -264,8 +245,8 @@ std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
 
     update(core.intersects(localRay));
 
-    Circle capA{ Vec2{0.0f, 0.0f}, radius };
-    Circle capB{ Vec2{length, 0.0f}, radius };
+    Circle capA{Vec2{0.0f, 0.0f}, radius};
+    Circle capB{Vec2{length, 0.0f}, radius};
     update(raycast(capA, Transform{}, localRay));
     update(raycast(capB, Transform{}, localRay));
 
@@ -283,9 +264,7 @@ std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
     return std::make_pair(entryTime, exitTime);
 }
 
-std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
-                                               Transform transform,
-                                               InfiniteRay ray)
+std::optional<std::pair<float, float>> raycast(const Capsule& capsule, Transform transform, InfiniteRay ray)
 {
     const Vec2 worldStart = transform.apply(capsule.center1);
     const Vec2 worldEnd = transform.apply(capsule.center2);
@@ -299,18 +278,16 @@ std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
         return raycast(circle, Transform{}, ray);
     }
     const Vec2 axisUnit = axis * (1.0f / length);
-    const Vec2 side{ -axisUnit.y, axisUnit.x };
+    const Vec2 side{-axisUnit.y, axisUnit.x};
 
     const auto toLocal = [&](Vec2 point) -> Vec2
     {
         const Vec2 diff = point - worldStart;
-        return Vec2{ diff.dot(axisUnit), diff.dot(side) };
+        return Vec2{diff.dot(axisUnit), diff.dot(side)};
     };
 
-    InfiniteRay localRay{ toLocal(ray.start),
-                          Vec2{ ray.direction.dot(axisUnit),
-                                ray.direction.dot(side) } };
-    AABB core{ Vec2{0.0f, -radius}, Vec2{length, radius} };
+    InfiniteRay localRay{toLocal(ray.start), Vec2{ray.direction.dot(axisUnit), ray.direction.dot(side)}};
+    AABB core{Vec2{0.0f, -radius}, Vec2{length, radius}};
 
     float entryTime = std::numeric_limits<float>::max();
     float exitTime = std::numeric_limits<float>::min();
@@ -327,8 +304,8 @@ std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
 
     update(core.intersects(localRay));
 
-    Circle capA{ Vec2{0.0f, 0.0f}, radius };
-    Circle capB{ Vec2{length, 0.0f}, radius };
+    Circle capA{Vec2{0.0f, 0.0f}, radius};
+    Circle capB{Vec2{length, 0.0f}, radius};
     update(raycast(capA, Transform{}, localRay));
     update(raycast(capB, Transform{}, localRay));
 
@@ -343,4 +320,3 @@ std::optional<std::pair<float, float>> raycast(const Capsule& capsule,
 }
 
 } // namespace c2d
-

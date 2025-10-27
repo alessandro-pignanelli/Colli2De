@@ -1,14 +1,15 @@
-#include <algorithm>
-#include <chrono>
-#include <cstdint>
-#include <catch2/catch_approx.hpp>
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/benchmark/catch_benchmark.hpp>
+#include "utils/Performance.hpp"
+#include "utils/Random.hpp"
 
 #include <colli2de/internal/data_structures/DynamicBVH.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
-#include "utils/Performance.hpp"
-#include "utils/Random.hpp"
+
+#include <catch2/benchmark/catch_benchmark.hpp>
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
 
 using namespace c2d;
 using namespace Catch;
@@ -21,21 +22,25 @@ TEST_CASE("DynamicBVH | Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
     microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Insert 10k proxies", 10ms, [&]()
-    {
-        DynamicBVH<uint32_t> bvh;
-        for (uint32_t i = 0; i < 10'000; ++i)
-            bvh.addProxy(i, aabbs[i]);
-        return bvh.size();
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | Insert 10k proxies",
+                       10ms,
+                       [&]()
+                       {
+                           DynamicBVH<uint32_t> bvh;
+                           for (uint32_t i = 0; i < 10'000; ++i)
+                               bvh.addProxy(i, aabbs[i]);
+                           return bvh.size();
+                       });
 
-    BENCHMARK_FUNCTION("DynamicBVH | Insert 100k proxies", 100ms, [&]()
-    {
-        DynamicBVH<uint32_t> bvh;
-        for (uint32_t i = 0; i < 100'000; ++i)
-            bvh.addProxy(i, aabbs[i]);
-        return bvh.size();
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | Insert 100k proxies",
+                       100ms,
+                       [&]()
+                       {
+                           DynamicBVH<uint32_t> bvh;
+                           for (uint32_t i = 0; i < 100'000; ++i)
+                               bvh.addProxy(i, aabbs[i]);
+                           return bvh.size();
+                       });
 }
 
 TEST_CASE("DynamicBVH | Moving proxies", "[DynamicBVH][Benchmark][Move]")
@@ -49,36 +54,44 @@ TEST_CASE("DynamicBVH | Moving proxies", "[DynamicBVH][Benchmark][Move]")
     for (uint32_t i = 0; i < 10'000; ++i)
         indices.push_back(bvh.addProxy(i, aabbs[i]));
 
-    BENCHMARK_FUNCTION("DynamicBVH | Move 10k proxies to new location", 2ms, [&]()
-    {
-        for (size_t i = 0; i < indices.size(); ++i)
-            bvh.moveProxy(indices[i], aabbs[i].translated(Vec2{ 50.0f, 0 }));
-        return bvh.size();
-    }, [&]()
-    {
-        bvh.clear();
-        indices.clear();
-        for (size_t i = 0; i < 10'000; ++i)
-            indices.push_back(bvh.addProxy(i, aabbs[i]));
-    });
+    BENCHMARK_FUNCTION(
+        "DynamicBVH | Move 10k proxies to new location",
+        2ms,
+        [&]()
+        {
+            for (size_t i = 0; i < indices.size(); ++i)
+                bvh.moveProxy(indices[i], aabbs[i].translated(Vec2{50.0f, 0}));
+            return bvh.size();
+        },
+        [&]()
+        {
+            bvh.clear();
+            indices.clear();
+            for (size_t i = 0; i < 10'000; ++i)
+                indices.push_back(bvh.addProxy(i, aabbs[i]));
+        });
 
     bvh.clear();
     indices.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
         indices.push_back(bvh.addProxy(i, aabbs[i]));
 
-    BENCHMARK_FUNCTION("DynamicBVH | Move 100k proxies to new location", 20ms, [&]()
-    {
-        for (size_t i = 0; i < indices.size(); ++i)
-            bvh.moveProxy(indices[i], aabbs[i].translated(Vec2{ 50.0f, 0 }));
-        return bvh.size();
-    }, [&]()
-    {
-        bvh.clear();
-        indices.clear();
-        for (size_t i = 0; i < 100'000; ++i)
-            indices.push_back(bvh.addProxy(i, aabbs[i]));
-    });
+    BENCHMARK_FUNCTION(
+        "DynamicBVH | Move 100k proxies to new location",
+        20ms,
+        [&]()
+        {
+            for (size_t i = 0; i < indices.size(); ++i)
+                bvh.moveProxy(indices[i], aabbs[i].translated(Vec2{50.0f, 0}));
+            return bvh.size();
+        },
+        [&]()
+        {
+            bvh.clear();
+            indices.clear();
+            for (size_t i = 0; i < 100'000; ++i)
+                indices.push_back(bvh.addProxy(i, aabbs[i]));
+        });
 }
 
 TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]")
@@ -92,23 +105,27 @@ TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Query 10k proxies", 10us, [&]()
-    {
-        std::vector<uint32_t> foundIds;
-        bvh.query(query, foundIds);
-        return foundIds.size();
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | Query 10k proxies",
+                       10us,
+                       [&]()
+                       {
+                           std::vector<uint32_t> foundIds;
+                           bvh.query(query, foundIds);
+                           return foundIds.size();
+                       });
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Query 100k proxies", 50us, [&]()
-    {
-        std::vector<uint32_t> foundIds;
-        bvh.query(query, foundIds);
-        return foundIds.size();
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | Query 100k proxies",
+                       50us,
+                       [&]()
+                       {
+                           std::vector<uint32_t> foundIds;
+                           bvh.query(query, foundIds);
+                           return foundIds.size();
+                       });
 
     std::vector<AABB> queries;
     for (uint32_t i = 0; i < 10'000; ++i)
@@ -119,13 +136,15 @@ TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]
     }
     std::shuffle(queries.begin(), queries.end(), std::mt19937{std::random_device{}()});
 
-    BENCHMARK_FUNCTION("DynamicBVH | 10k Queries 100k proxies", 150ms, [&]()
-    {
-        std::vector<uint32_t> foundIds;
-        for (const auto& query : queries)
-            bvh.query(query, foundIds);
-        return foundIds.size();
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | 10k Queries 100k proxies",
+                       150ms,
+                       [&]()
+                       {
+                           std::vector<uint32_t> foundIds;
+                           for (const auto& query : queries)
+                               bvh.query(query, foundIds);
+                           return foundIds.size();
+                       });
 }
 
 TEST_CASE("DynamicBVH | Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
@@ -139,23 +158,27 @@ TEST_CASE("DynamicBVH | Piercing raycast", "[DynamicBVH][Benchmark][Raycast]")
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Piercing raycast through 10k proxies", 50us, [&]()
-    {
-        std::set<RaycastInfo> hits;
-        bvh.piercingRaycast(ray, hits);
-        return hits.size();
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | Piercing raycast through 10k proxies",
+                       50us,
+                       [&]()
+                       {
+                           std::set<RaycastInfo> hits;
+                           bvh.piercingRaycast(ray, hits);
+                           return hits.size();
+                       });
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Piercing raycast through 100k proxies", 1ms, [&]()
-    {
-        std::set<RaycastInfo> hits;
-        bvh.piercingRaycast(ray, hits);
-        return hits.size();
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | Piercing raycast through 100k proxies",
+                       1ms,
+                       [&]()
+                       {
+                           std::set<RaycastInfo> hits;
+                           bvh.piercingRaycast(ray, hits);
+                           return hits.size();
+                       });
 }
 
 TEST_CASE("DynamicBVH | First hit raycast", "[DynamicBVH][Benchmark][Raycast]")
@@ -169,24 +192,29 @@ TEST_CASE("DynamicBVH | First hit raycast", "[DynamicBVH][Benchmark][Raycast]")
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("DynamicBVH | First hit raycast through 10k proxies", 20us, [&]()
-    {
-        const auto hit = bvh.firstHitRaycast(ray);
-        return hit.has_value();
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | First hit raycast through 10k proxies",
+                       20us,
+                       [&]()
+                       {
+                           const auto hit = bvh.firstHitRaycast(ray);
+                           return hit.has_value();
+                       });
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("DynamicBVH | First hit raycast through 100k proxies", 300us, [&]()
-    {
-        const auto hit = bvh.firstHitRaycast(ray);
-        return hit.has_value();
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | First hit raycast through 100k proxies",
+                       300us,
+                       [&]()
+                       {
+                           const auto hit = bvh.firstHitRaycast(ray);
+                           return hit.has_value();
+                       });
 }
 
-TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)", "[DynamicBVH][BroadPhaseCollisions][AllPairs][Benchmark]")
+TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)",
+          "[DynamicBVH][BroadPhaseCollisions][AllPairs][Benchmark]")
 {
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
     microseconds elapsed;
@@ -196,38 +224,38 @@ TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)", "[
     for (uint32_t i = 0; i < 1'000; ++i)
         bvh.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Find all colliding pairs among 1k proxies", 50us, [&]()
-    {
-        uint32_t totalPairs = 0;
-        bvh.findAllCollisions([&](uint32_t, uint32_t) {
-            totalPairs++;
-        });
-        return totalPairs;
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | Find all colliding pairs among 1k proxies",
+                       50us,
+                       [&]()
+                       {
+                           uint32_t totalPairs = 0;
+                           bvh.findAllCollisions([&](uint32_t, uint32_t) { totalPairs++; });
+                           return totalPairs;
+                       });
 
     bvh.clear();
     for (uint32_t i = 0; i < 10'000; ++i)
         bvh.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Find all colliding pairs among 10k proxies", 3ms, [&]()
-    {
-        uint32_t totalPairs = 0;
-        bvh.findAllCollisions([&](uint32_t, uint32_t) {
-            totalPairs++;
-        });
-        return totalPairs;
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | Find all colliding pairs among 10k proxies",
+                       3ms,
+                       [&]()
+                       {
+                           uint32_t totalPairs = 0;
+                           bvh.findAllCollisions([&](uint32_t, uint32_t) { totalPairs++; });
+                           return totalPairs;
+                       });
 
     bvh.clear();
     for (uint32_t i = 0; i < 100'000; ++i)
         bvh.addProxy(i, aabbs[i]);
 
-    BENCHMARK_FUNCTION("DynamicBVH | Find all colliding pairs among 100k proxies", 80ms, [&]()
-    {
-        uint32_t totalPairs = 0;
-        bvh.findAllCollisions([&](uint32_t, uint32_t) {
-            totalPairs++;
-        });
-        return totalPairs;
-    });
+    BENCHMARK_FUNCTION("DynamicBVH | Find all colliding pairs among 100k proxies",
+                       80ms,
+                       [&]()
+                       {
+                           uint32_t totalPairs = 0;
+                           bvh.findAllCollisions([&](uint32_t, uint32_t) { totalPairs++; });
+                           return totalPairs;
+                       });
 }

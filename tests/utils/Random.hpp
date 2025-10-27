@@ -1,19 +1,21 @@
 #pragma once
 
-#include <algorithm>
-#include <random>
-#include <ctime>
-
 #include <colli2de/Ray.hpp>
 #include <colli2de/Shapes.hpp>
 #include <colli2de/Vec2.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
 
+#include <algorithm>
+#include <ctime>
+#include <random>
+
 using namespace c2d;
 
-class DeterministicRNG {
+class DeterministicRNG
+{
     uint32_t state;
-public:
+
+  public:
     DeterministicRNG(uint32_t seed = 12345) : state(seed) {}
 
     // Returns a float in [0, 1)
@@ -31,17 +33,17 @@ public:
     }
 };
 
-template <typename Iterator>
-void randomShuffle(Iterator begin, Iterator end)
+template <typename Iterator> void randomShuffle(Iterator begin, Iterator end)
 {
-	// The random number generator that we want to use (Mersenne Twister)
-	std::mt19937 rng(std::time(nullptr));
-	
-	// Shuffle the numbers
-	std::shuffle(begin, end, rng);
+    // The random number generator that we want to use (Mersenne Twister)
+    std::mt19937 rng(std::time(nullptr));
+
+    // Shuffle the numbers
+    std::shuffle(begin, end, rng);
 }
 
-inline std::vector<AABB> generateRandomAABBs(size_t count, float regionMin, float regionMax, float size, uint32_t seed = 42)
+inline std::vector<AABB> generateRandomAABBs(
+    size_t count, float regionMin, float regionMax, float size, uint32_t seed = 42)
 {
     DeterministicRNG rng(seed);
     std::vector<AABB> aabbs;
@@ -51,12 +53,13 @@ inline std::vector<AABB> generateRandomAABBs(size_t count, float regionMin, floa
     {
         float x = rng.nextFloat(regionMin, regionMax - size);
         float y = rng.nextFloat(regionMin, regionMax - size);
-        aabbs.push_back(AABB{Vec2{ x, y }, Vec2{x + size, y + size }});
+        aabbs.push_back(AABB{Vec2{x, y}, Vec2{x + size, y + size}});
     }
     return aabbs;
 }
 
-inline std::vector<Circle> generateRandomCircles(size_t count, float regionMin, float regionMax, float radius, uint32_t seed = 42)
+inline std::vector<Circle> generateRandomCircles(
+    size_t count, float regionMin, float regionMax, float radius, uint32_t seed = 42)
 {
     DeterministicRNG rng(seed);
     std::vector<Circle> circles;
@@ -71,7 +74,8 @@ inline std::vector<Circle> generateRandomCircles(size_t count, float regionMin, 
     return circles;
 }
 
-inline std::vector<Segment> generateRandomSegments(size_t count, float regionMin, float regionMax, float length, uint32_t seed = 42)
+inline std::vector<Segment> generateRandomSegments(
+    size_t count, float regionMin, float regionMax, float length, uint32_t seed = 42)
 {
     DeterministicRNG rng(seed);
     std::vector<Segment> segments;
@@ -88,7 +92,8 @@ inline std::vector<Segment> generateRandomSegments(size_t count, float regionMin
     return segments;
 }
 
-inline std::vector<Capsule> generateRandomCapsules(size_t count, float regionMin, float regionMax, float length, float radius, uint32_t seed = 42)
+inline std::vector<Capsule> generateRandomCapsules(
+    size_t count, float regionMin, float regionMax, float length, float radius, uint32_t seed = 42)
 {
     DeterministicRNG rng(seed);
     std::vector<Capsule> capsules;
@@ -105,7 +110,8 @@ inline std::vector<Capsule> generateRandomCapsules(size_t count, float regionMin
     return capsules;
 }
 
-inline std::vector<Polygon> generateRandomRectangles(size_t count, float regionMin, float regionMax, float halfSize, uint32_t seed = 42)
+inline std::vector<Polygon> generateRandomRectangles(
+    size_t count, float regionMin, float regionMax, float halfSize, uint32_t seed = 42)
 {
     DeterministicRNG rng(seed);
     std::vector<Polygon> polygons;
@@ -137,7 +143,10 @@ inline std::vector<Ray> generateRandomRays(size_t count, float regionMin, float 
     return rays;
 }
 
-inline std::vector<InfiniteRay> generateRandomInfiniteRays(size_t count, float regionMin, float regionMax, uint32_t seed = 42)
+inline std::vector<InfiniteRay> generateRandomInfiniteRays(size_t count,
+                                                           float regionMin,
+                                                           float regionMax,
+                                                           uint32_t seed = 42)
 {
     DeterministicRNG rng(seed);
     std::vector<InfiniteRay> rays;
@@ -162,7 +171,7 @@ inline std::vector<Vec2> generateRandomTranslations(size_t count, float minValue
 
     for (size_t i = 0; i < count; ++i)
     {
-        translations.push_back(Vec2{ rng.nextFloat(minValue, maxValue), rng.nextFloat(minValue, maxValue) });
+        translations.push_back(Vec2{rng.nextFloat(minValue, maxValue), rng.nextFloat(minValue, maxValue)});
     }
 
     return translations;

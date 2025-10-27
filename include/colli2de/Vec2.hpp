@@ -1,25 +1,26 @@
 #pragma once
 
+#include <colli2de/internal/utils/Methods.hpp>
+
 #include <cassert>
 #include <cmath>
 #include <format>
 #include <iostream>
 #include <string>
 
-#include <colli2de/internal/utils/Methods.hpp>
-
 namespace c2d
 {
 
 class Vec2
 {
-public:
+  public:
     float x;
     float y;
 
     constexpr Vec2() : Vec2(0, 0) {}
+
     constexpr Vec2(float x, float y) : x(x), y(y) {}
-    
+
     constexpr Vec2(const Vec2& other) = default;
     constexpr Vec2& operator=(const Vec2& other) = default;
     constexpr Vec2(Vec2&& other) noexcept = default;
@@ -36,6 +37,7 @@ public:
     constexpr float cross(Vec2 other) const;
 
     constexpr Vec2 normalize() const;
+
     static constexpr Vec2 normalized(float x, float y)
     {
         const float inverseLen = 1.0f / std::sqrt(x * x + y * y);
@@ -74,10 +76,12 @@ public:
         assert(index == 0 || index == 1);
         return index == 0 ? x : y;
     }
+
     constexpr bool operator==(Vec2 other) const;
     constexpr bool operator!=(Vec2 other) const;
     constexpr bool operator<(Vec2 other) const;
     constexpr bool operator>(Vec2 other) const;
+
     friend std::ostream& operator<<(std::ostream& os, const Vec2& vec)
     {
         return os << vec.toString();
@@ -304,14 +308,12 @@ constexpr float Vec2::cross(Vec2 other) const
 
 static_assert(std::is_trivially_copyable_v<Vec2>, "Vec2 must be trivially copyable");
 
-}
+} // namespace c2d
 
 // Specialization for std::formatter to allow formatted output of Vec2
-template<>
-struct std::formatter<c2d::Vec2> : std::formatter<std::string>
+template <> struct std::formatter<c2d::Vec2> : std::formatter<std::string>
 {
-    template<typename FormatContext>
-    auto format(c2d::Vec2 vec, FormatContext& ctx) const
+    template <typename FormatContext> auto format(c2d::Vec2 vec, FormatContext& ctx) const
     {
         return std::formatter<std::string>::format(vec.toString(), ctx);
     }

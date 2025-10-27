@@ -10,24 +10,22 @@ Polygon makeRectangle(Vec2 center, float halfWidth, float halfHeight, float angl
 
     Polygon poly;
     poly.count = 4;
-    
+
     const float cosA = std::cos(angle);
     const float sinA = std::sin(angle);
 
     // Local corners
-    const std::array<Vec2, 4> corners = {
-        Vec2{ -halfWidth, -halfHeight },
-        Vec2{  halfWidth, -halfHeight },
-        Vec2{  halfWidth,  halfHeight },
-        Vec2{ -halfWidth,  halfHeight }
-    };
+    const std::array<Vec2, 4> corners = {Vec2{-halfWidth, -halfHeight},
+                                         Vec2{halfWidth, -halfHeight},
+                                         Vec2{halfWidth, halfHeight},
+                                         Vec2{-halfWidth, halfHeight}};
 
     // Transform corners to world
     for (uint8_t i = 0; i < 4; ++i)
     {
         const float x = corners[i].x * cosA - corners[i].y * sinA + center.x;
         const float y = corners[i].x * sinA + corners[i].y * cosA + center.y;
-        poly.vertices[i] = Vec2{ x, y };
+        poly.vertices[i] = Vec2{x, y};
     }
 
     poly.computeNormals();
@@ -61,7 +59,7 @@ Polygon makeRegularPolygon(uint8_t n, Vec2 center, float radius, float rotationA
     for (uint8_t i = 0; i < n; ++i)
     {
         const float theta = rotationAngle + step * i;
-        poly.vertices[i] = center + radius * Vec2{ std::cos(theta), std::sin(theta) };
+        poly.vertices[i] = center + radius * Vec2{std::cos(theta), std::sin(theta)};
     }
 
     poly.computeNormals();
@@ -86,4 +84,4 @@ Polygon makePolygon(const std::initializer_list<Vec2>& points)
     return poly;
 }
 
-} // namespace colli2de
+} // namespace c2d

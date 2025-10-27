@@ -1,10 +1,10 @@
 #pragma once
 
-#include <algorithm>
-
 #include <colli2de/Shapes.hpp>
-#include <colli2de/internal/geometry/AABB.hpp>
 #include <colli2de/Transform.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
+
+#include <algorithm>
 
 namespace c2d
 {
@@ -24,14 +24,8 @@ inline AABB computeAABB(const Capsule& capsule, const Transform& transform)
     const Vec2 p2 = transform.apply(capsule.center2);
     const float radius = capsule.radius;
 
-    const Vec2 minVertex{
-        std::min(p1.x, p2.x) - radius,
-        std::min(p1.y, p2.y) - radius
-    };
-    const Vec2 maxVertex{
-        std::max(p1.x, p2.x) + radius,
-        std::max(p1.y, p2.y) + radius
-    };
+    const Vec2 minVertex{std::min(p1.x, p2.x) - radius, std::min(p1.y, p2.y) - radius};
+    const Vec2 maxVertex{std::max(p1.x, p2.x) + radius, std::max(p1.y, p2.y) + radius};
 
     return AABB{minVertex, maxVertex};
 }
@@ -42,8 +36,8 @@ inline AABB computeAABB(const Segment& segment, const Transform& transform)
     const Vec2 p1 = transform.apply(segment.start);
     const Vec2 p2 = transform.apply(segment.end);
 
-    const Vec2 minVertex{ std::min(p1.x, p2.x), std::min(p1.y, p2.y) };
-    const Vec2 maxVertex{ std::max(p1.x, p2.x), std::max(p1.y, p2.y) };
+    const Vec2 minVertex{std::min(p1.x, p2.x), std::min(p1.y, p2.y)};
+    const Vec2 maxVertex{std::max(p1.x, p2.x), std::max(p1.y, p2.y)};
 
     return AABB{minVertex, maxVertex};
 }
@@ -187,28 +181,24 @@ inline Vec2 closestPoint(const Polygon& polygon, Transform transform, Vec2 point
 // --- Minimum distance between shapes ---
 namespace
 {
-template <typename Shape, typename Visitor>
-inline void forEachVertex(const Shape& shape, const Visitor& visitor)
+template <typename Shape, typename Visitor> inline void forEachVertex(const Shape& shape, const Visitor& visitor)
 {
     for (uint8_t i = 0; i < shape.count; ++i)
         visitor(shape.vertices[i]);
 }
 
-template <typename Visitor>
-inline void forEachVertex(const Circle& circle, const Visitor& visitor)
+template <typename Visitor> inline void forEachVertex(const Circle& circle, const Visitor& visitor)
 {
     visitor(circle.center);
 }
 
-template <typename Visitor>
-inline void forEachVertex(const Capsule& capsule, const Visitor& visitor)
+template <typename Visitor> inline void forEachVertex(const Capsule& capsule, const Visitor& visitor)
 {
     visitor(capsule.center1);
     visitor(capsule.center2);
 }
 
-template <typename Visitor>
-inline void forEachVertex(const Segment& segment, const Visitor& visitor)
+template <typename Visitor> inline void forEachVertex(const Segment& segment, const Visitor& visitor)
 {
     visitor(segment.start);
     visitor(segment.end);
@@ -216,10 +206,7 @@ inline void forEachVertex(const Segment& segment, const Visitor& visitor)
 } // anonymous namespace
 
 template <typename ShapeA, typename ShapeB>
-inline float distance(const ShapeA& shapeA,
-                      Transform transformA,
-                      const ShapeB& shapeB,
-                      Transform transformB)
+inline float distance(const ShapeA& shapeA, Transform transformA, const ShapeB& shapeB, Transform transformB)
 {
     float bestDistSqr = std::numeric_limits<float>::max();
 

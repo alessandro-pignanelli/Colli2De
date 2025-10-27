@@ -1,18 +1,18 @@
 #pragma once
 
-#include <variant>
-#include <vector>
-#include <map>
-
+#include <colli2de/Manifold.hpp>
 #include <colli2de/Ray.hpp>
 #include <colli2de/Shapes.hpp>
-#include <colli2de/Manifold.hpp>
 #include <colli2de/Transform.hpp>
+#include <colli2de/internal/collision/Collision.hpp>
 #include <colli2de/internal/data_structures/BroadPhaseTree.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
-#include <colli2de/internal/geometry/ShapesUtils.hpp>
 #include <colli2de/internal/geometry/RaycastShapes.hpp>
-#include <colli2de/internal/collision/Collision.hpp>
+#include <colli2de/internal/geometry/ShapesUtils.hpp>
+
+#include <map>
+#include <variant>
+#include <vector>
 
 namespace c2d
 {
@@ -32,10 +32,9 @@ enum class PartitioningMethod
     Grid,
 };
 
-template<typename EntityId, PartitioningMethod Method = PartitioningMethod::None>
-class Registry
+template <typename EntityId, PartitioningMethod Method = PartitioningMethod::None> class Registry
 {
-public:
+  public:
     struct EntityCollision
     {
         EntityId entityA;
@@ -46,8 +45,13 @@ public:
     };
 
     Registry() = default;
-    Registry(uint32_t cellSize) requires (Method == PartitioningMethod::Grid)
-        : treeStatic(cellSize), treeDynamic(cellSize), treeBullet(cellSize) {}
+
+    Registry(uint32_t cellSize) requires(Method == PartitioningMethod::Grid)
+        : treeStatic(cellSize),
+          treeDynamic(cellSize),
+          treeBullet(cellSize)
+    {
+    }
 
     void createEntity(EntityId id, BodyType type, const Transform& transform = Transform{});
     void removeEntity(EntityId id);
@@ -67,16 +71,17 @@ public:
     std::vector<EntityCollision> getCollisions(EntityId id) const;
     bool areColliding(EntityId a, EntityId b) const;
 
-    std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> firstHitRayCast(Ray ray, BitMaskType maskBits = ~0ull) const;
-    std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> firstHitRayCast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
+    std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> firstHitRayCast(Ray ray,
+                                                                            BitMaskType maskBits = ~0ull) const;
+    std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> firstHitRayCast(InfiniteRay ray,
+                                                                            BitMaskType maskBits = ~0ull) const;
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> rayCast(Ray ray, BitMaskType maskBits = ~0ull) const;
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> rayCast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
 
     size_t size() const;
     void clear();
 
-private:
-
+  private:
     struct ShapeInstance
     {
         ShapeId id;
@@ -99,7 +104,8 @@ private:
     std::vector<std::pair<EntityId, size_t>> shapeEntity;
     std::vector<ShapeId> freeShapeIds;
 
-    using TreeType = std::conditional_t<Method == PartitioningMethod::Grid, BroadPhaseTree<ShapeId>, DynamicBVH<ShapeId>>;
+    using TreeType =
+        std::conditional_t<Method == PartitioningMethod::Grid, BroadPhaseTree<ShapeId>, DynamicBVH<ShapeId>>;
     TreeType treeStatic;
     TreeType treeDynamic;
     TreeType treeBullet;
@@ -118,31 +124,38 @@ private:
                                std::vector<EntityCollision>& outCollisionsInfo) const;
 };
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 constexpr typename Registry<EntityId, Method>::TreeType& Registry<EntityId, Method>::treeFor(BodyType type)
 {
     switch (type)
     {
-        case BodyType::Static: return treeStatic;
-        case BodyType::Dynamic: return treeDynamic;
-        case BodyType::Bullet: return treeBullet;
-        default: throw std::invalid_argument("Invalid body type");
+    case BodyType::Static:
+        return treeStatic;
+    case BodyType::Dynamic:
+        return treeDynamic;
+    case BodyType::Bullet:
+        return treeBullet;
+    default:
+        throw std::invalid_argument("Invalid body type");
     }
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::createEntity(EntityId id, BodyType type, const Transform& transform)
 {
     assert(entities.find(id) == entities.end() && "Entity with this ID already exists");
-    entities.emplace(id, EntityInfo{ {}, transform, type });
+    entities.emplace(id, EntityInfo{{}, transform, type});
 
     if (type == BodyType::Bullet)
         bulletPreviousTransforms.emplace(id, transform);
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 template <IsShape Shape>
-ShapeId Registry<EntityId, Method>::addShape(EntityId entityId, const Shape& shape, uint64_t categoryBits, uint64_t maskBits)
+ShapeId Registry<EntityId, Method>::addShape(EntityId entityId,
+                                             const Shape& shape,
+                                             uint64_t categoryBits,
+                                             uint64_t maskBits)
 {
     assert(entities.find(entityId) != entities.end());
     EntityInfo& entity = entities.at(entityId);
@@ -158,7 +171,7 @@ ShapeId Registry<EntityId, Method>::addShape(EntityId entityId, const Shape& sha
         shapeId = shapeEntity.size();
         shapeEntity.emplace_back(entityId, entity.shapes.size());
     }
-    
+
     auto& tree = treeFor(entity.type);
 
     ShapeInstance instance;
@@ -173,16 +186,16 @@ ShapeId Registry<EntityId, Method>::addShape(EntityId entityId, const Shape& sha
     return shapeId;
 }
 
-template<typename EntityId, PartitioningMethod Method>
-void Registry<EntityId, Method>::removeShape(ShapeId shapeId)
+template <typename EntityId, PartitioningMethod Method> void Registry<EntityId, Method>::removeShape(ShapeId shapeId)
 {
     assert(shapeEntity.size() > shapeId && "Shape ID out of bounds");
     const EntityId entityId = shapeEntity.at(shapeId).first;
-    
+
     assert(entities.find(entityId) != entities.end() && "Entity with this ID does not exist");
     EntityInfo& entity = entities.at(entityId);
 
-    auto it = std::find_if(entity.shapes.begin(), entity.shapes.end(),
+    auto it = std::find_if(entity.shapes.begin(),
+                           entity.shapes.end(),
                            [shapeId](const ShapeInstance& shape) { return shape.id == shapeId; });
     assert(it != entity.shapes.end() && "Shape with this ID does not exist in the entity");
 
@@ -193,7 +206,7 @@ void Registry<EntityId, Method>::removeShape(ShapeId shapeId)
     entity.shapes.erase(it);
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::setShapeActive(ShapeId shapeId, bool isActive)
 {
     assert(shapeEntity.size() > shapeId && "Shape ID out of bounds");
@@ -205,8 +218,7 @@ void Registry<EntityId, Method>::setShapeActive(ShapeId shapeId, bool isActive)
     entity.shapes[shapeIndex].isActive = isActive;
 }
 
-template<typename EntityId, PartitioningMethod Method>
-void Registry<EntityId, Method>::removeEntity(EntityId id)
+template <typename EntityId, PartitioningMethod Method> void Registry<EntityId, Method>::removeEntity(EntityId id)
 {
     auto it = entities.find(id);
     assert(it != entities.end());
@@ -226,59 +238,63 @@ void Registry<EntityId, Method>::removeEntity(EntityId id)
     entities.erase(it);
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::teleportEntity(EntityId id, const Transform& transform)
 {
     assert(entities.find(id) != entities.end());
     EntityInfo& entity = entities.at(id);
-    
+
     auto& tree = treeFor(entity.type);
 
     if (entity.type == BodyType::Bullet)
     {
         for (auto& shape : entity.shapes)
         {
-            std::visit([&](const auto& concreteShape)
-            {
-                const auto oldAABB = shape.aabb;
-                shape.aabb = computeAABB(concreteShape, transform);
-                tree.moveProxy(shape.treeHandle, AABB::combine(oldAABB, shape.aabb));
-            }, shape.shape);
+            std::visit(
+                [&](const auto& concreteShape)
+                {
+                    const auto oldAABB = shape.aabb;
+                    shape.aabb = computeAABB(concreteShape, transform);
+                    tree.moveProxy(shape.treeHandle, AABB::combine(oldAABB, shape.aabb));
+                },
+                shape.shape);
         }
-        
+
         bulletPreviousTransforms.at(id) = entity.transform;
     }
     else
     {
         for (auto& shape : entity.shapes)
         {
-            std::visit([&](const auto& concreteShape)
-            {
-                shape.aabb = computeAABB(concreteShape, transform);
-                tree.moveProxy(shape.treeHandle, shape.aabb);
-            }, shape.shape);
+            std::visit(
+                [&](const auto& concreteShape)
+                {
+                    shape.aabb = computeAABB(concreteShape, transform);
+                    tree.moveProxy(shape.treeHandle, shape.aabb);
+                },
+                shape.shape);
         }
     }
-    
+
     entity.transform = transform;
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::teleportEntity(EntityId id, Translation translation)
 {
     assert(entities.find(id) != entities.end());
     EntityInfo& entity = entities.at(id);
-    
+
     const auto deltaTranslation = translation - entity.transform.translation;
     moveEntity(id, deltaTranslation);
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::moveEntity(EntityId id, const Transform& delta)
 {
     assert(entities.find(id) != entities.end());
     EntityInfo& entity = entities.at(id);
-    
+
     auto& tree = treeFor(entity.type);
 
     if (entity.type == BodyType::Bullet)
@@ -288,12 +304,14 @@ void Registry<EntityId, Method>::moveEntity(EntityId id, const Transform& delta)
 
         for (auto& shape : entity.shapes)
         {
-            std::visit([&](const auto& concreteShape)
-            {
-                const auto oldAABB = shape.aabb;
-                shape.aabb = computeAABB(concreteShape, entity.transform);
-                tree.moveProxy(shape.treeHandle, AABB::combine(oldAABB, shape.aabb));
-            }, shape.shape);
+            std::visit(
+                [&](const auto& concreteShape)
+                {
+                    const auto oldAABB = shape.aabb;
+                    shape.aabb = computeAABB(concreteShape, entity.transform);
+                    tree.moveProxy(shape.treeHandle, AABB::combine(oldAABB, shape.aabb));
+                },
+                shape.shape);
         }
     }
     else
@@ -302,23 +320,25 @@ void Registry<EntityId, Method>::moveEntity(EntityId id, const Transform& delta)
 
         for (auto& shape : entity.shapes)
         {
-            std::visit([&](const auto& concreteShape)
-            {
-                shape.aabb = computeAABB(concreteShape, entity.transform);
-                tree.moveProxy(shape.treeHandle, shape.aabb);
-            }, shape.shape);
+            std::visit(
+                [&](const auto& concreteShape)
+                {
+                    shape.aabb = computeAABB(concreteShape, entity.transform);
+                    tree.moveProxy(shape.treeHandle, shape.aabb);
+                },
+                shape.shape);
         }
     }
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::moveEntity(EntityId id, Translation deltaTranslation)
 {
     assert(entities.find(id) != entities.end());
     EntityInfo& entity = entities.at(id);
-    
+
     auto& tree = treeFor(entity.type);
-    
+
     if (entity.type == BodyType::Bullet)
     {
         bulletPreviousTransforms.at(id) = entity.transform;
@@ -339,11 +359,11 @@ void Registry<EntityId, Method>::moveEntity(EntityId id, Translation deltaTransl
             tree.moveProxy(shape.treeHandle, shape.aabb);
         }
     }
-    
+
     entity.transform.translation += deltaTranslation;
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 Transform Registry<EntityId, Method>::getEntityTransform(EntityId id) const
 {
     assert(entities.find(id) != entities.end());
@@ -351,7 +371,7 @@ Transform Registry<EntityId, Method>::getEntityTransform(EntityId id) const
     return entity.transform;
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<EntityId, Method>::getCollidingPairs()
 {
     std::vector<EntityCollision> collisionsInfo;
@@ -359,45 +379,50 @@ std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<Entit
 
     std::vector<std::pair<ShapeId, ShapeId>> collisions;
 
-    const auto handlePairCollisions = [&](ShapeId shapeAId, ShapeId shapeBId) {
-        collisions.emplace_back(shapeAId, shapeBId);
-    };
+    const auto handlePairCollisions = [&](ShapeId shapeAId, ShapeId shapeBId)
+    { collisions.emplace_back(shapeAId, shapeBId); };
 
     // Dynamic vs Static
     collisions.reserve(previousAllCollisionsCount);
     treeDynamic.findAllCollisions(treeStatic, handlePairCollisions);
-    if (!collisions.empty()) narrowPhaseCollisions(collisions, collisionsInfo);
+    if (!collisions.empty())
+        narrowPhaseCollisions(collisions, collisionsInfo);
 
     // Dynamic vs Dynamic
     collisions.clear();
     collisions.reserve(previousAllCollisionsCount);
     treeDynamic.findAllCollisions(handlePairCollisions);
-    if (!collisions.empty()) narrowPhaseCollisions(collisions, collisionsInfo);
+    if (!collisions.empty())
+        narrowPhaseCollisions(collisions, collisionsInfo);
 
     // Bullet vs Static
     collisions.clear();
     collisions.reserve(previousAllCollisionsCount);
     treeBullet.findAllCollisions(treeStatic, handlePairCollisions);
-    if (!collisions.empty()) narrowPhaseCollisions(collisions, collisionsInfo);
+    if (!collisions.empty())
+        narrowPhaseCollisions(collisions, collisionsInfo);
 
     // Bullet vs Dynamic
     collisions.clear();
     collisions.reserve(previousAllCollisionsCount);
     treeBullet.findAllCollisions(treeDynamic, handlePairCollisions);
-    if (!collisions.empty()) narrowPhaseCollisions(collisions, collisionsInfo);
+    if (!collisions.empty())
+        narrowPhaseCollisions(collisions, collisionsInfo);
 
     // Bullet vs Bullet
     collisions.clear();
     collisions.reserve(previousAllCollisionsCount);
     treeBullet.findAllCollisions(handlePairCollisions);
-    if (!collisions.empty()) narrowPhaseCollisions(collisions, collisionsInfo);
+    if (!collisions.empty())
+        narrowPhaseCollisions(collisions, collisionsInfo);
 
     previousAllCollisionsCount = collisionsInfo.size();
     return collisionsInfo;
 }
 
-template<typename EntityId, PartitioningMethod Method>
-std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<EntityId, Method>::getCollisions(EntityId id) const
+template <typename EntityId, PartitioningMethod Method>
+std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<EntityId, Method>::getCollisions(
+    EntityId id) const
 {
     assert(entities.find(id) != entities.end());
     const EntityInfo& entity = entities.at(id);
@@ -407,18 +432,17 @@ std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<Entit
 
     queries.reserve(entity.shapes.size());
     shapesQueried.reserve(entity.shapes.size());
-    
+
     if (entity.type == BodyType::Bullet)
     {
         for (const auto& shape : entity.shapes)
         {
             if (!shape.isActive)
                 continue;
-            
+
             const auto& previousTransform = bulletPreviousTransforms.at(id);
-            const auto oldAABB = std::visit([&](const auto& shape) {
-                return computeAABB(shape, previousTransform);
-            }, shape.shape);
+            const auto oldAABB =
+                std::visit([&](const auto& shape) { return computeAABB(shape, previousTransform); }, shape.shape);
 
             queries.emplace_back(AABB::combine(oldAABB, shape.aabb), shape.maskBits);
             shapesQueried.push_back(shape.id);
@@ -430,7 +454,7 @@ std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<Entit
         {
             if (!shape.isActive)
                 continue;
-            
+
             queries.emplace_back(shape.aabb, shape.maskBits);
             shapesQueried.push_back(shape.id);
         }
@@ -440,24 +464,24 @@ std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<Entit
 
     if (entity.type != BodyType::Static)
     {
-        treeStatic.batchQuery(queries, [&](size_t i, std::vector<ShapeId> collisions) {
-            narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo);
-        });
+        treeStatic.batchQuery(queries,
+                              [&](size_t i, std::vector<ShapeId> collisions)
+                              { narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo); });
     }
-    treeDynamic.batchQuery(queries, [&](size_t i, std::vector<ShapeId> collisions) {
-        narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo);
-    });
-    treeBullet.batchQuery(queries, [&](size_t i, std::vector<ShapeId> collisions) {
-        narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo);
-    });
+    treeDynamic.batchQuery(queries,
+                           [&](size_t i, std::vector<ShapeId> collisions)
+                           { narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo); });
+    treeBullet.batchQuery(queries,
+                          [&](size_t i, std::vector<ShapeId> collisions)
+                          { narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo); });
 
     return collisionsInfo;
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::narrowPhaseCollision(ShapeId shapeAId,
-                                              ShapeId shapeBId,
-                                              std::vector<EntityCollision>& outCollisionsInfo) const
+                                                      ShapeId shapeBId,
+                                                      std::vector<EntityCollision>& outCollisionsInfo) const
 {
     const auto [entityAId, entityAShapeIndex] = shapeEntity[shapeAId];
     const auto [entityBId, entityBShapeIndex] = shapeEntity[shapeBId];
@@ -472,7 +496,7 @@ void Registry<EntityId, Method>::narrowPhaseCollision(ShapeId shapeAId,
 
     if (!entityAShape.isActive || !entityBShape.isActive)
         return;
-    
+
     Manifold manifold;
 
     // Sweep for bullets
@@ -483,22 +507,34 @@ void Registry<EntityId, Method>::narrowPhaseCollision(ShapeId shapeAId,
 
         if (entityB.type != BodyType::Bullet)
         {
-            manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
-                const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
-                                                        otherShapeConcrete, entityB.transform);
-                return sweepManifold ? sweepManifold->manifold : Manifold{};
-            }, entityAShape.shape, entityBShape.shape);
+            manifold = std::visit(
+                [&](const auto& queryShapeConcrete, const auto& otherShapeConcrete)
+                {
+                    const auto sweepManifold = c2d::sweep(
+                        queryShapeConcrete, previousTransform, currentTransform, otherShapeConcrete, entityB.transform);
+                    return sweepManifold ? sweepManifold->manifold : Manifold{};
+                },
+                entityAShape.shape,
+                entityBShape.shape);
         }
         else
         {
             const auto& otherPreviousTransform = bulletPreviousTransforms.at(entityBId);
             const auto& otherCurrentTransform = entityB.transform;
 
-            manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
-                const auto sweepManifold = c2d::sweep(queryShapeConcrete, previousTransform, currentTransform,
-                                                        otherShapeConcrete, otherPreviousTransform, otherCurrentTransform);
-                return sweepManifold ? sweepManifold->manifold : Manifold{};
-            }, entityAShape.shape, entityBShape.shape);
+            manifold = std::visit(
+                [&](const auto& queryShapeConcrete, const auto& otherShapeConcrete)
+                {
+                    const auto sweepManifold = c2d::sweep(queryShapeConcrete,
+                                                          previousTransform,
+                                                          currentTransform,
+                                                          otherShapeConcrete,
+                                                          otherPreviousTransform,
+                                                          otherCurrentTransform);
+                    return sweepManifold ? sweepManifold->manifold : Manifold{};
+                },
+                entityAShape.shape,
+                entityBShape.shape);
         }
     }
     else if (entityA.type == BodyType::Bullet || entityB.type == BodyType::Bullet)
@@ -511,32 +547,37 @@ void Registry<EntityId, Method>::narrowPhaseCollision(ShapeId shapeAId,
         const auto& bulletShape = (entityA.type == BodyType::Bullet) ? entityAShape : entityBShape;
         const auto& otherShape = (entityA.type == BodyType::Bullet) ? entityBShape : entityAShape;
 
-        manifold = std::visit([&](const auto& bulletShapeConcrete, const auto& otherShapeConcrete) {
-            const auto sweepManifold = c2d::sweep(bulletShapeConcrete, bulletPreviousTransform, bulletCurrentTransform,
-                                                  otherShapeConcrete, otherEntity.transform);
-            return sweepManifold ? sweepManifold->manifold : Manifold{};
-        }, bulletShape.shape, otherShape.shape);
+        manifold = std::visit(
+            [&](const auto& bulletShapeConcrete, const auto& otherShapeConcrete)
+            {
+                const auto sweepManifold = c2d::sweep(bulletShapeConcrete,
+                                                      bulletPreviousTransform,
+                                                      bulletCurrentTransform,
+                                                      otherShapeConcrete,
+                                                      otherEntity.transform);
+                return sweepManifold ? sweepManifold->manifold : Manifold{};
+            },
+            bulletShape.shape,
+            otherShape.shape);
     }
     else
     {
-        manifold = std::visit([&](const auto& queryShapeConcrete, const auto& otherShapeConcrete) {
-            return c2d::collide(queryShapeConcrete, entityA.transform, otherShapeConcrete, entityB.transform);
-        }, entityAShape.shape, entityBShape.shape);
+        manifold = std::visit(
+            [&](const auto& queryShapeConcrete, const auto& otherShapeConcrete)
+            { return c2d::collide(queryShapeConcrete, entityA.transform, otherShapeConcrete, entityB.transform); },
+            entityAShape.shape,
+            entityBShape.shape);
     }
 
     if (!manifold.isColliding())
         return;
 
-    outCollisionsInfo.emplace_back(EntityCollision{entityAId,
-                                                   entityBId,
-                                                   shapeAId,
-                                                   shapeBId,
-                                                   std::move(manifold)});
+    outCollisionsInfo.emplace_back(EntityCollision{entityAId, entityBId, shapeAId, shapeBId, std::move(manifold)});
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::narrowPhaseCollisions(std::vector<std::pair<ShapeId, ShapeId>>& collisions,
-                                               std::vector<EntityCollision>& outCollisionsInfo) const
+                                                       std::vector<EntityCollision>& outCollisionsInfo) const
 {
     // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
     std::sort(collisions.begin(), collisions.end());
@@ -553,14 +594,14 @@ void Registry<EntityId, Method>::narrowPhaseCollisions(std::vector<std::pair<Sha
     }
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::narrowPhaseCollisions(ShapeId shapeQueried,
-                                               std::vector<ShapeId>& collisions,
-                                               std::vector<EntityCollision>& outCollisionsInfo) const
+                                                       std::vector<ShapeId>& collisions,
+                                                       std::vector<EntityCollision>& outCollisionsInfo) const
 {
     // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
     std::sort(collisions.begin(), collisions.end());
-    
+
     narrowPhaseCollision(shapeQueried, collisions[0], outCollisionsInfo);
     for (size_t i = 1; i < collisions.size(); ++i)
     {
@@ -572,7 +613,7 @@ void Registry<EntityId, Method>::narrowPhaseCollisions(ShapeId shapeQueried,
     }
 }
 
-template<typename EntityId, PartitioningMethod Method>
+template <typename EntityId, PartitioningMethod Method>
 bool Registry<EntityId, Method>::areColliding(EntityId entityAId, EntityId entityBId) const
 {
     assert(entities.find(entityAId) != entities.end() && "Entity A does not exist");
@@ -596,16 +637,24 @@ bool Registry<EntityId, Method>::areColliding(EntityId entityAId, EntityId entit
         {
             if (!shapeA.isActive)
                 continue;
-                
+
             for (const auto& shapeB : entityB.shapes)
             {
                 if (!shapeB.isActive)
                     continue;
-                
-                std::optional<SweepManifold> manifold = std::visit([&](const auto& shapeAConcrete, const auto& shapeBConcrete) {
-                    return c2d::sweep(shapeAConcrete, entityAPreviousTransform, entityACurrentTransform,
-                                      shapeBConcrete, entityBPreviousTransform, entityBCurrentTransform);
-                }, shapeA.shape, shapeB.shape);
+
+                std::optional<SweepManifold> manifold = std::visit(
+                    [&](const auto& shapeAConcrete, const auto& shapeBConcrete)
+                    {
+                        return c2d::sweep(shapeAConcrete,
+                                          entityAPreviousTransform,
+                                          entityACurrentTransform,
+                                          shapeBConcrete,
+                                          entityBPreviousTransform,
+                                          entityBCurrentTransform);
+                    },
+                    shapeA.shape,
+                    shapeB.shape);
 
                 if (manifold)
                     return true;
@@ -627,16 +676,23 @@ bool Registry<EntityId, Method>::areColliding(EntityId entityAId, EntityId entit
         {
             if (!shapeBullet.isActive)
                 continue;
-                
+
             for (const auto& shapeOther : otherEntity.shapes)
             {
                 if (!shapeOther.isActive)
                     continue;
 
-                std::optional<SweepManifold> manifold = std::visit([&](const auto& shapeBulletConcrete, const auto& shapeOtherConcrete) {
-                    return c2d::sweep(shapeBulletConcrete, bulletPreviousTransform, bulletCurrentTransform,
-                                      shapeOtherConcrete, otherEntity.transform);
-                }, shapeBullet.shape, shapeOther.shape);
+                std::optional<SweepManifold> manifold = std::visit(
+                    [&](const auto& shapeBulletConcrete, const auto& shapeOtherConcrete)
+                    {
+                        return c2d::sweep(shapeBulletConcrete,
+                                          bulletPreviousTransform,
+                                          bulletCurrentTransform,
+                                          shapeOtherConcrete,
+                                          otherEntity.transform);
+                    },
+                    shapeBullet.shape,
+                    shapeOther.shape);
 
                 if (manifold)
                     return true;
@@ -656,9 +712,11 @@ bool Registry<EntityId, Method>::areColliding(EntityId entityAId, EntityId entit
             if (!shapeB.isActive)
                 continue;
 
-            bool colliding = std::visit([&](const auto& shapeA, const auto& shapeB) {
-                return c2d::areColliding(shapeA, entityA.transform, shapeB, entityB.transform);
-            }, shapeA.shape, shapeB.shape);
+            bool colliding =
+                std::visit([&](const auto& shapeA, const auto& shapeB)
+                           { return c2d::areColliding(shapeA, entityA.transform, shapeB, entityB.transform); },
+                           shapeA.shape,
+                           shapeB.shape);
 
             if (colliding)
                 return true;
@@ -668,8 +726,9 @@ bool Registry<EntityId, Method>::areColliding(EntityId entityAId, EntityId entit
     return false;
 }
 
-template<typename EntityId, PartitioningMethod Method>
-std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::firstHitRayCast(Ray ray, BitMaskType maskBits) const
+template <typename EntityId, PartitioningMethod Method>
+std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::firstHitRayCast(
+    Ray ray, BitMaskType maskBits) const
 {
     std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> bestHit;
     float bestEntryTime = std::numeric_limits<float>::max();
@@ -689,107 +748,9 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Metho
 
         if (!shape.isActive)
             continue;
-        
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return raycast(shapeConcrete, entity.transform, ray);
-        }, shape.shape);
-        
-        if (narrowHit && narrowHit->first < bestEntryTime)
-        {
-            bestEntryTime = narrowHit->first;
-            bestHit = RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit);
-            toCheck = 5; // Check 5 other hits after finding the first one
-        }
 
-        if (--toCheck == 0)
-            break;
-    }
-
-    toCheck = dynamicHits.size();
-    for (const auto& hit : dynamicHits)
-    {
-        const auto& shapeInfo = shapeEntity[hit.id];
-        const auto entityId = shapeInfo.first;
-        const auto& entity = entities.at(entityId);
-        const auto& shape = entity.shapes[shapeInfo.second];
-
-        if (!shape.isActive)
-            continue;
-        
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return raycast(shapeConcrete, entity.transform, ray);
-        }, shape.shape);
-
-        if (narrowHit && narrowHit->first < bestEntryTime)
-        {
-            bestEntryTime = narrowHit->first;
-            bestHit = RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit);
-            toCheck = 5; // Check 5 other hits after finding the first one
-        }
-        else if (narrowHit->first >= bestEntryTime)
-            toCheck = std::min(toCheck, 5u); // If the hit is not better, check 5 more hits
-
-        if (--toCheck == 0)
-            break;
-    }
-    
-    toCheck = bulletHits.size();
-    for (const auto& hit : bulletHits)
-    {
-        const auto& shapeInfo = shapeEntity[hit.id];
-        const auto entityId = shapeInfo.first;
-        const auto& entity = entities.at(entityId);
-        const auto& shape = entity.shapes[shapeInfo.second];
-
-        if (!shape.isActive)
-            continue;
-        
-        const auto& previousTransform = bulletPreviousTransforms.at(entityId);
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return sweep(shapeConcrete, previousTransform, entity.transform, ray);
-        }, shape.shape);
-
-        if (narrowHit && narrowHit->first < bestEntryTime)
-        {
-            bestEntryTime = narrowHit->first;
-            bestHit = RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit);
-            toCheck = 5; // Check 5 other hits after finding the first one
-        }
-        else if (narrowHit->first >= bestEntryTime)
-            toCheck = std::min(toCheck, 5u); // If the hit is not better, check 5 more hits
-
-        if (--toCheck == 0)
-            break;
-    }
-
-    return bestHit;
-}
-
-template<typename EntityId, PartitioningMethod Method>
-std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::firstHitRayCast(InfiniteRay ray, BitMaskType maskBits) const
-{
-    std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
-    treeStatic.piercingRaycast(ray, staticHits, maskBits);
-    treeDynamic.piercingRaycast(ray, dynamicHits, maskBits);
-    treeBullet.piercingRaycast(ray, bulletHits, maskBits);
-
-    std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> bestHit;
-    float bestEntryTime = std::numeric_limits<float>::max();
-
-    uint32_t toCheck = staticHits.size();
-    for (const auto& hit : staticHits)
-    {
-        const auto& shapeInfo = shapeEntity[hit.id];
-        const auto entityId = shapeInfo.first;
-        const auto& entity = entities.at(entityId);
-        const auto& shape = entity.shapes[shapeInfo.second];
-
-        if (!shape.isActive)
-            continue;
-        
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return raycast(shapeConcrete, entity.transform, ray);
-        }, shape.shape);
+        const auto narrowHit = std::visit(
+            [&](const auto& shapeConcrete) { return raycast(shapeConcrete, entity.transform, ray); }, shape.shape);
 
         if (narrowHit && narrowHit->first < bestEntryTime)
         {
@@ -812,11 +773,10 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Metho
 
         if (!shape.isActive)
             continue;
-        
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return raycast(shapeConcrete, entity.transform, ray);
-        }, shape.shape);
-        
+
+        const auto narrowHit = std::visit(
+            [&](const auto& shapeConcrete) { return raycast(shapeConcrete, entity.transform, ray); }, shape.shape);
+
         if (narrowHit && narrowHit->first < bestEntryTime)
         {
             bestEntryTime = narrowHit->first;
@@ -829,7 +789,7 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Metho
         if (--toCheck == 0)
             break;
     }
-    
+
     toCheck = bulletHits.size();
     for (const auto& hit : bulletHits)
     {
@@ -840,11 +800,11 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Metho
 
         if (!shape.isActive)
             continue;
-        
+
         const auto& previousTransform = bulletPreviousTransforms.at(entityId);
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return sweep(shapeConcrete, previousTransform, entity.transform, ray);
-        }, shape.shape);
+        const auto narrowHit = std::visit([&](const auto& shapeConcrete)
+                                          { return sweep(shapeConcrete, previousTransform, entity.transform, ray); },
+                                          shape.shape);
 
         if (narrowHit && narrowHit->first < bestEntryTime)
         {
@@ -862,8 +822,105 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Metho
     return bestHit;
 }
 
-template<typename EntityId, PartitioningMethod Method>
-std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::rayCast(Ray ray, BitMaskType maskBits) const
+template <typename EntityId, PartitioningMethod Method>
+std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::firstHitRayCast(
+    InfiniteRay ray, BitMaskType maskBits) const
+{
+    std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
+    treeStatic.piercingRaycast(ray, staticHits, maskBits);
+    treeDynamic.piercingRaycast(ray, dynamicHits, maskBits);
+    treeBullet.piercingRaycast(ray, bulletHits, maskBits);
+
+    std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> bestHit;
+    float bestEntryTime = std::numeric_limits<float>::max();
+
+    uint32_t toCheck = staticHits.size();
+    for (const auto& hit : staticHits)
+    {
+        const auto& shapeInfo = shapeEntity[hit.id];
+        const auto entityId = shapeInfo.first;
+        const auto& entity = entities.at(entityId);
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
+
+        const auto narrowHit = std::visit(
+            [&](const auto& shapeConcrete) { return raycast(shapeConcrete, entity.transform, ray); }, shape.shape);
+
+        if (narrowHit && narrowHit->first < bestEntryTime)
+        {
+            bestEntryTime = narrowHit->first;
+            bestHit = RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit);
+            toCheck = 5; // Check 5 other hits after finding the first one
+        }
+
+        if (--toCheck == 0)
+            break;
+    }
+
+    toCheck = dynamicHits.size();
+    for (const auto& hit : dynamicHits)
+    {
+        const auto& shapeInfo = shapeEntity[hit.id];
+        const auto entityId = shapeInfo.first;
+        const auto& entity = entities.at(entityId);
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
+
+        const auto narrowHit = std::visit(
+            [&](const auto& shapeConcrete) { return raycast(shapeConcrete, entity.transform, ray); }, shape.shape);
+
+        if (narrowHit && narrowHit->first < bestEntryTime)
+        {
+            bestEntryTime = narrowHit->first;
+            bestHit = RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit);
+            toCheck = 5; // Check 5 other hits after finding the first one
+        }
+        else if (narrowHit->first >= bestEntryTime)
+            toCheck = std::min(toCheck, 5u); // If the hit is not better, check 5 more hits
+
+        if (--toCheck == 0)
+            break;
+    }
+
+    toCheck = bulletHits.size();
+    for (const auto& hit : bulletHits)
+    {
+        const auto& shapeInfo = shapeEntity[hit.id];
+        const auto entityId = shapeInfo.first;
+        const auto& entity = entities.at(entityId);
+        const auto& shape = entity.shapes[shapeInfo.second];
+
+        if (!shape.isActive)
+            continue;
+
+        const auto& previousTransform = bulletPreviousTransforms.at(entityId);
+        const auto narrowHit = std::visit([&](const auto& shapeConcrete)
+                                          { return sweep(shapeConcrete, previousTransform, entity.transform, ray); },
+                                          shape.shape);
+
+        if (narrowHit && narrowHit->first < bestEntryTime)
+        {
+            bestEntryTime = narrowHit->first;
+            bestHit = RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit);
+            toCheck = 5; // Check 5 other hits after finding the first one
+        }
+        else if (narrowHit->first >= bestEntryTime)
+            toCheck = std::min(toCheck, 5u); // If the hit is not better, check 5 more hits
+
+        if (--toCheck == 0)
+            break;
+    }
+
+    return bestHit;
+}
+
+template <typename EntityId, PartitioningMethod Method>
+std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::rayCast(Ray ray,
+                                                                                       BitMaskType maskBits) const
 {
     std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
     treeStatic.piercingRaycast(ray, staticHits, maskBits);
@@ -881,10 +938,9 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
 
         if (!shape.isActive)
             continue;
-        
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return raycast(shapeConcrete, entity.transform, ray);
-        }, shape.shape);
+
+        const auto narrowHit = std::visit(
+            [&](const auto& shapeConcrete) { return raycast(shapeConcrete, entity.transform, ray); }, shape.shape);
 
         if (narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
@@ -899,10 +955,9 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
 
         if (!shape.isActive)
             continue;
-        
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return raycast(shapeConcrete, entity.transform, ray);
-        }, shape.shape);
+
+        const auto narrowHit = std::visit(
+            [&](const auto& shapeConcrete) { return raycast(shapeConcrete, entity.transform, ray); }, shape.shape);
 
         if (narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
@@ -917,11 +972,11 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
 
         if (!shape.isActive)
             continue;
-        
+
         const auto& previousTransform = bulletPreviousTransforms.at(entityId);
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return sweep(shapeConcrete, previousTransform, entity.transform, ray);
-        }, shape.shape);
+        const auto narrowHit = std::visit([&](const auto& shapeConcrete)
+                                          { return sweep(shapeConcrete, previousTransform, entity.transform, ray); },
+                                          shape.shape);
 
         if (narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
@@ -930,8 +985,9 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
     return hits;
 }
 
-template<typename EntityId, PartitioningMethod Method>
-std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::rayCast(InfiniteRay ray, BitMaskType maskBits) const
+template <typename EntityId, PartitioningMethod Method>
+std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::rayCast(InfiniteRay ray,
+                                                                                       BitMaskType maskBits) const
 {
     std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
     treeStatic.piercingRaycast(ray, staticHits, maskBits);
@@ -939,7 +995,7 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
     treeBullet.piercingRaycast(ray, bulletHits, maskBits);
 
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> hits;
-    
+
     for (const auto& hit : staticHits)
     {
         const auto& shapeInfo = shapeEntity[hit.id];
@@ -949,11 +1005,10 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
 
         if (!shape.isActive)
             continue;
-        
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return raycast(shapeConcrete, entity.transform, ray);
-        }, shape.shape);
-        
+
+        const auto narrowHit = std::visit(
+            [&](const auto& shapeConcrete) { return raycast(shapeConcrete, entity.transform, ray); }, shape.shape);
+
         if (narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
     }
@@ -967,11 +1022,10 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
 
         if (!shape.isActive)
             continue;
-        
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return raycast(shapeConcrete, entity.transform, ray);
-        }, shape.shape);
-        
+
+        const auto narrowHit = std::visit(
+            [&](const auto& shapeConcrete) { return raycast(shapeConcrete, entity.transform, ray); }, shape.shape);
+
         if (narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
     }
@@ -985,11 +1039,11 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
 
         if (!shape.isActive)
             continue;
-        
+
         const auto& previousTransform = bulletPreviousTransforms.at(entityId);
-        const auto narrowHit = std::visit([&](const auto& shapeConcrete) {
-            return sweep(shapeConcrete, previousTransform, entity.transform, ray);
-        }, shape.shape);
+        const auto narrowHit = std::visit([&](const auto& shapeConcrete)
+                                          { return sweep(shapeConcrete, previousTransform, entity.transform, ray); },
+                                          shape.shape);
 
         if (narrowHit)
             hits.insert(RaycastHit<std::pair<EntityId, ShapeId>>::fromRay({entityId, hit.id}, ray, *narrowHit));
@@ -998,14 +1052,12 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
     return hits;
 }
 
-template<typename EntityId, PartitioningMethod Method>
-size_t Registry<EntityId, Method>::size() const
+template <typename EntityId, PartitioningMethod Method> size_t Registry<EntityId, Method>::size() const
 {
     return entities.size();
 }
 
-template<typename EntityId, PartitioningMethod Method>
-void Registry<EntityId, Method>::clear()
+template <typename EntityId, PartitioningMethod Method> void Registry<EntityId, Method>::clear()
 {
     entities.clear();
     shapeEntity.clear();

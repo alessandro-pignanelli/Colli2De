@@ -1,9 +1,9 @@
+#include "utils/Performance.hpp"
+
+#include <catch2/catch_session.hpp>
 #include <chrono>
 #include <format>
 #include <iostream>
-#include <catch2/catch_session.hpp>
-
-#include "utils/Performance.hpp"
 
 void parseCustomArgs(int& argc, char* argv[])
 {
@@ -19,12 +19,12 @@ void parseCustomArgs(int& argc, char* argv[])
                 std::cerr << "Error: --filter-benchmark requires a benchmark name." << std::endl;
                 exit(1);
             }
-            
+
             // Remove the argument from the list
             for (int j = i; j < argc - 2; ++j)
                 argv[j] = argv[j + 2];
             argc -= 2;
-            
+
             ++i;
         }
 }

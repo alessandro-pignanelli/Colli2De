@@ -1,11 +1,11 @@
+#include <colli2de/internal/data_structures/DynamicBVH.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
+
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <algorithm>
 #include <cstdint>
 #include <set>
-#include <catch2/catch_approx.hpp>
-#include <catch2/catch_test_macros.hpp>
-
-#include <colli2de/internal/data_structures/DynamicBVH.hpp>
-#include <colli2de/internal/geometry/AABB.hpp>
 
 using namespace c2d;
 using namespace Catch;
@@ -13,28 +13,28 @@ using RaycastInfo = DynamicBVH<uint32_t>::RaycastInfo;
 
 namespace
 {
-    std::vector<uint32_t> toVectorIds(const std::set<RaycastInfo>& hits)
-    {
-        std::vector<uint32_t> ids;
-        ids.reserve(hits.size());
-        for (const auto& hit : hits)
-            ids.push_back(hit.id);
-        return ids;
-    }
+std::vector<uint32_t> toVectorIds(const std::set<RaycastInfo>& hits)
+{
+    std::vector<uint32_t> ids;
+    ids.reserve(hits.size());
+    for (const auto& hit : hits)
+        ids.push_back(hit.id);
+    return ids;
 }
+} // namespace
 
 TEST_CASE("DynamicBVH | query with mask bits filters correctly", "[DynamicBVH][Query][BitsMask]")
 {
     DynamicBVH<uint32_t> bvh;
 
     // Insert proxies with distinct categories
-    bvh.addProxy(1, {Vec2{0,0}, Vec2{1,1}}, 0b0001); // Category 0
-    bvh.addProxy(2, {Vec2{1,0}, Vec2{2,1}}, 0b0010); // Category 1
-    bvh.addProxy(3, {Vec2{2,0}, Vec2{3,1}}, 0b0100); // Category 2
-    bvh.addProxy(4, {Vec2{3,0}, Vec2{4,1}}, 0b1000); // Category 3
+    bvh.addProxy(1, {Vec2{0, 0}, Vec2{1, 1}}, 0b0001); // Category 0
+    bvh.addProxy(2, {Vec2{1, 0}, Vec2{2, 1}}, 0b0010); // Category 1
+    bvh.addProxy(3, {Vec2{2, 0}, Vec2{3, 1}}, 0b0100); // Category 2
+    bvh.addProxy(4, {Vec2{3, 0}, Vec2{4, 1}}, 0b1000); // Category 3
 
     // Query AABB covering all
-    AABB allAABB{Vec2{0,0}, Vec2{4,1}};
+    AABB allAABB{Vec2{0, 0}, Vec2{4, 1}};
 
     // Query with mask that matches only category 2
     SECTION("DynamicBVH | Query with mask for category 2")
@@ -43,7 +43,8 @@ TEST_CASE("DynamicBVH | query with mask bits filters correctly", "[DynamicBVH][Q
         std::vector<uint32_t> result;
         bvh.query(allAABB, result, only2);
         CHECK(result.size() == 1);
-        CHECK(std::find(result.begin(), result.end(), 3) != result.end()); // Should match only the proxy with category 2
+        CHECK(std::find(result.begin(), result.end(), 3) !=
+              result.end()); // Should match only the proxy with category 2
     }
 
     // Query with mask that matches category 1 and 3
@@ -78,10 +79,10 @@ TEST_CASE("DynamicBVH | piercingRaycast finds intersected proxies", "[DynamicBVH
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10, with unique categoryBits (bit i)
     for (uint32_t i = 0; i < 10; ++i)
-        bvh.addProxy(i, AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, 1ull << i);
+        bvh.addProxy(i, AABB{Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f}}, 1ull << i);
 
     // Ray from (-1,0.5) to (11,0.5) passes through all AABBs
-    Ray ray{ Vec2{-1.0f, 0.5f}, Vec2{11.0f, 0.5f} };
+    Ray ray{Vec2{-1.0f, 0.5f}, Vec2{11.0f, 0.5f}};
 
     SECTION("DynamicBVH | No mask - finds all")
     {
@@ -119,11 +120,11 @@ TEST_CASE("DynamicBVH | firstHitRaycast finds the nearest hit", "[DynamicBVH][Fi
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
 
-    bvh.addProxy(1, {Vec2{0,0}, Vec2{1,1}}, 0b0001); // cat 0
-    bvh.addProxy(2, {Vec2{2,0}, Vec2{3,1}}, 0b0010); // cat 1
-    bvh.addProxy(3, {Vec2{4,0}, Vec2{5,1}}, 0b0100); // cat 2
+    bvh.addProxy(1, {Vec2{0, 0}, Vec2{1, 1}}, 0b0001); // cat 0
+    bvh.addProxy(2, {Vec2{2, 0}, Vec2{3, 1}}, 0b0010); // cat 1
+    bvh.addProxy(3, {Vec2{4, 0}, Vec2{5, 1}}, 0b0100); // cat 2
 
-    Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
+    Ray ray{Vec2{-1, 0.5f}, Vec2{6, 0.5f}};
 
     SECTION("DynamicBVH | No mask - hits the first AABB")
     {
@@ -174,16 +175,17 @@ TEST_CASE("DynamicBVH | firstHitRaycast finds the nearest hit", "[DynamicBVH][Fi
     }
 }
 
-TEST_CASE("DynamicBVH | piercingRaycast finds all hits with entry/exit points", "[DynamicBVH][PiercingRaycast][BitsMask]")
+TEST_CASE("DynamicBVH | piercingRaycast finds all hits with entry/exit points",
+          "[DynamicBVH][PiercingRaycast][BitsMask]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
 
-    bvh.addProxy(10, {Vec2{0,0 }, Vec2{1,1 } }, 0b0001); // cat 0
-    bvh.addProxy(20, {Vec2{2,0 }, Vec2{3,1 } }, 0b0010); // cat 1
-    bvh.addProxy(30, {Vec2{4,0 }, Vec2{5,1 } }, 0b0100); // cat 2
+    bvh.addProxy(10, {Vec2{0, 0}, Vec2{1, 1}}, 0b0001); // cat 0
+    bvh.addProxy(20, {Vec2{2, 0}, Vec2{3, 1}}, 0b0010); // cat 1
+    bvh.addProxy(30, {Vec2{4, 0}, Vec2{5, 1}}, 0b0100); // cat 2
 
-    Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
+    Ray ray{Vec2{-1, 0.5f}, Vec2{6, 0.5f}};
 
     SECTION("DynamicBVH | No mask - finds all")
     {
@@ -217,16 +219,17 @@ TEST_CASE("DynamicBVH | piercingRaycast finds all hits with entry/exit points", 
     }
 }
 
-TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest hit", "[DynamicBVH][FirstHitRaycast][BitsMask]")
+TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest hit",
+          "[DynamicBVH][FirstHitRaycast][BitsMask]")
 {
     const float margin = 0.0f;
     DynamicBVH<uint32_t> bvh(margin);
 
-    bvh.addProxy(101, {Vec2{1,1 }, Vec2{2,2 } }, 0b0001); // cat 0
-    bvh.addProxy(102, {Vec2{3,1 }, Vec2{4,2 } }, 0b0010); // cat 1
-    bvh.addProxy(103, {Vec2{5,1 }, Vec2{6,2 } }, 0b0100); // cat 2
+    bvh.addProxy(101, {Vec2{1, 1}, Vec2{2, 2}}, 0b0001); // cat 0
+    bvh.addProxy(102, {Vec2{3, 1}, Vec2{4, 2}}, 0b0010); // cat 1
+    bvh.addProxy(103, {Vec2{5, 1}, Vec2{6, 2}}, 0b0100); // cat 2
 
-    Ray ray{Vec2{0,1.5f}, Vec2{5,1.5f}};
+    Ray ray{Vec2{0, 1.5f}, Vec2{5, 1.5f}};
 
     SECTION("DynamicBVH | No mask - first hit is 101")
     {
@@ -234,11 +237,11 @@ TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest 
         REQUIRE(hit);
         CHECK(hit->id == 101);
         CHECK(hit->entry.x == Approx(1.0f));
-        CHECK(hit->exit.x  == Approx(2.0f));
+        CHECK(hit->exit.x == Approx(2.0f));
         CHECK(hit->entry.y == Approx(1.5f));
-        CHECK(hit->exit.y  == Approx(1.5f));
+        CHECK(hit->exit.y == Approx(1.5f));
         CHECK(hit->entryTime == Approx(1.0f / 5.0f));
-        CHECK(hit->exitTime  == Approx(2.0f / 5.0f));
+        CHECK(hit->exitTime == Approx(2.0f / 5.0f));
     }
 
     SECTION("DynamicBVH | Mask for category 2 (id 103)")
@@ -248,11 +251,11 @@ TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest 
         REQUIRE(hit);
         CHECK(hit->id == 103);
         CHECK(hit->entry.x == Approx(5.0f));
-        CHECK(hit->exit.x  == Approx(5.0f));
+        CHECK(hit->exit.x == Approx(5.0f));
         CHECK(hit->entry.y == Approx(1.5f));
-        CHECK(hit->exit.y  == Approx(1.5f));
+        CHECK(hit->exit.y == Approx(1.5f));
         CHECK(hit->entryTime == Approx(1.0f));
-        CHECK(hit->exitTime  == Approx(1.0f));
+        CHECK(hit->exitTime == Approx(1.0f));
     }
 
     SECTION("DynamicBVH | Mask for category 1 (id 102)")
@@ -262,22 +265,23 @@ TEST_CASE("DynamicBVH | firstHitRaycast returns id, entry, and exit for closest 
         REQUIRE(hit);
         CHECK(hit->id == 102);
         CHECK(hit->entry.x == Approx(3.0f));
-        CHECK(hit->exit.x  == Approx(4.0f));
+        CHECK(hit->exit.x == Approx(4.0f));
         CHECK(hit->entry.y == Approx(1.5f));
-        CHECK(hit->exit.y  == Approx(1.5f));
+        CHECK(hit->exit.y == Approx(1.5f));
         CHECK(hit->entryTime == Approx(3.0f / 5.0f));
-        CHECK(hit->exitTime  == Approx(4.0f / 5.0f));
+        CHECK(hit->exitTime == Approx(4.0f / 5.0f));
     }
 }
 
-TEST_CASE("DynamicBVH | piercingRaycast with infinite ray finds intersected proxies", "[DynamicBVH][PiercingRaycast][BitsMask]")
+TEST_CASE("DynamicBVH | piercingRaycast with infinite ray finds intersected proxies",
+          "[DynamicBVH][PiercingRaycast][BitsMask]")
 {
     DynamicBVH<uint32_t> bvh(0.0f);
 
     for (uint32_t i = 0; i < 10; ++i)
-        bvh.addProxy(i, AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, 1ull << i);
+        bvh.addProxy(i, AABB{Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f}}, 1ull << i);
 
-    InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
+    InfiniteRay ray{Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f}};
 
     SECTION("DynamicBVH | Mask for category 3 (id 3 only)")
     {

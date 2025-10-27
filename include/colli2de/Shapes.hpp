@@ -1,13 +1,13 @@
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <cstddef>
-#include <cassert>
-#include <variant>
-
-#include <colli2de/Vec2.hpp>
 #include <colli2de/Constants.hpp>
+#include <colli2de/Vec2.hpp>
+
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <variant>
 
 namespace c2d
 {
@@ -26,11 +26,9 @@ struct Segment;
 struct Polygon;
 
 template <typename ShapeType>
-concept IsShape = std::is_same_v<ShapeType, Circle> ||
-                  std::is_same_v<ShapeType, Capsule> ||
-                  std::is_same_v<ShapeType, Segment> ||
-                  std::is_same_v<ShapeType, Polygon>;
-                  
+concept IsShape = std::is_same_v<ShapeType, Circle> || std::is_same_v<ShapeType, Capsule> ||
+                  std::is_same_v<ShapeType, Segment> || std::is_same_v<ShapeType, Polygon>;
+
 using ShapeVariant = std::variant<Circle, Capsule, Segment, Polygon>;
 
 struct Circle
@@ -39,6 +37,7 @@ struct Circle
     float radius{1}; // Must be >= 0
 
     constexpr Circle() = default;
+
     constexpr Circle(Vec2 center, float radius) : center(center), radius(radius) {}
 
     constexpr ShapeType getType() const
@@ -47,17 +46,17 @@ struct Circle
     }
 };
 
-
 // Capsule (for segments with round ends)
 struct Capsule
 {
-    Vec2 center1{};      // Center of end 1
-    Vec2 center2{};      // Center of end 2
-    float radius{1};     // Radius of the two semi-circles at the ends
+    Vec2 center1{};  // Center of end 1
+    Vec2 center2{};  // Center of end 2
+    float radius{1}; // Radius of the two semi-circles at the ends
     // Height = (center2.y - center1.y) + 2 * radius
     // Width = (center2.x - center1.x) + 2 * radius
 
     constexpr Capsule() = default;
+
     constexpr Capsule(Vec2 center1, Vec2 center2, float radius) : center1(center1), center2(center2), radius(radius) {}
 
     constexpr ShapeType getType() const
@@ -66,7 +65,6 @@ struct Capsule
     }
 };
 
-
 // Segment (line, two-sided, zero radius)
 struct Segment
 {
@@ -74,6 +72,7 @@ struct Segment
     Vec2 end{};
 
     constexpr Segment() = default;
+
     constexpr Segment(Vec2 start, Vec2 end) : start(start), end(end) {}
 
     constexpr ShapeType getType() const
@@ -82,19 +81,18 @@ struct Segment
     }
 };
 
-
 struct Polygon
 {
     std::array<Vec2, MAX_POLYGON_VERTICES> vertices{};
     std::array<Vec2, MAX_POLYGON_VERTICES> normals{}; // Outward edge normals (for SAT)
-    uint8_t count{0}; // Number of vertices actually used
+    uint8_t count{0};                                 // Number of vertices actually used
 
     constexpr Polygon() = default;
 
     // Polygon with N vertices
-    template<std::size_t N>
-    constexpr Polygon(const std::array<Vec2, N>& verts, uint8_t count)
-        requires(N <= MAX_POLYGON_VERTICES) : count(count)
+    template <std::size_t N>
+    constexpr Polygon(const std::array<Vec2, N>& verts, uint8_t count) requires(N <= MAX_POLYGON_VERTICES)
+        : count(count)
     {
         for (uint8_t i = 0; i < count; ++i)
             vertices[i] = verts[i];

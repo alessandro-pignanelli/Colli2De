@@ -1,17 +1,18 @@
+#include "utils/Performance.hpp"
+#include "utils/Random.hpp"
+
+#include <colli2de/internal/data_structures/DynamicBVH.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
+
+#include <catch2/benchmark/catch_benchmark.hpp>
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/interfaces/catch_interfaces_config.hpp>
+#include <catch2/internal/catch_context.hpp>
 #include <cstdint>
 #include <functional>
 #include <set>
 #include <vector>
-#include <catch2/catch_approx.hpp>
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/benchmark/catch_benchmark.hpp>
-#include <catch2/interfaces/catch_interfaces_config.hpp>
-#include <catch2/internal/catch_context.hpp>
-
-#include <colli2de/internal/data_structures/DynamicBVH.hpp>
-#include <colli2de/internal/geometry/AABB.hpp>
-#include "utils/Performance.hpp"
-#include "utils/Random.hpp"
 
 using namespace c2d;
 using namespace Catch;
@@ -26,11 +27,11 @@ uint32_t insertRemoveAndCheckBalancing(const std::vector<AABB>& aabbs)
     {
         NodeIndex rootIndex = bvh.getRootIndex();
         REQUIRE(rootIndex != -1);
-        
+
         // Tree height should be O(log2(N))
         const int32_t height = bvh.getNode(rootIndex).height;
         const int logN = static_cast<int>(std::ceil(std::log2(bvh.proxies())));
-        
+
         // Allow a little extra for imperfect balancing and fattening
         // println("Tree height: {}, optimal = {}, expected <= {}", height, logN, logN + 3);
         CHECK(height <= logN + 3);
@@ -45,7 +46,8 @@ uint32_t insertRemoveAndCheckBalancing(const std::vector<AABB>& aabbs)
         {
             NodeIndex idx = stack.back();
             stack.pop_back();
-            if (idx == -1) continue;
+            if (idx == -1)
+                continue;
             const auto& node = bvh.getNode(idx);
 
             if (node.isLeaf())
@@ -108,11 +110,11 @@ TEST_CASE("DynamicBVH | handle many proxies", "[DynamicBVH][Stress]")
     for (int i = 0; i < N; ++i)
     {
         float x = static_cast<float>(i) * 0.1f;
-        bvh.addProxy(i, {Vec2{x,0}, Vec2{x+0.05f,1}});
+        bvh.addProxy(i, {Vec2{x, 0}, Vec2{x + 0.05f, 1}});
     }
 
     // Query a range covering many
-    AABB query{Vec2{10,0}, Vec2{20,1}};
+    AABB query{Vec2{10, 0}, Vec2{20, 1}};
     std::vector<uint32_t> hits;
     bvh.query(query, hits);
 
@@ -139,7 +141,6 @@ TEST_CASE("DynamicBVH | balance with 10k proxies", "[DynamicBVH][Stress][Balance
     // Deterministic random AABBs
     const std::vector<AABB> aabbs = generateRandomAABBs(10'000, 0.0f, 100.0f, 2.0f, seed);
 
-    BENCHMARK_FUNCTION("DynamicBVH | 10k Proxy creation and destruction", 20ms,
-        std::bind(insertRemoveAndCheckBalancing, aabbs)
-    );
+    BENCHMARK_FUNCTION(
+        "DynamicBVH | 10k Proxy creation and destruction", 20ms, std::bind(insertRemoveAndCheckBalancing, aabbs));
 }

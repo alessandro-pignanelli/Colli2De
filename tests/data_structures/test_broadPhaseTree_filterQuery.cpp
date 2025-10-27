@@ -1,11 +1,11 @@
+#include <colli2de/internal/data_structures/BroadPhaseTree.hpp>
+#include <colli2de/internal/geometry/AABB.hpp>
+
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <algorithm>
 #include <cstdint>
 #include <set>
-#include <catch2/catch_approx.hpp>
-#include <catch2/catch_test_macros.hpp>
-
-#include <colli2de/internal/data_structures/BroadPhaseTree.hpp>
-#include <colli2de/internal/geometry/AABB.hpp>
 
 using namespace c2d;
 using namespace Catch;
@@ -13,28 +13,28 @@ using BPTRaycastInfo = RaycastInfo<uint32_t>;
 
 namespace
 {
-    std::vector<uint32_t> toVectorIds(const std::set<BPTRaycastInfo>& hits)
-    {
-        std::vector<uint32_t> ids;
-        ids.reserve(hits.size());
-        for (const auto& hit : hits)
-            ids.push_back(hit.id);
-        return ids;
-    }
+std::vector<uint32_t> toVectorIds(const std::set<BPTRaycastInfo>& hits)
+{
+    std::vector<uint32_t> ids;
+    ids.reserve(hits.size());
+    for (const auto& hit : hits)
+        ids.push_back(hit.id);
+    return ids;
 }
+} // namespace
 
 TEST_CASE("BroadPhaseTree | query with mask bits filters correctly", "[BroadPhaseTree][Query][BitsMask]")
 {
     BroadPhaseTree<uint32_t> tree;
 
     // Insert proxies with distinct categories
-    tree.addProxy(1, {Vec2{0,0}, Vec2{1,1}}, 0b0001); // Category 0
-    tree.addProxy(2, {Vec2{1,0}, Vec2{2,1}}, 0b0010); // Category 1
-    tree.addProxy(3, {Vec2{2,0}, Vec2{3,1}}, 0b0100); // Category 2
-    tree.addProxy(4, {Vec2{3,0}, Vec2{4,1}}, 0b1000); // Category 3
+    tree.addProxy(1, {Vec2{0, 0}, Vec2{1, 1}}, 0b0001); // Category 0
+    tree.addProxy(2, {Vec2{1, 0}, Vec2{2, 1}}, 0b0010); // Category 1
+    tree.addProxy(3, {Vec2{2, 0}, Vec2{3, 1}}, 0b0100); // Category 2
+    tree.addProxy(4, {Vec2{3, 0}, Vec2{4, 1}}, 0b1000); // Category 3
 
     // Query AABB covering all
-    AABB allAABB{Vec2{0,0}, Vec2{4,1}};
+    AABB allAABB{Vec2{0, 0}, Vec2{4, 1}};
 
     // Query with mask that matches only category 2
     SECTION("BroadPhaseTree | Query with mask for category 2")
@@ -43,7 +43,8 @@ TEST_CASE("BroadPhaseTree | query with mask bits filters correctly", "[BroadPhas
         std::vector<uint32_t> result;
         tree.query(allAABB, result, only2);
         CHECK(result.size() == 1);
-        CHECK(std::find(result.begin(), result.end(), 3) != result.end()); // Should match only the proxy with category 2
+        CHECK(std::find(result.begin(), result.end(), 3) !=
+              result.end()); // Should match only the proxy with category 2
     }
 
     // Query with mask that matches category 1 and 3
@@ -77,10 +78,10 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds intersected proxies", "[BroadP
 
     // Insert a row of 10 AABBs at y = 0..1, x = 0..10, with unique categoryBits (bit i)
     for (uint32_t i = 0; i < 10; ++i)
-        tree.addProxy(i, AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, 1ull << i);
+        tree.addProxy(i, AABB{Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f}}, 1ull << i);
 
     // Ray from (-1,0.5) to (11,0.5) passes through all AABBs
-    Ray ray{ Vec2{-1.0f, 0.5f}, Vec2{11.0f, 0.5f} };
+    Ray ray{Vec2{-1.0f, 0.5f}, Vec2{11.0f, 0.5f}};
 
     SECTION("BroadPhaseTree | No mask - finds all")
     {
@@ -117,11 +118,11 @@ TEST_CASE("BroadPhaseTree | firstHitRaycast finds the nearest hit", "[BroadPhase
 {
     BroadPhaseTree<uint32_t> tree;
 
-    tree.addProxy(1, {Vec2{0,0}, Vec2{1,1}}, 0b001); // cat 0
-    tree.addProxy(2, {Vec2{2,0}, Vec2{3,1}}, 0b010); // cat 1
-    tree.addProxy(3, {Vec2{4,0}, Vec2{5,1}}, 0b100); // cat 2
+    tree.addProxy(1, {Vec2{0, 0}, Vec2{1, 1}}, 0b001); // cat 0
+    tree.addProxy(2, {Vec2{2, 0}, Vec2{3, 1}}, 0b010); // cat 1
+    tree.addProxy(3, {Vec2{4, 0}, Vec2{5, 1}}, 0b100); // cat 2
 
-    Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
+    Ray ray{Vec2{-1, 0.5f}, Vec2{6, 0.5f}};
 
     SECTION("BroadPhaseTree | No mask - hits the first AABB")
     {
@@ -172,15 +173,16 @@ TEST_CASE("BroadPhaseTree | firstHitRaycast finds the nearest hit", "[BroadPhase
     }
 }
 
-TEST_CASE("BroadPhaseTree | piercingRaycast finds all hits with entry/exit points", "[BroadPhaseTree][PiercingRaycast][BitsMask]")
+TEST_CASE("BroadPhaseTree | piercingRaycast finds all hits with entry/exit points",
+          "[BroadPhaseTree][PiercingRaycast][BitsMask]")
 {
     BroadPhaseTree<uint32_t> tree;
 
-    tree.addProxy(10, {Vec2{0,0 }, Vec2{1,1 } }, 0b001); // cat 0
-    tree.addProxy(20, {Vec2{2,0 }, Vec2{3,1 } }, 0b010); // cat 1
-    tree.addProxy(30, {Vec2{4,0 }, Vec2{5,1 } }, 0b100); // cat 2
+    tree.addProxy(10, {Vec2{0, 0}, Vec2{1, 1}}, 0b001); // cat 0
+    tree.addProxy(20, {Vec2{2, 0}, Vec2{3, 1}}, 0b010); // cat 1
+    tree.addProxy(30, {Vec2{4, 0}, Vec2{5, 1}}, 0b100); // cat 2
 
-    Ray ray{Vec2{-1,0.5f}, Vec2{6,0.5f}};
+    Ray ray{Vec2{-1, 0.5f}, Vec2{6, 0.5f}};
 
     SECTION("BroadPhaseTree | No mask - finds all")
     {
@@ -214,15 +216,16 @@ TEST_CASE("BroadPhaseTree | piercingRaycast finds all hits with entry/exit point
     }
 }
 
-TEST_CASE("BroadPhaseTree | firstHitRaycast returns id, entry, and exit for closest hit", "[BroadPhaseTree][FirstHitRaycast][BitsMask]")
+TEST_CASE("BroadPhaseTree | firstHitRaycast returns id, entry, and exit for closest hit",
+          "[BroadPhaseTree][FirstHitRaycast][BitsMask]")
 {
     BroadPhaseTree<uint32_t> tree;
 
-    tree.addProxy(101, {Vec2{1,1 }, Vec2{2,2 } }, 0b001); // cat 0
-    tree.addProxy(102, {Vec2{3,1 }, Vec2{4,2 } }, 0b010); // cat 1
-    tree.addProxy(103, {Vec2{5,1 }, Vec2{6,2 } }, 0b100); // cat 2
+    tree.addProxy(101, {Vec2{1, 1}, Vec2{2, 2}}, 0b001); // cat 0
+    tree.addProxy(102, {Vec2{3, 1}, Vec2{4, 2}}, 0b010); // cat 1
+    tree.addProxy(103, {Vec2{5, 1}, Vec2{6, 2}}, 0b100); // cat 2
 
-    Ray ray{Vec2{0,1.5f}, Vec2{5,1.5f}};
+    Ray ray{Vec2{0, 1.5f}, Vec2{5, 1.5f}};
 
     SECTION("BroadPhaseTree | No mask - first hit is 101")
     {
@@ -230,11 +233,11 @@ TEST_CASE("BroadPhaseTree | firstHitRaycast returns id, entry, and exit for clos
         REQUIRE(hit);
         CHECK(hit->id == 101);
         CHECK(hit->entry.x == Approx(1.0f));
-        CHECK(hit->exit.x  == Approx(2.0f));
+        CHECK(hit->exit.x == Approx(2.0f));
         CHECK(hit->entry.y == Approx(1.5f));
-        CHECK(hit->exit.y  == Approx(1.5f));
+        CHECK(hit->exit.y == Approx(1.5f));
         CHECK(hit->entryTime == Approx(1.0f / 5.0f));
-        CHECK(hit->exitTime  == Approx(2.0f / 5.0f));
+        CHECK(hit->exitTime == Approx(2.0f / 5.0f));
     }
 
     SECTION("BroadPhaseTree | Mask for category 2 (id 103)")
@@ -244,11 +247,11 @@ TEST_CASE("BroadPhaseTree | firstHitRaycast returns id, entry, and exit for clos
         REQUIRE(hit);
         CHECK(hit->id == 103);
         CHECK(hit->entry.x == Approx(5.0f));
-        CHECK(hit->exit.x  == Approx(5.0f));
+        CHECK(hit->exit.x == Approx(5.0f));
         CHECK(hit->entry.y == Approx(1.5f));
-        CHECK(hit->exit.y  == Approx(1.5f));
+        CHECK(hit->exit.y == Approx(1.5f));
         CHECK(hit->entryTime == Approx(1.0f));
-        CHECK(hit->exitTime  == Approx(1.0f));
+        CHECK(hit->exitTime == Approx(1.0f));
     }
 
     SECTION("BroadPhaseTree | Mask for category 1 (id 102)")
@@ -258,22 +261,23 @@ TEST_CASE("BroadPhaseTree | firstHitRaycast returns id, entry, and exit for clos
         REQUIRE(hit);
         CHECK(hit->id == 102);
         CHECK(hit->entry.x == Approx(3.0f));
-        CHECK(hit->exit.x  == Approx(4.0f));
+        CHECK(hit->exit.x == Approx(4.0f));
         CHECK(hit->entry.y == Approx(1.5f));
-        CHECK(hit->exit.y  == Approx(1.5f));
+        CHECK(hit->exit.y == Approx(1.5f));
         CHECK(hit->entryTime == Approx(3.0f / 5.0f));
-        CHECK(hit->exitTime  == Approx(4.0f / 5.0f));
+        CHECK(hit->exitTime == Approx(4.0f / 5.0f));
     }
 }
 
-TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds intersected proxies", "[BroadPhaseTree][PiercingRaycast][BitsMask]")
+TEST_CASE("BroadPhaseTree | piercingRaycast with infinite ray finds intersected proxies",
+          "[BroadPhaseTree][PiercingRaycast][BitsMask]")
 {
     BroadPhaseTree<uint32_t> tree;
 
     for (uint32_t i = 0; i < 10; ++i)
-        tree.addProxy(i, AABB{ Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f} }, 1ull << i);
+        tree.addProxy(i, AABB{Vec2{float(i), 0.0f}, Vec2{float(i + 1), 1.0f}}, 1ull << i);
 
-    InfiniteRay ray{ Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f} };
+    InfiniteRay ray{Vec2{-1.0f, 0.5f}, Vec2{1.0f, 0.0f}};
 
     SECTION("BroadPhaseTree | Mask for category 3 (id 3 only)")
     {

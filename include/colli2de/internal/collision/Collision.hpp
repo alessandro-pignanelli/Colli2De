@@ -1,11 +1,11 @@
 #pragma once
 
-#include <functional>
-
 #include <colli2de/Manifold.hpp>
 #include <colli2de/Ray.hpp>
 #include <colli2de/Shapes.hpp>
 #include <colli2de/Transform.hpp>
+
+#include <functional>
 
 namespace c2d
 {
@@ -14,155 +14,58 @@ namespace c2d
 // All functions assume local shape definitions and a world transform for each shape.
 
 // Circle vs Circle
-Manifold collide(const Circle& circleA,
-                 Transform transformA,
-                 const Circle& circleB,
-                 Transform transformB);
+Manifold collide(const Circle& circleA, Transform transformA, const Circle& circleB, Transform transformB);
 
 // Capsule vs Capsule
-Manifold collide(const Capsule& capsuleA,
-                 Transform transformA,
-                 const Capsule& capsuleB,
-                 Transform transformB);
+Manifold collide(const Capsule& capsuleA, Transform transformA, const Capsule& capsuleB, Transform transformB);
 
 // Polygon vs Polygon
-Manifold collide(const Polygon& polygonA,
-                 Transform transformA,
-                 const Polygon& polygonB,
-                 Transform transformB);
+Manifold collide(const Polygon& polygonA, Transform transformA, const Polygon& polygonB, Transform transformB);
 
 // Segment vs Segment
-Manifold collide(const Segment& segmentA,
-                 Transform transformA,
-                 const Segment& segmentB,
-                 Transform transformB);
+Manifold collide(const Segment& segmentA, Transform transformA, const Segment& segmentB, Transform transformB);
 
 // Circle vs Capsule
-Manifold collide(const Capsule& capsule,
-                 Transform transformA,
-                 const Circle& circle,
-                 Transform transformB);
-Manifold collide(const Circle& circle,
-                 Transform transformA,
-                 const Capsule& capsule,
-                 Transform transformB);
+Manifold collide(const Capsule& capsule, Transform transformA, const Circle& circle, Transform transformB);
+Manifold collide(const Circle& circle, Transform transformA, const Capsule& capsule, Transform transformB);
 
 // Circle vs Polygon
-Manifold collide(const Polygon& polygon,
-                 Transform transformA,
-                 const Circle& circle,
-                 Transform transformB);
-Manifold collide(const Circle& circle,
-                 Transform transformA,
-                 const Polygon& polygon,
-                 Transform transformB);
+Manifold collide(const Polygon& polygon, Transform transformA, const Circle& circle, Transform transformB);
+Manifold collide(const Circle& circle, Transform transformA, const Polygon& polygon, Transform transformB);
 
 // Circle vs Segment
-Manifold collide(const Circle& circle,
-                 Transform transformA,
-                 const Segment& segment,
-                 Transform transformB);
-Manifold collide(const Segment& segment,
-                 Transform transformA,
-                 const Circle& circle,
-                 Transform transformB);
+Manifold collide(const Circle& circle, Transform transformA, const Segment& segment, Transform transformB);
+Manifold collide(const Segment& segment, Transform transformA, const Circle& circle, Transform transformB);
 
 // Capsule vs Polygon
-Manifold collide(const Capsule& capsule,
-                 Transform transformA,
-                 const Polygon& polygon,
-                 Transform transformB);
-Manifold collide(const Polygon& polygon,
-                 Transform transformA,
-                 const Capsule& capsule,
-                 Transform transformB);
+Manifold collide(const Capsule& capsule, Transform transformA, const Polygon& polygon, Transform transformB);
+Manifold collide(const Polygon& polygon, Transform transformA, const Capsule& capsule, Transform transformB);
 
 // Capsule vs Segment
-Manifold collide(const Capsule& capsule,
-                 Transform transformA,
-                 const Segment& segment,
-                 Transform transformB);
-Manifold collide(const Segment& segment,
-                 Transform transformA,
-                 const Capsule& capsule,
-                 Transform transformB);
+Manifold collide(const Capsule& capsule, Transform transformA, const Segment& segment, Transform transformB);
+Manifold collide(const Segment& segment, Transform transformA, const Capsule& capsule, Transform transformB);
 
 // Polygon vs Segment
-Manifold collide(const Polygon& polygon,
-                 Transform transformA,
-                 const Segment& segment,
-                 Transform transformB);
-Manifold collide(const Segment& segment,
-                 Transform transformA,
-                 const Polygon& polygon,
-                 Transform transformB);
+Manifold collide(const Polygon& polygon, Transform transformA, const Segment& segment, Transform transformB);
+Manifold collide(const Segment& segment, Transform transformA, const Polygon& polygon, Transform transformB);
 
 // --- Core collision boolean checks ---
-bool areColliding(const Circle& circleA,
-                  Transform transformA,
-                  const Circle& circleB,
-                  Transform transformB);
-bool areColliding(const Capsule& capsule,
-                  Transform transformA,
-                  const Circle& circle,
-                  Transform transformB);
-bool areColliding(const Circle& circle,
-                  Transform transformA,
-                  const Capsule& capsule,
-                  Transform transformB);
-bool areColliding(const Capsule& capsuleA,
-                  Transform transformA,
-                  const Capsule& capsuleB,
-                  Transform transformB);
-bool areColliding(const Segment& segmentA,
-                  Transform transformA,
-                  const Segment& segmentB,
-                  Transform transformB);
-bool areColliding(const Circle& circle,
-                  Transform transformA,
-                  const Segment& segment,
-                  Transform transformB);
-bool areColliding(const Segment& segment,
-                  Transform transformA,
-                  const Circle& circle,
-                  Transform transformB);
-bool areColliding(const Capsule& capsule,
-                  Transform transformA,
-                  const Segment& segment,
-                  Transform transformB);
-bool areColliding(const Segment& segment,
-                  Transform transformA,
-                  const Capsule& capsule,
-                  Transform transformB);
-bool areColliding(const Polygon& polygonA,
-                  Transform transformA,
-                  const Polygon& polygonB,
-                  Transform transformB);
-bool areColliding(const Polygon& polygon,
-                  Transform transformA,
-                  const Circle& circle,
-                  Transform transformB);
-bool areColliding(const Circle& circle,
-                  Transform transformA,
-                  const Polygon& polygon,
-                  Transform transformB);
-bool areColliding(const Capsule& capsule,
-                  Transform transformA,
-                  const Polygon& polygon,
-                  Transform transformB);
-bool areColliding(const Polygon& polygon,
-                  Transform transformA,
-                  const Capsule& capsule,
-                  Transform transformB);
-bool areColliding(const Polygon& polygon,
-                  Transform transformA,
-                  const Segment& segment,
-                  Transform transformB);
-bool areColliding(const Segment& segment,
-                  Transform transformA,
-                  const Polygon& polygon,
-                  Transform transformB);
-
+bool areColliding(const Circle& circleA, Transform transformA, const Circle& circleB, Transform transformB);
+bool areColliding(const Capsule& capsule, Transform transformA, const Circle& circle, Transform transformB);
+bool areColliding(const Circle& circle, Transform transformA, const Capsule& capsule, Transform transformB);
+bool areColliding(const Capsule& capsuleA, Transform transformA, const Capsule& capsuleB, Transform transformB);
+bool areColliding(const Segment& segmentA, Transform transformA, const Segment& segmentB, Transform transformB);
+bool areColliding(const Circle& circle, Transform transformA, const Segment& segment, Transform transformB);
+bool areColliding(const Segment& segment, Transform transformA, const Circle& circle, Transform transformB);
+bool areColliding(const Capsule& capsule, Transform transformA, const Segment& segment, Transform transformB);
+bool areColliding(const Segment& segment, Transform transformA, const Capsule& capsule, Transform transformB);
+bool areColliding(const Polygon& polygonA, Transform transformA, const Polygon& polygonB, Transform transformB);
+bool areColliding(const Polygon& polygon, Transform transformA, const Circle& circle, Transform transformB);
+bool areColliding(const Circle& circle, Transform transformA, const Polygon& polygon, Transform transformB);
+bool areColliding(const Capsule& capsule, Transform transformA, const Polygon& polygon, Transform transformB);
+bool areColliding(const Polygon& polygon, Transform transformA, const Capsule& capsule, Transform transformB);
+bool areColliding(const Polygon& polygon, Transform transformA, const Segment& segment, Transform transformB);
+bool areColliding(const Segment& segment, Transform transformA, const Polygon& polygon, Transform transformB);
 
 // --- Sweep collision detection ---
 inline std::optional<float> sweepHelper(Transform startTransform,
@@ -184,7 +87,8 @@ inline std::optional<float> sweepHelper(Transform startTransform,
     {
         const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
         currentTransform.translation = startTransform.translation + deltaTransform.translation * testFraction;
-        currentTransform.rotation = startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * testFraction;
+        currentTransform.rotation =
+            startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * testFraction;
 
         if (isColliding(currentTransform))
         {
@@ -193,7 +97,7 @@ inline std::optional<float> sweepHelper(Transform startTransform,
             break;
         }
     }
-    
+
     // If no collision was found in the coarse steps, return no hit
     if (fractionLower == 0.0f && fractionUpper == 1.0f)
         return std::nullopt;
@@ -202,7 +106,8 @@ inline std::optional<float> sweepHelper(Transform startTransform,
     {
         const float midFraction = 0.5f * (fractionLower + fractionUpper);
         currentTransform.translation = startTransform.translation + deltaTransform.translation * midFraction;
-        currentTransform.rotation = startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * midFraction;
+        currentTransform.rotation =
+            startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * midFraction;
 
         if (isColliding(currentTransform))
             fractionUpper = midFraction;
@@ -241,9 +146,11 @@ inline std::optional<float> sweepHelper(Transform startTransform1,
         const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
 
         currentTransform1.translation = startTransform1.translation + deltaTransform1.translation * testFraction;
-        currentTransform1.rotation = startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * testFraction;
+        currentTransform1.rotation =
+            startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * testFraction;
         currentTransform2.translation = startTransform2.translation + deltaTransform2.translation * testFraction;
-        currentTransform2.rotation = startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * testFraction;
+        currentTransform2.rotation =
+            startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * testFraction;
 
         if (areColliding(currentTransform1, currentTransform2))
         {
@@ -252,7 +159,7 @@ inline std::optional<float> sweepHelper(Transform startTransform1,
             break;
         }
     }
-    
+
     // If no collision was found in the coarse steps, return no hit
     if (fractionLower == 0.0f && fractionUpper == 1.0f)
         return std::nullopt;
@@ -262,9 +169,11 @@ inline std::optional<float> sweepHelper(Transform startTransform1,
         const float midFraction = 0.5f * (fractionLower + fractionUpper);
 
         currentTransform1.translation = startTransform1.translation + deltaTransform1.translation * midFraction;
-        currentTransform1.rotation = startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * midFraction;
+        currentTransform1.rotation =
+            startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * midFraction;
         currentTransform2.translation = startTransform2.translation + deltaTransform2.translation * midFraction;
-        currentTransform2.rotation = startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * midFraction;
+        currentTransform2.rotation =
+            startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * midFraction;
 
         if (areColliding(currentTransform1, currentTransform2))
             fractionUpper = midFraction;
@@ -287,19 +196,16 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape,
                                    Transform targetTransform)
 {
     const auto isCollidingFunc = [&](const Transform& sweepTransform) -> bool
-    {
-        return areColliding(movingShape, sweepTransform, targetShape, targetTransform);
-    };
+    { return areColliding(movingShape, sweepTransform, targetShape, targetTransform); };
 
-    std::optional<float> collisionFraction = sweepHelper(startTransform,
-                                                         endTransform,
-                                                         isCollidingFunc);
+    std::optional<float> collisionFraction = sweepHelper(startTransform, endTransform, isCollidingFunc);
     if (!collisionFraction)
         return std::nullopt;
 
     const Transform deltaTransform = endTransform - startTransform;
-    Transform currentTransform {startTransform.translation + deltaTransform.translation * *collisionFraction,
-                                startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * *collisionFraction};
+    Transform currentTransform{startTransform.translation + deltaTransform.translation * *collisionFraction,
+                               startTransform.rotation.angleRadians +
+                                   deltaTransform.rotation.angleRadians * *collisionFraction};
     return SweepManifold{*collisionFraction, collide(movingShape, currentTransform, targetShape, targetTransform)};
 }
 
@@ -312,25 +218,22 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape1,
                                    Transform endTransform2)
 {
     const auto areCollidingFunc = [&](const Transform& transformShapeA, const Transform& transformShapeB) -> bool
-    {
-        return areColliding(movingShape1, transformShapeA, movingShape2, transformShapeB);
-    };
+    { return areColliding(movingShape1, transformShapeA, movingShape2, transformShapeB); };
 
-    std::optional<float> collisionFraction = sweepHelper(startTransform1,
-                                                         endTransform1,
-                                                         startTransform2,
-                                                         endTransform2,
-                                                         areCollidingFunc);
+    std::optional<float> collisionFraction =
+        sweepHelper(startTransform1, endTransform1, startTransform2, endTransform2, areCollidingFunc);
     if (!collisionFraction)
         return std::nullopt;
 
     const Transform deltaTransform1 = endTransform1 - startTransform1;
     const Transform deltaTransform2 = endTransform2 - startTransform2;
 
-    Transform targetTransform1 {startTransform1.translation + deltaTransform1.translation * *collisionFraction,
-                                startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * *collisionFraction};
-    Transform targetTransform2 {startTransform2.translation + deltaTransform2.translation * *collisionFraction,
-                                startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * *collisionFraction};
+    Transform targetTransform1{startTransform1.translation + deltaTransform1.translation * *collisionFraction,
+                               startTransform1.rotation.angleRadians +
+                                   deltaTransform1.rotation.angleRadians * *collisionFraction};
+    Transform targetTransform2{startTransform2.translation + deltaTransform2.translation * *collisionFraction,
+                               startTransform2.rotation.angleRadians +
+                                   deltaTransform2.rotation.angleRadians * *collisionFraction};
 
     return SweepManifold{*collisionFraction, collide(movingShape1, targetTransform1, movingShape2, targetTransform2)};
 }

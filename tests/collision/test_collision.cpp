@@ -1,17 +1,17 @@
+#include "utils/Print.hpp"
+
+#include <colli2de/Shapes.hpp>
+#include <colli2de/Transform.hpp>
+#include <colli2de/internal/collision/Collision.hpp>
+
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 
-#include <colli2de/Shapes.hpp>
-#include <colli2de/internal/collision/Collision.hpp>
-#include <colli2de/Transform.hpp>
-
-#include "utils/Print.hpp"
-
 using namespace c2d;
 using namespace Catch;
 
-template<typename ShapeA, typename ShapeB>
+template <typename ShapeA, typename ShapeB>
 static Manifold collideSymmetric(const ShapeA& shapeA,
                                  const Transform& transformA,
                                  const ShapeB& shapeB,
@@ -97,9 +97,9 @@ TEST_CASE("Circle vs Circle collision", "[collision][circle]")
 
     SECTION("Rotated centers")
     {
-        const Circle rotatedCircle{ Vec2{ 1.0f, 0.0f }, 1.0f };
-        const Transform transformA{ Vec2{ 0.0f, 0.0f }, 0.5f };
-        const Transform transformB{ Vec2{ 2.0f, 0.0f }, 0.5f };
+        const Circle rotatedCircle{Vec2{1.0f, 0.0f}, 1.0f};
+        const Transform transformA{Vec2{0.0f, 0.0f}, 0.5f};
+        const Transform transformB{Vec2{2.0f, 0.0f}, 0.5f};
         const Manifold manifold = collideSymmetric(rotatedCircle, transformA, rotatedCircle, transformB);
 
         REQUIRE(manifold.pointCount == 1);
@@ -163,10 +163,10 @@ TEST_CASE("Capsule vs Circle collision", "[collision][capsule][circle]")
 
     SECTION("Rotated centers")
     {
-        const Capsule rotatedCapsule{ Vec2{ -1.0f, 0.0f }, Vec2{ 1.0f, 0.0f }, 0.5f };
-        const Circle rotatedCircle{ Vec2{ 0.0f, 1.0f }, 0.5f };
-        const Transform transformA{ Vec2{ 0.0f, 0.0f }, 0.5f };
-        const Transform transformB{ Vec2{ 0.0f, 0.0f }, -0.5f };
+        const Capsule rotatedCapsule{Vec2{-1.0f, 0.0f}, Vec2{1.0f, 0.0f}, 0.5f};
+        const Circle rotatedCircle{Vec2{0.0f, 1.0f}, 0.5f};
+        const Transform transformA{Vec2{0.0f, 0.0f}, 0.5f};
+        const Transform transformB{Vec2{0.0f, 0.0f}, -0.5f};
         const Manifold manifold = collideSymmetric(rotatedCapsule, transformA, rotatedCircle, transformB);
 
         REQUIRE(manifold.pointCount == 1);
@@ -228,8 +228,8 @@ TEST_CASE("Capsule vs Capsule collision", "[collision][capsule]")
 
     SECTION("Rotated")
     {
-        const Transform transformA{ Vec2{ 0.0f, 0.0f }, 0.25f };
-        const Transform transformB{ Vec2{ 0.0f, 0.0f }, -0.25f };
+        const Transform transformA{Vec2{0.0f, 0.0f}, 0.25f};
+        const Transform transformB{Vec2{0.0f, 0.0f}, -0.25f};
         const Manifold manifold = collideSymmetric(capA, transformA, capA, transformB);
 
         REQUIRE(manifold.pointCount == 1);
@@ -288,9 +288,9 @@ TEST_CASE("Segment vs Segment collision", "[collision][segment]")
 
     SECTION("Rotated")
     {
-        const Transform transformA{ Vec2{ 0.0f, 0.0f }, 0.25f };
-        const Transform transformB{ Vec2{ 0.0f, 0.0f }, -0.25f };
-        const Segment rotatedSegment{ Vec2{ -1.0f, 0.0f }, Vec2{ 1.0f, 0.0f } };
+        const Transform transformA{Vec2{0.0f, 0.0f}, 0.25f};
+        const Transform transformB{Vec2{0.0f, 0.0f}, -0.25f};
+        const Segment rotatedSegment{Vec2{-1.0f, 0.0f}, Vec2{1.0f, 0.0f}};
         const Manifold manifold = collideSymmetric(segA, transformA, rotatedSegment, transformB);
 
         REQUIRE(manifold.pointCount == 1);
@@ -352,9 +352,9 @@ TEST_CASE("Circle vs Polygon collision", "[collision][circle][polygon]")
 
     SECTION("Rotated")
     {
-        const Polygon rotatedPolygon = makeRectangle(Vec2{ 0.0f, 0.0f }, 1.0f, 1.0f, 0.3f);
-        const Circle rotatedCircle{ Vec2{ 1.0f, 0.0f }, 0.5f };
-        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.5f };
+        const Polygon rotatedPolygon = makeRectangle(Vec2{0.0f, 0.0f}, 1.0f, 1.0f, 0.3f);
+        const Circle rotatedCircle{Vec2{1.0f, 0.0f}, 0.5f};
+        const Transform transform{Vec2{0.0f, 0.0f}, 0.5f};
         const Manifold manifold = collideSymmetric(rotatedPolygon, transform, rotatedCircle, transform);
 
         REQUIRE(manifold.pointCount == 1);
@@ -416,9 +416,9 @@ TEST_CASE("Circle vs Segment collision", "[collision][circle][segment]")
 
     SECTION("Rotated")
     {
-        const Circle rotatedCircle{ Vec2{ 0.0f, 0.5f }, 0.5f };
-        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.25f };
-        const Segment rotatedSegment{ Vec2{ -1.0f, 0.0f }, Vec2{ 1.0f, 0.0f } };
+        const Circle rotatedCircle{Vec2{0.0f, 0.5f}, 0.5f};
+        const Transform transform{Vec2{0.0f, 0.0f}, 0.25f};
+        const Segment rotatedSegment{Vec2{-1.0f, 0.0f}, Vec2{1.0f, 0.0f}};
         const Manifold manifold = collideSymmetric(rotatedCircle, transform, rotatedSegment, transform);
 
         REQUIRE(manifold.pointCount == 1);
@@ -469,9 +469,9 @@ TEST_CASE("Capsule vs Polygon collision", "[collision][capsule][polygon]")
 
     SECTION("Rotated")
     {
-        const Polygon rotatedPolygon = makeRectangle(Vec2{ 0.0f, 0.0f }, 1.0f, 1.0f, 0.1f);
-        const Capsule rotatedCapsule{ Vec2{ 0.0f, -1.0f }, Vec2{ 0.0f, 1.0f }, 0.5f };
-        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.3f };
+        const Polygon rotatedPolygon = makeRectangle(Vec2{0.0f, 0.0f}, 1.0f, 1.0f, 0.1f);
+        const Capsule rotatedCapsule{Vec2{0.0f, -1.0f}, Vec2{0.0f, 1.0f}, 0.5f};
+        const Transform transform{Vec2{0.0f, 0.0f}, 0.3f};
         const Manifold manifold = collideSymmetric(rotatedPolygon, transform, rotatedCapsule, transform);
 
         REQUIRE(manifold.pointCount == 2);
@@ -518,8 +518,8 @@ TEST_CASE("Capsule vs Segment collision", "[collision][capsule][segment]")
 
     SECTION("Rotated")
     {
-        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.25f };
-        const Segment rotatedSegment{ Vec2{ -1.0f, 0.0f }, Vec2{ 1.0f, 0.0f } };
+        const Transform transform{Vec2{0.0f, 0.0f}, 0.25f};
+        const Segment rotatedSegment{Vec2{-1.0f, 0.0f}, Vec2{1.0f, 0.0f}};
         const Manifold manifold = collideSymmetric(cap, transform, rotatedSegment, transform);
 
         REQUIRE(manifold.pointCount == 1);
@@ -572,9 +572,9 @@ TEST_CASE("Polygon vs Segment collision", "[collision][polygon][segment]")
 
     SECTION("Rotated")
     {
-        const Polygon rotatedPolygon = makeRectangle(Vec2{ 0.0f, 0.0f }, 1.0f, 1.0f, 0.2f);
-        const Segment rotatedSegment{ Vec2{ -1.0f, 0.0f }, Vec2{ 1.0f, 0.0f } };
-        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.2f };
+        const Polygon rotatedPolygon = makeRectangle(Vec2{0.0f, 0.0f}, 1.0f, 1.0f, 0.2f);
+        const Segment rotatedSegment{Vec2{-1.0f, 0.0f}, Vec2{1.0f, 0.0f}};
+        const Transform transform{Vec2{0.0f, 0.0f}, 0.2f};
         const Manifold manifold = collideSymmetric(rotatedPolygon, transform, rotatedSegment, transform);
 
         REQUIRE(manifold.pointCount == 2);
@@ -628,9 +628,9 @@ TEST_CASE("Polygon vs Polygon collision", "[collision][polygon]")
 
     SECTION("Rotated overlap")
     {
-        const Polygon rotatedA = makeRectangle(Vec2{ 0.0f, 0.0f }, 1.0f, 1.0f, 0.5f);
-        const Polygon rotatedB = makeRectangle(Vec2{ 0.5f, 0.5f }, 1.0f, 1.0f, 0.25f);
-        const Transform transform{ Vec2{ 0.0f, 0.0f }, 0.0f };
+        const Polygon rotatedA = makeRectangle(Vec2{0.0f, 0.0f}, 1.0f, 1.0f, 0.5f);
+        const Polygon rotatedB = makeRectangle(Vec2{0.5f, 0.5f}, 1.0f, 1.0f, 0.25f);
+        const Transform transform{Vec2{0.0f, 0.0f}, 0.0f};
         const Manifold manifold = collideSymmetric(rotatedA, transform, rotatedB, transform);
 
         REQUIRE(manifold.pointCount == 2);

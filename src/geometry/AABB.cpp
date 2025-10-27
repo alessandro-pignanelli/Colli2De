@@ -8,11 +8,7 @@ namespace c2d
 
 AABB AABB::fromCenter(Vec2 center, Vec2 halfSize)
 {
-    return AABB
-    {
-        center - halfSize,
-        center + halfSize
-    };
+    return AABB{center - halfSize, center + halfSize};
 }
 
 Vec2 AABB::center() const
@@ -27,20 +23,17 @@ Vec2 AABB::size() const
 
 bool AABB::contains(Vec2 point) const
 {
-    return point.x >= min.x && point.x <= max.x &&
-           point.y >= min.y && point.y <= max.y;
+    return point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y;
 }
 
 bool AABB::contains(AABB other) const
 {
-    return min.x <= other.min.x && min.y <= other.min.y &&
-           max.x >= other.max.x && max.y >= other.max.y;
+    return min.x <= other.min.x && min.y <= other.min.y && max.x >= other.max.x && max.y >= other.max.y;
 }
 
 bool AABB::intersects(AABB other) const
 {
-    return min.x <= other.max.x && max.x >= other.min.x &&
-           min.y <= other.max.y && max.y >= other.min.y;
+    return min.x <= other.max.x && max.x >= other.min.x && min.y <= other.max.y && max.y >= other.min.y;
 }
 
 std::optional<std::pair<float, float>> AABB::intersects(Ray ray) const
@@ -66,7 +59,7 @@ std::optional<std::pair<float, float>> AABB::intersects(Ray ray) const
         {
             const float invD = 1.0f / dir;
             float entryPoint = (min.x - origin) * invD;
-            float exitPoint  = (max.x - origin) * invD;
+            float exitPoint = (max.x - origin) * invD;
 
             if (invD < 0.0f)
                 std::swap(entryPoint, exitPoint);
@@ -92,7 +85,7 @@ std::optional<std::pair<float, float>> AABB::intersects(Ray ray) const
         {
             const float invD = 1.0f / dir;
             float entryPoint = (min.y - origin) * invD;
-            float exitPoint  = (max.y - origin) * invD;
+            float exitPoint = (max.y - origin) * invD;
 
             if (invD < 0.0f)
                 std::swap(entryPoint, exitPoint);
@@ -127,7 +120,7 @@ std::optional<std::pair<float, float>> AABB::intersects(InfiniteRay ray) const
         {
             float invD = 1.0f / dir;
             float entryPoint = (min.x - origin) * invD;
-            float exitPoint  = (max.x - origin) * invD;
+            float exitPoint = (max.x - origin) * invD;
 
             if (invD < 0.0f)
                 std::swap(entryPoint, exitPoint);
@@ -154,7 +147,7 @@ std::optional<std::pair<float, float>> AABB::intersects(InfiniteRay ray) const
         {
             const float invD = 1.0f / dir;
             float entryPoint = (min.y - origin) * invD;
-            float exitPoint  = (max.y - origin) * invD;
+            float exitPoint = (max.y - origin) * invD;
 
             if (invD < 0.0f)
                 std::swap(entryPoint, exitPoint);
@@ -213,11 +206,7 @@ void AABB::fatten(float margin, Vec2 displacement)
 
 AABB AABB::fattened(float margin) const
 {
-    return AABB
-    {
-        Vec2{ min.x - margin, min.y - margin },
-        Vec2{ max.x + margin, max.y + margin }
-    };
+    return AABB{Vec2{min.x - margin, min.y - margin}, Vec2{max.x + margin, max.y + margin}};
 }
 
 AABB AABB::fattened(float margin, Vec2 displacement) const
@@ -234,7 +223,7 @@ AABB AABB::fattened(float margin, Vec2 displacement) const
         result.min.y += displacement.y;
     else
         result.max.y += displacement.y;
-    
+
     return result;
 }
 
@@ -252,7 +241,7 @@ AABB AABB::fattened(Vec2 displacement) const
         result.min.y += displacement.y;
     else
         result.max.y += displacement.y;
-    
+
     return result;
 }
 
@@ -264,11 +253,7 @@ void AABB::translate(Vec2 direction)
 
 AABB AABB::translated(Vec2 direction) const
 {
-    return AABB
-    {
-        Vec2{ min.x + direction.x, min.y + direction.y },
-        Vec2{ max.x + direction.x, max.y + direction.y }
-    };
+    return AABB{Vec2{min.x + direction.x, min.y + direction.y}, Vec2{max.x + direction.x, max.y + direction.y}};
 }
 
 void AABB::expandToInclude(Vec2 point)
@@ -281,11 +266,8 @@ void AABB::expandToInclude(Vec2 point)
 
 AABB AABB::expandedToInclude(Vec2 point) const
 {
-    return AABB
-    {
-        Vec2{ std::min(min.x, point.x), std::min(min.y, point.y) },
-        Vec2{ std::max(max.x, point.x), std::max(max.y, point.y) }
-    };
+    return AABB{Vec2{std::min(min.x, point.x), std::min(min.y, point.y)},
+                Vec2{std::max(max.x, point.x), std::max(max.y, point.y)}};
 }
 
 AABB AABB::combine(AABB a, AABB b)
@@ -295,7 +277,7 @@ AABB AABB::combine(AABB a, AABB b)
     const auto maxX = std::max(a.max.x, b.max.x);
     const auto maxY = std::max(a.max.y, b.max.y);
 
-    return AABB{ Vec2{minX, minY}, Vec2{maxX, maxY} };
+    return AABB{Vec2{minX, minY}, Vec2{maxX, maxY}};
 }
 
 float AABB::perimeter() const
@@ -312,26 +294,21 @@ std::string AABB::toString() const
 
 AABB AABB::operator+(Vec2 offset) const
 {
-    return AABB
-    {
-        Vec2{ min.x + offset.x, min.y + offset.y },
-        Vec2{ max.x + offset.x, max.y + offset.y }
-    };
+    return AABB{Vec2{min.x + offset.x, min.y + offset.y}, Vec2{max.x + offset.x, max.y + offset.y}};
 }
+
 AABB AABB::operator-(Vec2 offset) const
 {
-    return AABB
-    {
-        Vec2{ min.x - offset.x, min.y - offset.y },
-        Vec2{ max.x - offset.x, max.y - offset.y }
-    };
+    return AABB{Vec2{min.x - offset.x, min.y - offset.y}, Vec2{max.x - offset.x, max.y - offset.y}};
 }
+
 AABB& AABB::operator+=(Vec2 offset)
 {
     min += offset;
     max += offset;
     return *this;
 }
+
 AABB& AABB::operator-=(Vec2 offset)
 {
     min -= offset;
@@ -341,11 +318,12 @@ AABB& AABB::operator-=(Vec2 offset)
 
 Vec2 AABB::operator+(AABB other) const
 {
-    return Vec2{ min.x + other.min.x, min.y + other.min.y };
+    return Vec2{min.x + other.min.x, min.y + other.min.y};
 }
+
 Vec2 AABB::operator-(AABB other) const
 {
-    return Vec2{ min.x - other.min.x, min.y - other.min.y };
+    return Vec2{min.x - other.min.x, min.y - other.min.y};
 }
 
 } // namespace c2d

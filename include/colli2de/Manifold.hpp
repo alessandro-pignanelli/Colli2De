@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cstdint>
-#include <algorithm>
-
 #include <colli2de/Vec2.hpp>
+
+#include <algorithm>
+#include <cstdint>
 
 namespace c2d
 {
@@ -25,15 +25,18 @@ struct ManifoldPoint
     std::string toString() const
     {
         return std::format("ManifoldPoint(point={}, anchorA={}, anchorB={}, separation={})",
-                           point.toString(), anchorA.toString(), anchorB.toString(), separation);
+                           point.toString(),
+                           anchorA.toString(),
+                           anchorB.toString(),
+                           separation);
     }
 };
 
 struct Manifold
 {
-    Vec2 normal;                              // Direction of collision, from shape A to shape B
-    ManifoldPoint points[MaxManifoldPoints];  // Up to 2 contact points
-    uint8_t pointCount{0};                    // Actual number of contact points (0, 1, or 2)
+    Vec2 normal;                             // Direction of collision, from shape A to shape B
+    ManifoldPoint points[MaxManifoldPoints]; // Up to 2 contact points
+    uint8_t pointCount{0};                   // Actual number of contact points (0, 1, or 2)
 
     constexpr Manifold() = default;
 
@@ -73,34 +76,28 @@ struct SweepManifold
 
 } // namespace c2d
 
-
-template<>
-struct std::formatter<c2d::ManifoldPoint> : std::formatter<std::string>
+template <> struct std::formatter<c2d::ManifoldPoint> : std::formatter<std::string>
 {
-	template<typename FormatContext>
-	auto format(const c2d::ManifoldPoint& point, FormatContext& ctx) const
-	{
-		return std::formatter<std::string>::format(point.toString(), ctx);
-	}
+    template <typename FormatContext> auto format(const c2d::ManifoldPoint& point, FormatContext& ctx) const
+    {
+        return std::formatter<std::string>::format(point.toString(), ctx);
+    }
 };
 
-template<>
-struct std::formatter<c2d::Manifold> : std::formatter<std::string>
+template <> struct std::formatter<c2d::Manifold> : std::formatter<std::string>
 {
-	template<typename FormatContext>
-	auto format(const c2d::Manifold& manifold, FormatContext& ctx) const
-	{
-		return std::formatter<std::string>::format(manifold.toString(), ctx);
-	}
+    template <typename FormatContext> auto format(const c2d::Manifold& manifold, FormatContext& ctx) const
+    {
+        return std::formatter<std::string>::format(manifold.toString(), ctx);
+    }
 };
 
-template<>
-struct std::formatter<c2d::SweepManifold> : std::formatter<std::string>
+template <> struct std::formatter<c2d::SweepManifold> : std::formatter<std::string>
 {
-	template<typename FormatContext>
-	auto format(const c2d::SweepManifold& sweepManifold, FormatContext& ctx) const
-	{
-		return std::formatter<std::string>::format(std::format("SweepManifold(fraction={}, manifold={})",
-			sweepManifold.fraction, sweepManifold.manifold), ctx);
-	}
+    template <typename FormatContext> auto format(const c2d::SweepManifold& sweepManifold, FormatContext& ctx) const
+    {
+        return std::formatter<std::string>::format(
+            std::format("SweepManifold(fraction={}, manifold={})", sweepManifold.fraction, sweepManifold.manifold),
+            ctx);
+    }
 };

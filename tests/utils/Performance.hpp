@@ -1,15 +1,15 @@
+#include "utils/Print.hpp"
+
+#include <catch2/benchmark/catch_benchmark.hpp>
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <chrono>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 #include <map>
 #include <numeric>
 #include <string>
 #include <vector>
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_approx.hpp>
-#include <catch2/benchmark/catch_benchmark.hpp>
-
-#include "utils/Print.hpp"
 
 using namespace std::chrono;
 using namespace std::literals::chrono_literals;
@@ -17,72 +17,73 @@ using namespace Catch;
 
 namespace c2d::test
 {
-    inline double thresholdMultiplier = 1.0;
+inline double thresholdMultiplier = 1.0;
 
-    inline int benchmarkSystem()
+inline int benchmarkSystem()
+{
+    const auto start = high_resolution_clock::now();
+
+    std::map<std::string, std::string> map;
+    for (int i = 0; i < 1'000'000; ++i)
     {
-        const auto start = high_resolution_clock::now();
-
-        std::map<std::string, std::string> map;
-        for (int i = 0; i < 1'000'000; ++i)
-        {
-            const auto key = std::to_string(i) + std::to_string(i % 1000) + std::to_string(i ^ 12345);
-            if (map.contains(key))
-                map[key] += std::to_string(i);
-            else
-                map[key] = std::to_string(i);
-        }
-
-        const auto end = high_resolution_clock::now();
-        const auto elapsed = duration_cast<milliseconds>(end - start);
-
-        thresholdMultiplier = elapsed.count() / 335.0;
-        c2d::test::println("Benchmark system took {}", elapsed);
-        c2d::test::println("  Benchmark time threshold multiplier: {}", thresholdMultiplier);
-
-        return map.size();
+        const auto key = std::to_string(i) + std::to_string(i % 1000) + std::to_string(i ^ 12345);
+        if (map.contains(key))
+            map[key] += std::to_string(i);
+        else
+            map[key] = std::to_string(i);
     }
 
+    const auto end = high_resolution_clock::now();
+    const auto elapsed = duration_cast<milliseconds>(end - start);
+
+    thresholdMultiplier = elapsed.count() / 335.0;
+    c2d::test::println("Benchmark system took {}", elapsed);
+    c2d::test::println("  Benchmark time threshold multiplier: {}", thresholdMultiplier);
+
+    return map.size();
 }
 
+} // namespace c2d::test
+
 #ifdef NDEBUG
-    
-#define __BENCHMARK_FUNCTION(name, threshold, func, reset, ...) \
-{ \
-    if (std::string(name).contains(c2d::test::filterBenchmark)) \
-    { \
-        std::vector<microseconds> elapsedTimes; \
-        BENCHMARK(name) \
-        { \
-            (reset)(); \
-            const auto start = high_resolution_clock::now(); \
-            const auto result = func(); \
-            const auto end = high_resolution_clock::now(); \
-            elapsedTimes.push_back(duration_cast<microseconds>(end - start)); \
-            return result; \
-        }; \
-        const auto elapsedAvg = std::accumulate(elapsedTimes.begin(), elapsedTimes.end(), microseconds(0)) / elapsedTimes.size(); \
-        CHECK(elapsedAvg <= threshold * c2d::test::thresholdMultiplier); \
-        c2d::test::printElapsed(elapsedAvg, threshold); \
-        c2d::test::storeBenchmark(name, elapsedTimes, threshold); \
-    } \
-}
+
+#define __BENCHMARK_FUNCTION(name, threshold, func, reset, ...)                                                        \
+    {                                                                                                                  \
+        if (std::string(name).contains(c2d::test::filterBenchmark))                                                    \
+        {                                                                                                              \
+            std::vector<microseconds> elapsedTimes;                                                                    \
+            BENCHMARK(name)                                                                                            \
+            {                                                                                                          \
+                (reset)();                                                                                             \
+                const auto start = high_resolution_clock::now();                                                       \
+                const auto result = func();                                                                            \
+                const auto end = high_resolution_clock::now();                                                         \
+                elapsedTimes.push_back(duration_cast<microseconds>(end - start));                                      \
+                return result;                                                                                         \
+            };                                                                                                         \
+            const auto elapsedAvg =                                                                                    \
+                std::accumulate(elapsedTimes.begin(), elapsedTimes.end(), microseconds(0)) / elapsedTimes.size();      \
+            CHECK(elapsedAvg <= threshold * c2d::test::thresholdMultiplier);                                           \
+            c2d::test::printElapsed(elapsedAvg, threshold);                                                            \
+            c2d::test::storeBenchmark(name, elapsedTimes, threshold);                                                  \
+        }                                                                                                              \
+    }
 
 #else
 
-#define __BENCHMARK_FUNCTION(name, threshold, func, reset, ...) \
-{ \
-    if (std::string(name).contains(c2d::test::filterBenchmark)) \
-    { \
-        c2d::test::println("Running benchmark only once: \"{}\"", name); \
-        (reset)(); \
-        const auto result = (func)(); \
-    } \
-}
+#define __BENCHMARK_FUNCTION(name, threshold, func, reset, ...)                                                        \
+    {                                                                                                                  \
+        if (std::string(name).contains(c2d::test::filterBenchmark))                                                    \
+        {                                                                                                              \
+            c2d::test::println("Running benchmark only once: \"{}\"", name);                                           \
+            (reset)();                                                                                                 \
+            const auto result = (func)();                                                                              \
+        }                                                                                                              \
+    }
 
 #endif
 
-#define BENCHMARK_FUNCTION(...) __BENCHMARK_FUNCTION(__VA_ARGS__, [](){})
+#define BENCHMARK_FUNCTION(...) __BENCHMARK_FUNCTION(__VA_ARGS__, []() {})
 
 namespace c2d
 {
@@ -100,7 +101,11 @@ struct BenchmarkResult
     float avgTime;
 
     BenchmarkResult(const std::string& name, const microseconds& threshold, const std::vector<microseconds>& elapsed)
-        : name(name), threshold(threshold.count() / 1000.0f), minTime(0.0f), maxTime(0.0f), avgTime(0.0f)
+        : name(name),
+          threshold(threshold.count() / 1000.0f),
+          minTime(0.0f),
+          maxTime(0.0f),
+          avgTime(0.0f)
     {
         this->threshold = threshold.count() / 1000.0f;
         if (!elapsed.empty())
@@ -121,7 +126,9 @@ struct BenchmarkResult
 inline std::vector<BenchmarkResult> benchmarkResults;
 inline microseconds maxTime = 0us;
 
-inline void storeBenchmark(const std::string& name, const std::vector<microseconds>& elapsed, const microseconds& threshold)
+inline void storeBenchmark(const std::string& name,
+                           const std::vector<microseconds>& elapsed,
+                           const microseconds& threshold)
 {
     benchmarkResults.emplace_back(name, threshold, elapsed);
     maxTime = std::max(maxTime, *std::max_element(elapsed.begin(), elapsed.end()));
@@ -130,24 +137,24 @@ inline void storeBenchmark(const std::string& name, const std::vector<microsecon
 
 namespace
 {
-    std::error_code createDirectoryRecursive(const std::string& dirName)
-    {
-        std::error_code err;
+std::error_code createDirectoryRecursive(const std::string& dirName)
+{
+    std::error_code err;
 
-        if (std::filesystem::exists(dirName))
-            return err;
-
-        std::filesystem::create_directories(dirName, err);
-        c2d::test::println("Error: {}", err.message());
-
+    if (std::filesystem::exists(dirName))
         return err;
-    }
+
+    std::filesystem::create_directories(dirName, err);
+    c2d::test::println("Error: {}", err.message());
+
+    return err;
 }
+} // namespace
 
 inline void exportBenchmarks(const std::filesystem::path& filePath)
 {
     if (benchmarkResults.empty())
-            return;
+        return;
     std::sort(benchmarkResults.begin(),
               benchmarkResults.end(),
               [](const BenchmarkResult& a, const BenchmarkResult& b) { return a.avgTime < b.avgTime; });
@@ -170,16 +177,17 @@ inline void exportBenchmarks(const std::filesystem::path& filePath)
     const std::string benchmarkNameStr = "Benchmark Name";
     maxBenchmarkNameLength = std::max(maxBenchmarkNameLength, static_cast<int>(benchmarkNameStr.size()));
 
-    #define println2(...) \
-        _printlnFile(file, __VA_ARGS__); \
-        c2d::test::println(__VA_ARGS__)
+#define println2(...)                                                                                                  \
+    _printlnFile(file, __VA_ARGS__);                                                                                   \
+    c2d::test::println(__VA_ARGS__)
 
     // Header
     println2("{:<{}} | Status | Threshold (ms) | Avg (ms) | Min (ms) | Max (ms) |",
-             benchmarkNameStr, maxBenchmarkNameLength);
+             benchmarkNameStr,
+             maxBenchmarkNameLength);
 
     // Separator
-    println2("{} | {} | {} | {} | {} | {} |", 
+    println2("{} | {} | {} | {} | {} | {} |",
              std::string(maxBenchmarkNameLength, '-'),
              std::string(6, '-'),
              std::string(14, '-'),
@@ -193,7 +201,8 @@ inline void exportBenchmarks(const std::filesystem::path& filePath)
     for (const auto& result : benchmarkResults)
     {
         println2("{:<{}} | {:<6} | {:<14} | {:<8} | {:<8} | {:<8} |",
-                 result.name, maxBenchmarkNameLength,
+                 result.name,
+                 maxBenchmarkNameLength,
                  (result.avgTime <= result.threshold) ? "PASS" : "FAIL",
                  std::format("{:{}.3f}", result.threshold, resultTotalDigits),
                  std::format("{:{}.3f}", result.avgTime, resultTotalDigits),
@@ -201,8 +210,8 @@ inline void exportBenchmarks(const std::filesystem::path& filePath)
                  std::format("{:{}.3f}", result.maxTime, resultTotalDigits));
     }
 
-    #undef println2
+#undef println2
 }
 
-}
-}
+} // namespace test
+} // namespace c2d

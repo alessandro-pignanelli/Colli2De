@@ -1,11 +1,11 @@
 #pragma once
 
+#include <colli2de/Ray.hpp>
+#include <colli2de/Vec2.hpp>
+
 #include <format>
 #include <optional>
 #include <string>
-
-#include <colli2de/Ray.hpp>
-#include <colli2de/Vec2.hpp>
 
 namespace c2d
 {
@@ -16,6 +16,7 @@ struct AABB
     Vec2 max;
 
     AABB() = default;
+
     AABB(Vec2 min, Vec2 max) : min{min}, max{max} {}
 
     static AABB fromCenter(Vec2 center, Vec2 halfSize);
@@ -46,7 +47,7 @@ struct AABB
 
     void expandToInclude(Vec2 point);
     AABB expandedToInclude(Vec2 point) const;
-    
+
     float perimeter() const;
 
     std::string toString() const;
@@ -70,11 +71,9 @@ static_assert(std::is_trivially_copyable_v<AABB>, "AABB must be trivially copyab
 } // namespace c2d
 
 // Specialization for std::formatter to allow formatted output of AABB
-template<>
-struct std::formatter<c2d::AABB> : std::formatter<std::string>
+template <> struct std::formatter<c2d::AABB> : std::formatter<std::string>
 {
-    template<typename FormatContext>
-    auto format(c2d::AABB aabb, FormatContext& ctx) const
+    template <typename FormatContext> auto format(c2d::AABB aabb, FormatContext& ctx) const
     {
         return std::formatter<std::string>::format(aabb.toString(), ctx);
     }
