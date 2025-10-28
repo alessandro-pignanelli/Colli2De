@@ -103,6 +103,11 @@ struct Rotation
     {
         return float_equals(angleRadians, other.angleRadians);
     }
+
+    constexpr bool operator!=(const Rotation& other) const
+    {
+        return !(*this == other);
+    }
 };
 
 using Translation = Vec2;
@@ -208,6 +213,11 @@ struct Transform
     constexpr bool operator==(const Transform& other) const
     {
         return translation == other.translation && rotation == other.rotation;
+    }
+
+    constexpr bool operator!=(const Transform& other) const
+    {
+        return !(*this == other);
     }
 };
 

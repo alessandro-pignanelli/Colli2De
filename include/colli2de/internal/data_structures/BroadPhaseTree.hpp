@@ -108,6 +108,9 @@ template <typename IdType> class BroadPhaseTree
     std::optional<RaycastInfo<IdType>> firstHitRaycast(InfiniteRay ray, BitMaskType maskBits = ~0ull) const;
     void piercingRaycast(InfiniteRay ray, std::set<RaycastInfo<IdType>>& hits, BitMaskType maskBits = ~0ull) const;
 
+    void serialize(std::ostream& out) const;
+    static BroadPhaseTree deserialize(std::istream& in);
+
     // For debugging/statistics
     std::size_t size() const
     {
@@ -115,6 +118,13 @@ template <typename IdType> class BroadPhaseTree
     }
 
     void clear();
+
+    bool operator==(const BroadPhaseTree& other) const;
+
+    bool operator!=(const BroadPhaseTree& other) const
+    {
+        return !(*this == other);
+    }
 
     // Optionally, support spatial partitioning (e.g. grid or region BVHs)
     // Each grid cell/region can have its own BVH
@@ -129,9 +139,19 @@ template <typename IdType> class BroadPhaseTree
         AABB aabb;
         BitMaskType categoryBits; // For collision filtering
         BitMaskType maskBits;     // For collision filtering
+
+        void serialize(std::ostream& out) const;
+        static Proxy deserialize(std::istream& in);
+
+        bool operator==(const Proxy& other) const;
+
+        bool operator!=(const Proxy& other) const
+        {
+            return !(*this == other);
+        }
     };
 
-    const int32_t cellSize;                                    // Size of each grid cell for spatial partitioning
+    int32_t cellSize;                                          // Size of each grid cell for spatial partitioning
     std::vector<Proxy> proxies;                                // Indexed by BroadPhaseTreeHandle
     std::vector<BroadPhaseTreeHandle> proxiesFreeList;         // For fast recycling
     std::vector<std::pair<GridCell, DynamicBVH<IdType>>> bvhs; // Each grid cell has its own BVH
@@ -486,6 +506,185 @@ void BroadPhaseTree<IdType>::piercingRaycast(InfiniteRay ray,
         Ray{ray.start, ray.start + ray.direction.normalize() * cellSize * INFINITE_RAY_CELL_SPAN}, hits, maskBits);
 }
 
+template <typename IdType> void BroadPhaseTree<IdType>::serialize(std::ostream& out) const
+{
+    Writer writer(out);
+
+    writer(cellSize);
+
+    // Write proxies
+    size_t proxiesSize = proxies.size();
+    writer(proxiesSize);
+
+    for (const Proxy& proxy : proxies)
+        proxy.serialize(out);
+
+    // Write regions
+    size_t regionsSize = regions.size();
+    writer(regionsSize);
+    for (const auto& [cell, bvhIndex] : regions)
+    {
+        writer(cell.x);
+        writer(cell.y);
+        writer(bvhIndex);
+    }
+
+    // Write BVHs
+    size_t bvhsSize = bvhs.size();
+    writer(bvhsSize);
+    for (const auto& [cell, bvh] : bvhs)
+    {
+        writer(cell.x);
+        writer(cell.y);
+        bvh.serialize(out);
+    }
+
+    // Write proxies free list
+    size_t proxiesFreeListSize = proxiesFreeList.size();
+    writer(proxiesFreeListSize);
+    for (const BroadPhaseTreeHandle& handle : proxiesFreeList)
+        writer(handle);
+
+    // Write BVH free list
+    size_t bvhFreeListSize = bvhFreeList.size();
+    writer(bvhFreeListSize);
+    for (const size_t index : bvhFreeList)
+        writer(index);
+}
+
+template <typename IdType> BroadPhaseTree<IdType> BroadPhaseTree<IdType>::deserialize(std::istream& in)
+{
+    Reader reader(in);
+
+    int32_t cellSize;
+    reader(cellSize);
+
+    BroadPhaseTree<IdType> tree(cellSize);
+
+    // Read proxies
+    size_t proxiesSize;
+    reader(proxiesSize);
+
+    tree.proxies.reserve(proxiesSize);
+    for (size_t i = 0; i < proxiesSize; ++i)
+        tree.proxies.push_back(Proxy::deserialize(in));
+
+    // Read regions
+    size_t regionsSize;
+    reader(regionsSize);
+
+    for (size_t i = 0; i < regionsSize; ++i)
+    {
+        GridCell cell;
+        reader(cell.x);
+        reader(cell.y);
+
+        size_t bvhIndex;
+        reader(bvhIndex);
+
+        tree.regions.emplace(cell, bvhIndex);
+    }
+
+    // Read BVHs
+    size_t bvhsSize;
+    reader(bvhsSize);
+
+    tree.bvhs.reserve(bvhsSize);
+    for (size_t i = 0; i < bvhsSize; ++i)
+    {
+        GridCell cell;
+        reader(cell.x);
+        reader(cell.y);
+
+        DynamicBVH<IdType> bvh = DynamicBVH<IdType>::deserialize(in);
+        tree.bvhs.emplace_back(cell, std::move(bvh));
+    }
+
+    // Read proxies free list
+    size_t proxiesFreeListSize;
+    reader(proxiesFreeListSize);
+
+    tree.proxiesFreeList.reserve(proxiesFreeListSize);
+    for (size_t i = 0; i < proxiesFreeListSize; ++i)
+    {
+        BroadPhaseTreeHandle handle;
+        reader(handle);
+        tree.proxiesFreeList.push_back(handle);
+    }
+
+    // Read BVH free list
+    size_t bvhFreeListSize;
+    reader(bvhFreeListSize);
+
+    tree.bvhFreeList.reserve(bvhFreeListSize);
+    for (size_t i = 0; i < bvhFreeListSize; ++i)
+    {
+        size_t index;
+        reader(index);
+        tree.bvhFreeList.push_back(index);
+    }
+
+    return tree;
+}
+
+template <typename IdType> void BroadPhaseTree<IdType>::Proxy::serialize(std::ostream& out) const
+{
+    Writer writer(out);
+
+    writer(entityId);
+    writer(aabb.min.x);
+    writer(aabb.min.y);
+    writer(aabb.max.x);
+    writer(aabb.max.y);
+    writer(categoryBits);
+    writer(maskBits);
+
+    // Write bvhHandles size
+    size_t bvhHandlesSize = bvhHandles.size();
+    writer(bvhHandlesSize);
+
+    // Write bvhHandles
+    for (const auto& [cell, nodeIndex] : bvhHandles)
+    {
+        writer(cell.x);
+        writer(cell.y);
+        writer(nodeIndex);
+    }
+}
+
+template <typename IdType>
+typename BroadPhaseTree<IdType>::Proxy BroadPhaseTree<IdType>::Proxy::deserialize(std::istream& in)
+{
+    Reader reader(in);
+
+    Proxy proxy;
+    reader(proxy.entityId);
+    reader(proxy.aabb.min.x);
+    reader(proxy.aabb.min.y);
+    reader(proxy.aabb.max.x);
+    reader(proxy.aabb.max.y);
+    reader(proxy.categoryBits);
+    reader(proxy.maskBits);
+
+    // Read bvhHandles
+    size_t bvhHandlesSize;
+    reader(bvhHandlesSize);
+
+    for (size_t i = 0; i < bvhHandlesSize; ++i)
+    {
+        GridCell cell;
+        reader(cell.x);
+        reader(cell.y);
+
+        NodeIndex nodeIndex;
+        reader(nodeIndex);
+
+        proxy.bvhHandles.emplace(cell, nodeIndex);
+    }
+
+    return proxy;
+}
+
 template <typename IdType> bool BroadPhaseTree<IdType>::isValidHandle(BroadPhaseTreeHandle handle) const
 {
     return static_cast<size_t>(handle) < proxies.size();
@@ -523,6 +722,40 @@ template <typename IdType> void BroadPhaseTree<IdType>::clear()
     regions.clear();
     bvhs.clear();
     bvhFreeList.clear();
+}
+
+template <typename IdType> bool BroadPhaseTree<IdType>::operator==(const BroadPhaseTree& other) const
+{
+    if (cellSize != other.cellSize)
+        return false;
+    if (proxies != other.proxies)
+        return false;
+    if (proxiesFreeList != other.proxiesFreeList)
+        return false;
+    if (regions != other.regions)
+        return false;
+    if (bvhs != other.bvhs)
+        return false;
+    if (bvhFreeList != other.bvhFreeList)
+        return false;
+
+    return true;
+}
+
+template <typename IdType> bool BroadPhaseTree<IdType>::Proxy::operator==(const Proxy& other) const
+{
+    if (bvhHandles != other.bvhHandles)
+        return false;
+    if (entityId != other.entityId)
+        return false;
+    if (aabb != other.aabb)
+        return false;
+    if (categoryBits != other.categoryBits)
+        return false;
+    if (maskBits != other.maskBits)
+        return false;
+
+    return true;
 }
 
 } // namespace c2d

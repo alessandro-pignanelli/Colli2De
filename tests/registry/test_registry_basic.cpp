@@ -382,3 +382,53 @@ TEST_CASE("Registry moveEntity updates collision status", "[Registry][Movement]"
     reg.moveEntity(1, Transform({2.0f, 0.0f}));
     CHECK(reg.areColliding(1, 2));
 }
+
+TEST_CASE("Registry serialization | No Partitioning", "[Registry][Serialize][Deserialize]")
+{
+    Registry<int, PartitioningMethod::None> registry;
+    for (uint32_t i = 0; i < 1000; ++i)
+    {
+        registry.createEntity(i, BodyType::Dynamic, Transform({static_cast<float>(i), i * 3.23f}));
+
+        const auto shapeIndex = i % 3;
+        if (shapeIndex == 0)
+            registry.addShape(i, Circle{{i * 5.23f, i * -0.973f}, 1.0f}, 1, 1 << 1); // Category 1, mask 2
+        else if (shapeIndex == 1)
+            registry.addShape(i, makeRectangle({0.0f, 0.0f}, 2.0f, 2.0f), 2, 1 << 0); // Category 2, mask 1
+        else
+            registry.addShape(
+                i, makeRegularPolygon(6, {i * 2.43f, i * -1.9f}, 1.0f, 5), 3, ~0ull); // Category 3, mask all
+    }
+
+    std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+    registry.serialize(ss);
+
+    auto deserializedRegistry = Registry<int, PartitioningMethod::None>::deserialize(ss);
+
+    CHECK(registry == deserializedRegistry);
+}
+
+TEST_CASE("Registry serialization | With Partitioning", "[Registry][Serialize][Deserialize]")
+{
+    Registry<int, PartitioningMethod::Grid> registry;
+    for (uint32_t i = 0; i < 1000; ++i)
+    {
+        registry.createEntity(i, BodyType::Dynamic, Transform({static_cast<float>(i), i * 3.23f}));
+
+        const auto shapeIndex = i % 3;
+        if (shapeIndex == 0)
+            registry.addShape(i, Circle{{i * 5.23f, i * -0.973f}, 1.0f}, 1, 1 << 1); // Category 1, mask 2
+        else if (shapeIndex == 1)
+            registry.addShape(i, makeRectangle({0.0f, 0.0f}, 2.0f, 2.0f), 2, 1 << 0); // Category 2, mask 1
+        else
+            registry.addShape(
+                i, makeRegularPolygon(6, {i * 2.43f, i * -1.9f}, 1.0f, 5), 3, ~0ull); // Category 3, mask all
+    }
+
+    std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+    registry.serialize(ss);
+
+    auto deserializedRegistry = Registry<int, PartitioningMethod::Grid>::deserialize(ss);
+
+    CHECK(registry == deserializedRegistry);
+}

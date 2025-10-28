@@ -3,6 +3,7 @@
 #include <colli2de/Ray.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
 #include <colli2de/internal/utils/Methods.hpp>
+#include <colli2de/internal/utils/Serialization.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -15,16 +16,6 @@
 namespace
 {
 constexpr float displacementFactor = 2.2f; // Factor to adjust the displacement for fattening AABBs
-
-template <typename T> void write_pod(std::ostream& out, const T& v)
-{
-    out.write(reinterpret_cast<const char*>(&v), sizeof(T));
-}
-
-template <typename T> void read_pod(std::istream& in, T& v)
-{
-    in.read(reinterpret_cast<char*>(&v), sizeof(T));
-}
 } // namespace
 
 namespace c2d
@@ -57,6 +48,16 @@ template <typename IdType> struct BVHNode
     {
         return (categoryBits & mask) != 0;
     }
+
+    void serialize(std::ostream& out) const;
+    static BVHNode deserialize(std::istream& in);
+
+    bool operator==(const BVHNode& other) const;
+
+    bool operator!=(const BVHNode& other) const
+    {
+        return !(*this == other);
+    }
 };
 
 template <typename IdType> class DynamicBVH
@@ -67,8 +68,6 @@ template <typename IdType> class DynamicBVH
     using RaycastInfo = RaycastHit<IdType>;
     using const_iterator = LeafConstIterator;
     using value_type = BVHNode<IdType>;
-
-    const float fatAABBMargin = 0.0f;
 
     DynamicBVH(float fatAABBMargin = 0.0f);
 
@@ -84,6 +83,11 @@ template <typename IdType> class DynamicBVH
     bool moveProxy(NodeIndex nodeIndex, AABB aabb);
 
     void clear();
+
+    float getFatAABBMargin() const
+    {
+        return fatAABBMargin;
+    }
 
     size_t size() const
     {
@@ -149,12 +153,18 @@ template <typename IdType> class DynamicBVH
     void piercingRaycast(InfiniteRay ray, std::set<RaycastInfo>& hits, BitMaskType maskBits = ~0ull) const;
 
     void serialize(std::ostream& out) const;
-    static DynamicBVH<IdType> deserialize(std::istream& in);
+    static DynamicBVH deserialize(std::istream& in);
 
-    bool operator==(const DynamicBVH<IdType>& other) const;
+    bool operator==(const DynamicBVH& other) const;
+
+    bool operator!=(const DynamicBVH& other) const
+    {
+        return !(*this == other);
+    }
 
   private:
     std::vector<BVHNode<IdType>> nodes;
+    float fatAABBMargin = 0.0f;
     uint32_t nodeCount = 0;
     uint32_t proxyCount = 0;
 
@@ -964,91 +974,125 @@ void DynamicBVH<IdType>::findAllCollisionsRecursive(NodeIndex nodeIdx,
 
 template <typename IdType> void DynamicBVH<IdType>::serialize(std::ostream& out) const
 {
-    write_pod(out, fatAABBMargin);
-    write_pod(out, rootIndex);
-    write_pod(out, nodeCount);
-    write_pod(out, nextAvailableIndex);
+    Writer writer(out);
+
+    writer(fatAABBMargin);
+    writer(rootIndex);
+    writer(nodeCount);
+    writer(proxyCount);
+    writer(nextAvailableIndex);
 
     // Write nodes vector size
-    uint64_t nodesSize = nodes.size();
-    write_pod(out, nodesSize);
+    const size_t nodesSize = nodes.size();
+    writer(nodesSize);
 
     // Write nodes
     for (const auto& node : nodes)
-    {
-        write_pod(out, node.aabb.min.x);
-        write_pod(out, node.aabb.min.y);
-        write_pod(out, node.aabb.max.x);
-        write_pod(out, node.aabb.max.y);
-        write_pod(out, node.parentIndex);
-        write_pod(out, node.child1Index);
-        write_pod(out, node.child2Index);
-        write_pod(out, node.height);
-        write_pod(out, node.id);
-    }
+        node.serialize(out);
 }
 
 template <typename IdType> DynamicBVH<IdType> DynamicBVH<IdType>::deserialize(std::istream& in)
 {
+    Reader reader(in);
+
     float fatAABBMargin;
-    read_pod(in, fatAABBMargin);
+    reader(fatAABBMargin);
+
     DynamicBVH<IdType> bvh(fatAABBMargin);
 
-    read_pod(in, bvh.rootIndex);
-    read_pod(in, bvh.nodeCount);
-    read_pod(in, bvh.nextAvailableIndex);
+    reader(bvh.rootIndex);
+    reader(bvh.nodeCount);
+    reader(bvh.proxyCount);
+    reader(bvh.nextAvailableIndex);
 
-    uint64_t nodesSize;
-    read_pod(in, nodesSize);
-    bvh.nodes.resize(nodesSize);
+    size_t nodesSize;
+    reader(nodesSize);
 
-    for (auto& node : bvh.nodes)
-    {
-        read_pod(in, node.aabb.min.x);
-        read_pod(in, node.aabb.min.y);
-        read_pod(in, node.aabb.max.x);
-        read_pod(in, node.aabb.max.y);
-        read_pod(in, node.parentIndex);
-        read_pod(in, node.child1Index);
-        read_pod(in, node.child2Index);
-        read_pod(in, node.height);
-        read_pod(in, node.id);
-    }
+    // Replace the preallocated storage created by the constructor
+    bvh.nodes.clear();
+    bvh.nodes.reserve(nodesSize);
+    for (size_t i = 0; i < nodesSize; ++i)
+        bvh.nodes.push_back(BVHNode<IdType>::deserialize(in));
 
     return bvh;
 }
 
-template <typename IdType> bool DynamicBVH<IdType>::operator==(const DynamicBVH<IdType>& other) const
+template <typename IdType> bool DynamicBVH<IdType>::operator==(const DynamicBVH& other) const
 {
     if (!float_equals(fatAABBMargin, other.fatAABBMargin))
         return false;
-    if (rootIndex != other.rootIndex)
-        return false;
     if (nodeCount != other.nodeCount)
+        return false;
+    if (proxyCount != other.proxyCount)
+        return false;
+    if (rootIndex != other.rootIndex)
         return false;
     if (nextAvailableIndex != other.nextAvailableIndex)
         return false;
-    if (nodes.size() != other.nodes.size())
+    if (nodes != other.nodes)
         return false;
 
-    for (size_t i = 0; i < nodes.size(); ++i)
-    {
-        const auto& a = nodes[i];
-        const auto& b = other.nodes[i];
+    return true;
+}
 
-        if (a.aabb != b.aabb)
-            return false;
-        if (a.parentIndex != b.parentIndex)
-            return false;
-        if (a.child1Index != b.child1Index)
-            return false;
-        if (a.child2Index != b.child2Index)
-            return false;
-        if (a.height != b.height)
-            return false;
-        if (a.id != b.id)
-            return false;
-    }
+template <typename IdType> void BVHNode<IdType>::serialize(std::ostream& out) const
+{
+    Writer writer(out);
+
+    writer(aabb.min.x);
+    writer(aabb.min.y);
+    writer(aabb.max.x);
+    writer(aabb.max.y);
+    writer(categoryBits);
+    writer(isHittingBits);
+    writer(parentIndex);
+    writer(child1Index);
+    writer(child2Index);
+    writer(height);
+    writer(id);
+}
+
+template <typename IdType> BVHNode<IdType> BVHNode<IdType>::deserialize(std::istream& in)
+{
+    Reader reader(in);
+    BVHNode<IdType> node;
+
+    reader(node.aabb.min.x);
+    reader(node.aabb.min.y);
+    reader(node.aabb.max.x);
+    reader(node.aabb.max.y);
+    reader(node.categoryBits);
+    reader(node.isHittingBits);
+    reader(node.parentIndex);
+    reader(node.child1Index);
+    reader(node.child2Index);
+    reader(node.height);
+    reader(node.id);
+
+    return node;
+}
+
+template <typename IdType> bool BVHNode<IdType>::operator==(const BVHNode& other) const
+{
+    if (aabb != other.aabb)
+        return false;
+    if (categoryBits != other.categoryBits)
+        return false;
+    if (isHittingBits != other.isHittingBits)
+        return false;
+
+    if (parentIndex != other.parentIndex)
+        return false;
+    if (child1Index != other.child1Index)
+        return false;
+    if (child2Index != other.child2Index)
+        return false;
+
+    if (height != other.height)
+        return false;
+
+    if (id != other.id)
+        return false;
 
     return true;
 }

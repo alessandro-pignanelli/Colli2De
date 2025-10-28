@@ -64,6 +64,11 @@ struct AABB
     {
         return min == other.min && max == other.max;
     }
+
+    bool operator!=(const AABB& other) const
+    {
+        return !(*this == other);
+    }
 };
 
 static_assert(std::is_trivially_copyable_v<AABB>, "AABB must be trivially copyable");

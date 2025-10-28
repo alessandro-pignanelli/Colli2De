@@ -44,6 +44,16 @@ struct Circle
     {
         return ShapeType::Circle;
     }
+
+    bool operator==(const Circle& other) const
+    {
+        return center == other.center && float_equals(radius, other.radius);
+    }
+
+    bool operator!=(const Circle& other) const
+    {
+        return !(*this == other);
+    }
 };
 
 // Capsule (for segments with round ends)
@@ -63,6 +73,16 @@ struct Capsule
     {
         return ShapeType::Capsule;
     }
+
+    bool operator==(const Capsule& other) const
+    {
+        return center1 == other.center1 && center2 == other.center2 && float_equals(radius, other.radius);
+    }
+
+    bool operator!=(const Capsule& other) const
+    {
+        return !(*this == other);
+    }
 };
 
 // Segment (line, two-sided, zero radius)
@@ -78,6 +98,16 @@ struct Segment
     constexpr ShapeType getType() const
     {
         return ShapeType::Segment;
+    }
+
+    bool operator==(const Segment& other) const
+    {
+        return start == other.start && end == other.end;
+    }
+
+    bool operator!=(const Segment& other) const
+    {
+        return !(*this == other);
     }
 };
 
@@ -116,6 +146,25 @@ struct Polygon
             const Vec2 edge = vertices[0] - vertices[lastEdgeIndex];
             normals[lastEdgeIndex] = Vec2::normalized(edge.y, -edge.x); // Right-hand normal (CCW)
         }
+    }
+
+    bool operator==(const Polygon& other) const
+    {
+        if (count != other.count)
+            return false;
+        for (uint8_t i = 0; i < count; ++i)
+        {
+            if (vertices[i] != other.vertices[i])
+                return false;
+            if (normals[i] != other.normals[i])
+                return false;
+        }
+        return true;
+    }
+
+    bool operator!=(const Polygon& other) const
+    {
+        return !(*this == other);
     }
 };
 

@@ -61,3 +61,21 @@ TEST_CASE("BroadPhaseTree | findAllCollisions detects overlaps", "[BroadPhaseTre
     for (const auto& p : expected)
         CHECK(std::find(pairs.begin(), pairs.end(), p) != pairs.end());
 }
+
+TEST_CASE("BroadPhaseTree | can serialize and deserialize correctly", "[BroadPhaseTree][Serialize][Deserialize]")
+{
+    // 1. Build and populate a BVH
+    BroadPhaseTree<uint32_t> bvh;
+    for (uint32_t i = 0; i < 100; ++i)
+        bvh.addProxy(i, AABB{Vec2{float(i), float(i)}, Vec2{float(i + 1), float(i + 1)}});
+
+    // 2. Serialize to memory
+    std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+    bvh.serialize(ss);
+
+    // 3. Deserialize into a new BVH
+    auto bvh2 = BroadPhaseTree<uint32_t>::deserialize(ss);
+
+    // 4. Check equality
+    CHECK(bvh == bvh2);
+}

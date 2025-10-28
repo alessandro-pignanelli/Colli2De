@@ -81,6 +81,17 @@ template <typename EntityId, PartitioningMethod Method = PartitioningMethod::Non
     size_t size() const;
     void clear();
 
+    void serialize(std::ostream& out) const;
+    static Registry deserialize(std::istream& in);
+
+    // Used for testing equality
+    bool operator==(const Registry& other) const;
+
+    bool operator!=(const Registry& other) const
+    {
+        return !(*this == other);
+    }
+
   private:
     struct ShapeInstance
     {
@@ -91,6 +102,16 @@ template <typename EntityId, PartitioningMethod Method = PartitioningMethod::Non
         BitMaskType categoryBits = {1};
         BitMaskType maskBits = {~0ull};
         bool isActive = true;
+
+        void serialize(std::ostream& out) const;
+        static ShapeInstance deserialize(std::istream& in);
+
+        bool operator==(const ShapeInstance& other) const;
+
+        bool operator!=(const ShapeInstance& other) const
+        {
+            return !(*this == other);
+        }
     };
 
     struct EntityInfo
@@ -98,6 +119,16 @@ template <typename EntityId, PartitioningMethod Method = PartitioningMethod::Non
         std::vector<ShapeInstance> shapes;
         Transform transform;
         BodyType type;
+
+        void serialize(std::ostream& out) const;
+        static EntityInfo deserialize(std::istream& in);
+
+        bool operator==(const EntityInfo& other) const;
+
+        bool operator!=(const EntityInfo& other) const
+        {
+            return !(*this == other);
+        }
     };
 
     std::map<EntityId, EntityInfo> entities;
@@ -583,7 +614,7 @@ void Registry<EntityId, Method>::narrowPhaseCollisions(std::vector<std::pair<Sha
     std::sort(collisions.begin(), collisions.end());
 
     narrowPhaseCollision(collisions[0].first, collisions[0].second, outCollisionsInfo);
-    for (size_t i = 1; i < collisions.size(); ++i)
+    for (size_t i = 1; i < collisions.size(); i++)
     {
         // Skip duplicates
         if ((collisions[i].first == collisions[i - 1].first && collisions[i].second == collisions[i - 1].second) ||
@@ -603,7 +634,7 @@ void Registry<EntityId, Method>::narrowPhaseCollisions(ShapeId shapeQueried,
     std::sort(collisions.begin(), collisions.end());
 
     narrowPhaseCollision(shapeQueried, collisions[0], outCollisionsInfo);
-    for (size_t i = 1; i < collisions.size(); ++i)
+    for (size_t i = 1; i < collisions.size(); i++)
     {
         // Skip duplicates
         if (collisions[i] == collisions[i - 1])
@@ -1067,6 +1098,401 @@ template <typename EntityId, PartitioningMethod Method> void Registry<EntityId, 
     treeBullet.clear();
     bulletPreviousTransforms.clear();
     previousAllCollisionsCount = 1000;
+}
+
+template <typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::serialize(std::ostream& out) const
+{
+    Writer writer(out);
+
+    // Write entities
+    size_t entitiesSize = entities.size();
+    writer(entitiesSize);
+    for (const auto& [entityId, entityInfo] : entities)
+    {
+        writer(entityId);
+        entityInfo.serialize(out);
+    }
+
+    // Write shape to entity map
+    size_t shapeEntitySize = shapeEntity.size();
+    writer(shapeEntitySize);
+    for (const auto& [shapeId, shapesCount] : shapeEntity)
+    {
+        writer(shapeId);
+        writer(shapesCount);
+    }
+
+    // Write free shape IDs
+    size_t freeShapeIdsSize = freeShapeIds.size();
+    writer(freeShapeIdsSize);
+    for (const ShapeId& shapeId : freeShapeIds)
+        writer(shapeId);
+
+    // Write broad-phase trees
+    treeStatic.serialize(out);
+    treeDynamic.serialize(out);
+    treeBullet.serialize(out);
+
+    // Write bullet previous transforms
+    size_t bulletPrevTransformsSize = bulletPreviousTransforms.size();
+    writer(bulletPrevTransformsSize);
+    for (const auto& [entityId, transform] : bulletPreviousTransforms)
+    {
+        writer(entityId);
+
+        writer(transform.translation.x);
+        writer(transform.translation.y);
+        writer(transform.rotation.angleRadians);
+        writer(transform.rotation.sin);
+        writer(transform.rotation.cos);
+    }
+
+    writer(previousAllCollisionsCount);
+}
+
+template <typename EntityId, PartitioningMethod Method>
+Registry<EntityId, Method> Registry<EntityId, Method>::deserialize(std::istream& in)
+{
+    Reader reader(in);
+    Registry<EntityId, Method> registry;
+
+    // Read entities
+    size_t entitiesSize;
+    reader(entitiesSize);
+
+    for (size_t i = 0; i < entitiesSize; i++)
+    {
+        EntityId entityId;
+        reader(entityId);
+
+        auto entityInfo = EntityInfo::deserialize(in);
+
+        registry.entities.emplace(entityId, std::move(entityInfo));
+    }
+
+    // Read shape to entity map
+    size_t shapeEntitySize;
+    reader(shapeEntitySize);
+
+    registry.shapeEntity.resize(shapeEntitySize);
+    for (size_t i = 0; i < shapeEntitySize; i++)
+    {
+        reader(registry.shapeEntity[i].first);
+        reader(registry.shapeEntity[i].second);
+    }
+
+    // Read free shape IDs
+    size_t freeShapeIdsSize;
+    reader(freeShapeIdsSize);
+
+    registry.freeShapeIds.resize(freeShapeIdsSize);
+    for (size_t i = 0; i < freeShapeIdsSize; i++)
+        reader(registry.freeShapeIds[i]);
+
+    // Read broad-phase trees
+    registry.treeStatic = TreeType::deserialize(in);
+    registry.treeDynamic = TreeType::deserialize(in);
+    registry.treeBullet = TreeType::deserialize(in);
+
+    // Read bullet previous transforms
+    size_t bulletPrevTransformsSize;
+    reader(bulletPrevTransformsSize);
+
+    for (size_t i = 0; i < bulletPrevTransformsSize; i++)
+    {
+        EntityId entityId;
+        reader(entityId);
+
+        Transform transform;
+        reader(transform.translation.x);
+        reader(transform.translation.y);
+        reader(transform.rotation.angleRadians);
+        reader(transform.rotation.sin);
+        reader(transform.rotation.cos);
+
+        registry.bulletPreviousTransforms.emplace(entityId, std::move(transform));
+    }
+
+    reader(registry.previousAllCollisionsCount);
+
+    return registry;
+}
+
+template <typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::EntityInfo::serialize(std::ostream& out) const
+{
+    Writer writer(out);
+
+    // Write body type
+    writer(static_cast<uint8_t>(type));
+
+    // Write transform
+    writer(transform.translation.x);
+    writer(transform.translation.y);
+    writer(transform.rotation.angleRadians);
+    writer(transform.rotation.sin);
+    writer(transform.rotation.cos);
+
+    // Write shapes
+    size_t shapesSize = shapes.size();
+    writer(shapesSize);
+    for (const auto& shapeInstance : shapes)
+        shapeInstance.serialize(out);
+}
+
+template <typename EntityId, PartitioningMethod Method>
+Registry<EntityId, Method>::EntityInfo Registry<EntityId, Method>::EntityInfo::deserialize(std::istream& in)
+{
+    Reader reader(in);
+    EntityInfo entityInfo;
+
+    // Read body type
+    reader(entityInfo.type);
+
+    // Read transform
+    reader(entityInfo.transform.translation.x);
+    reader(entityInfo.transform.translation.y);
+    reader(entityInfo.transform.rotation.angleRadians);
+    reader(entityInfo.transform.rotation.sin);
+    reader(entityInfo.transform.rotation.cos);
+
+    // Read shapes
+    size_t shapesSize;
+    reader(shapesSize);
+
+    entityInfo.shapes.resize(shapesSize);
+    for (auto& shapeInstance : entityInfo.shapes)
+        shapeInstance = ShapeInstance::deserialize(in);
+
+    return entityInfo;
+}
+
+template <typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::ShapeInstance::serialize(std::ostream& out) const
+{
+    Writer writer(out);
+
+    // Write shape ID
+    writer(id);
+
+    // Write shape variant
+    uint8_t shapeType = static_cast<uint8_t>(shape.index());
+    writer(shapeType);
+
+    // Write AABB
+    writer(aabb.min.x);
+    writer(aabb.min.y);
+    writer(aabb.max.x);
+    writer(aabb.max.y);
+
+    // Write tree handle
+    writer(treeHandle);
+
+    // Write mask bits
+    writer(categoryBits);
+    writer(maskBits);
+
+    // Write isActive
+    writer(isActive);
+
+    // Write shape data
+    if (std::holds_alternative<Circle>(shape))
+    {
+        const Circle& circle = std::get<Circle>(shape);
+        writer(circle.center.x);
+        writer(circle.center.y);
+        writer(circle.radius);
+    }
+    else if (std::holds_alternative<Capsule>(shape))
+    {
+        const Capsule& capsule = std::get<Capsule>(shape);
+        writer(capsule.center1.x);
+        writer(capsule.center1.y);
+        writer(capsule.center2.x);
+        writer(capsule.center2.y);
+        writer(capsule.radius);
+    }
+    else if (std::holds_alternative<Segment>(shape))
+    {
+        const Segment& segment = std::get<Segment>(shape);
+        writer(segment.start.x);
+        writer(segment.start.y);
+        writer(segment.end.x);
+        writer(segment.end.y);
+    }
+    else if (std::holds_alternative<Polygon>(shape))
+    {
+        const Polygon& polygon = std::get<Polygon>(shape);
+        writer(polygon.count);
+
+        for (size_t i = 0; i < polygon.count; i++)
+        {
+            writer(polygon.vertices[i].x);
+            writer(polygon.vertices[i].y);
+        }
+        for (size_t i = 0; i < polygon.count; i++)
+        {
+            writer(polygon.normals[i].x);
+            writer(polygon.normals[i].y);
+        }
+    }
+}
+
+template <typename EntityId, PartitioningMethod Method>
+typename Registry<EntityId, Method>::ShapeInstance Registry<EntityId, Method>::ShapeInstance::deserialize(
+    std::istream& in)
+{
+    Reader reader(in);
+    ShapeInstance shapeInstance;
+
+    // Read shape ID
+    reader(shapeInstance.id);
+
+    // Read shape variant
+    uint8_t shapeType;
+    reader(shapeType);
+
+    // Read AABB
+    reader(shapeInstance.aabb.min.x);
+    reader(shapeInstance.aabb.min.y);
+    reader(shapeInstance.aabb.max.x);
+    reader(shapeInstance.aabb.max.y);
+
+    // Read tree handle
+    reader(shapeInstance.treeHandle);
+
+    // Read mask bits
+    reader(shapeInstance.categoryBits);
+    reader(shapeInstance.maskBits);
+
+    // Read isActive
+    reader(shapeInstance.isActive);
+
+    // Read shape data
+    if (shapeType == static_cast<uint8_t>(ShapeType::Circle))
+    {
+        Circle circle;
+        reader(circle.center.x);
+        reader(circle.center.y);
+        reader(circle.radius);
+        shapeInstance.shape = circle;
+    }
+    else if (shapeType == static_cast<uint8_t>(ShapeType::Capsule))
+    {
+        Capsule capsule;
+        reader(capsule.center1.x);
+        reader(capsule.center1.y);
+        reader(capsule.center2.x);
+        reader(capsule.center2.y);
+        reader(capsule.radius);
+        shapeInstance.shape = capsule;
+    }
+    else if (shapeType == static_cast<uint8_t>(ShapeType::Segment))
+    {
+        Segment segment;
+        reader(segment.start.x);
+        reader(segment.start.y);
+        reader(segment.end.x);
+        reader(segment.end.y);
+        shapeInstance.shape = segment;
+    }
+    else if (shapeType == static_cast<uint8_t>(ShapeType::Polygon))
+    {
+        Polygon polygon;
+        reader(polygon.count);
+
+        for (size_t i = 0; i < polygon.count; i++)
+        {
+            reader(polygon.vertices[i].x);
+            reader(polygon.vertices[i].y);
+        }
+        for (size_t i = 0; i < polygon.count; i++)
+        {
+            reader(polygon.normals[i].x);
+            reader(polygon.normals[i].y);
+        }
+
+        shapeInstance.shape = polygon;
+    }
+
+    return shapeInstance;
+}
+
+template <typename EntityId, PartitioningMethod Method>
+bool Registry<EntityId, Method>::operator==(const Registry& other) const
+{
+    if (entities.size() != other.entities.size())
+        return false;
+
+    for (const auto& [id, entity] : entities)
+    {
+        auto it = other.entities.find(id);
+        if (it == other.entities.end() || it->second != entity)
+            return false;
+    }
+
+    if (shapeEntity != other.shapeEntity)
+        return false;
+
+    if (freeShapeIds != other.freeShapeIds)
+        return false;
+
+    if (treeStatic != other.treeStatic)
+        return false;
+    if (treeDynamic != other.treeDynamic)
+        return false;
+    if (treeBullet != other.treeBullet)
+        return false;
+
+    if (bulletPreviousTransforms.size() != other.bulletPreviousTransforms.size())
+        return false;
+
+    for (const auto& [id, transform] : bulletPreviousTransforms)
+    {
+        auto it = other.bulletPreviousTransforms.find(id);
+        if (it == other.bulletPreviousTransforms.end() || it->second != transform)
+            return false;
+    }
+
+    if (previousAllCollisionsCount != other.previousAllCollisionsCount)
+        return false;
+
+    return true;
+}
+
+template <typename EntityId, PartitioningMethod Method>
+bool Registry<EntityId, Method>::EntityInfo::operator==(const EntityInfo& other) const
+{
+    if (shapes != other.shapes)
+        return false;
+    if (transform != other.transform)
+        return false;
+    if (type != other.type)
+        return false;
+
+    return true;
+}
+
+template <typename EntityId, PartitioningMethod Method>
+bool Registry<EntityId, Method>::ShapeInstance::operator==(const ShapeInstance& other) const
+{
+    if (id != other.id)
+        return false;
+    if (shape != other.shape)
+        return false;
+    if (aabb != other.aabb)
+        return false;
+    if (treeHandle != other.treeHandle)
+        return false;
+    if (categoryBits != other.categoryBits)
+        return false;
+    if (maskBits != other.maskBits)
+        return false;
+    if (isActive != other.isActive)
+        return false;
+
+    return true;
 }
 
 } // namespace c2d

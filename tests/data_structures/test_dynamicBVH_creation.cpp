@@ -309,12 +309,8 @@ TEST_CASE("DynamicBVH | can serialize and deserialize correctly", "[DynamicBVH][
 {
     // 1. Build and populate a BVH
     DynamicBVH<uint32_t> bvh(0.2f);
-    std::vector<AABB> boxes;
     for (uint32_t i = 0; i < 100; ++i)
-    {
-        boxes.push_back(AABB{Vec2{float(i), float(i)}, Vec2{float(i + 1), float(i + 1)}});
-        bvh.addProxy(i, boxes.back());
-    }
+        bvh.addProxy(i, AABB{Vec2{float(i), float(i)}, Vec2{float(i + 1), float(i + 1)}});
 
     // 2. Serialize to memory
     std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
@@ -324,7 +320,7 @@ TEST_CASE("DynamicBVH | can serialize and deserialize correctly", "[DynamicBVH][
     auto bvh2 = DynamicBVH<uint32_t>::deserialize(ss);
 
     // 4. Check core fields
-    CHECK(bvh2.fatAABBMargin == Approx(bvh.fatAABBMargin));
+    CHECK(bvh2.getFatAABBMargin() == Approx(bvh.getFatAABBMargin()));
     CHECK(bvh2.capacity() == bvh.capacity());
 
     // 5. Query both and compare results
