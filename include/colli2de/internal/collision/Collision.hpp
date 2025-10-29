@@ -76,19 +76,19 @@ inline std::optional<float> sweepHelper(Transform startTransform,
         return 0.0f;
 
     const Transform deltaTransform = endTransform - startTransform;
-    Transform currentTransform;
 
-    constexpr int32_t coarseSteps = 8;
-    constexpr int32_t refinementSteps = 10;
+    constexpr uint8_t coarseSteps = 8;
+    constexpr uint8_t refinementSteps = 10;
     float fractionLower = 0.0f;
     float fractionUpper = 1.0f;
 
-    for (int32_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
+    for (uint8_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
     {
         const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
-        currentTransform.translation = startTransform.translation + deltaTransform.translation * testFraction;
-        currentTransform.rotation =
-            startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * testFraction;
+
+        const Transform currentTransform(startTransform.translation + deltaTransform.translation * testFraction,
+                                         startTransform.rotation.angleRadians +
+                                             deltaTransform.rotation.angleRadians * testFraction);
 
         if (isColliding(currentTransform))
         {
@@ -105,9 +105,10 @@ inline std::optional<float> sweepHelper(Transform startTransform,
     for (int32_t iteration = 0; iteration < refinementSteps; ++iteration)
     {
         const float midFraction = 0.5f * (fractionLower + fractionUpper);
-        currentTransform.translation = startTransform.translation + deltaTransform.translation * midFraction;
-        currentTransform.rotation =
-            startTransform.rotation.angleRadians + deltaTransform.rotation.angleRadians * midFraction;
+
+        const Transform currentTransform(startTransform.translation + deltaTransform.translation * midFraction,
+                                         startTransform.rotation.angleRadians +
+                                             deltaTransform.rotation.angleRadians * midFraction);
 
         if (isColliding(currentTransform))
             fractionUpper = midFraction;
@@ -122,6 +123,31 @@ inline std::optional<float> sweepHelper(Transform startTransform,
     return fractionUpper;
 }
 
+inline bool boolSweepHelper(Transform startTransform,
+                            Transform endTransform,
+                            const std::function<bool(const Transform&)>& isColliding)
+{
+    if (isColliding(startTransform))
+        return true;
+
+    const Transform deltaTransform = endTransform - startTransform;
+
+    constexpr uint8_t coarseSteps = 8;
+    for (uint8_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
+    {
+        const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
+
+        const Transform currentTransform(startTransform.translation + deltaTransform.translation * testFraction,
+                                         startTransform.rotation.angleRadians +
+                                             deltaTransform.rotation.angleRadians * testFraction);
+
+        if (isColliding(currentTransform))
+            return true;
+    }
+
+    return false;
+}
+
 inline std::optional<float> sweepHelper(Transform startTransform1,
                                         Transform endTransform1,
                                         Transform startTransform2,
@@ -133,24 +159,22 @@ inline std::optional<float> sweepHelper(Transform startTransform1,
 
     const Transform deltaTransform1 = endTransform1 - startTransform1;
     const Transform deltaTransform2 = endTransform2 - startTransform2;
-    Transform currentTransform1;
-    Transform currentTransform2;
 
-    constexpr int32_t coarseSteps = 8;
-    constexpr int32_t refinementSteps = 10;
+    constexpr uint8_t coarseSteps = 8;
+    constexpr uint8_t refinementSteps = 10;
     float fractionLower = 0.0f;
     float fractionUpper = 1.0f;
 
-    for (int32_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
+    for (uint8_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
     {
         const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
 
-        currentTransform1.translation = startTransform1.translation + deltaTransform1.translation * testFraction;
-        currentTransform1.rotation =
-            startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * testFraction;
-        currentTransform2.translation = startTransform2.translation + deltaTransform2.translation * testFraction;
-        currentTransform2.rotation =
-            startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * testFraction;
+        const auto currentTransform1 =
+            Transform(startTransform1.translation + deltaTransform1.translation * testFraction,
+                      startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * testFraction);
+        const auto currentTransform2 =
+            Transform(startTransform2.translation + deltaTransform2.translation * testFraction,
+                      startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * testFraction);
 
         if (areColliding(currentTransform1, currentTransform2))
         {
@@ -164,16 +188,16 @@ inline std::optional<float> sweepHelper(Transform startTransform1,
     if (fractionLower == 0.0f && fractionUpper == 1.0f)
         return std::nullopt;
 
-    for (int32_t iteration = 0; iteration < refinementSteps; ++iteration)
+    for (uint8_t iteration = 0; iteration < refinementSteps; ++iteration)
     {
         const float midFraction = 0.5f * (fractionLower + fractionUpper);
 
-        currentTransform1.translation = startTransform1.translation + deltaTransform1.translation * midFraction;
-        currentTransform1.rotation =
-            startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * midFraction;
-        currentTransform2.translation = startTransform2.translation + deltaTransform2.translation * midFraction;
-        currentTransform2.rotation =
-            startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * midFraction;
+        const auto currentTransform1 =
+            Transform(startTransform1.translation + deltaTransform1.translation * midFraction,
+                      startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * midFraction);
+        const auto currentTransform2 =
+            Transform(startTransform2.translation + deltaTransform2.translation * midFraction,
+                      startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * midFraction);
 
         if (areColliding(currentTransform1, currentTransform2))
             fractionUpper = midFraction;
@@ -186,6 +210,37 @@ inline std::optional<float> sweepHelper(Transform startTransform1,
     }
 
     return fractionUpper;
+}
+
+inline bool boolSweepHelper(Transform startTransform1,
+                            Transform endTransform1,
+                            Transform startTransform2,
+                            Transform endTransform2,
+                            const std::function<bool(const Transform&, const Transform&)>& areColliding)
+{
+    if (areColliding(startTransform1, startTransform2))
+        return true;
+
+    const Transform deltaTransform1 = endTransform1 - startTransform1;
+    const Transform deltaTransform2 = endTransform2 - startTransform2;
+
+    constexpr uint8_t coarseSteps = 8;
+    for (uint8_t stepIndex = 1; stepIndex <= coarseSteps; ++stepIndex)
+    {
+        const float testFraction = static_cast<float>(stepIndex) / static_cast<float>(coarseSteps);
+
+        const auto currentTransform1 =
+            Transform(startTransform1.translation + deltaTransform1.translation * testFraction,
+                      startTransform1.rotation.angleRadians + deltaTransform1.rotation.angleRadians * testFraction);
+        const auto currentTransform2 =
+            Transform(startTransform2.translation + deltaTransform2.translation * testFraction,
+                      startTransform2.rotation.angleRadians + deltaTransform2.rotation.angleRadians * testFraction);
+
+        if (areColliding(currentTransform1, currentTransform2))
+            return true;
+    }
+
+    return false;
 }
 
 template <IsShape ShapeA, IsShape ShapeB>
@@ -207,6 +262,19 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape,
                                startTransform.rotation.angleRadians +
                                    deltaTransform.rotation.angleRadians * *collisionFraction};
     return SweepManifold{*collisionFraction, collide(movingShape, currentTransform, targetShape, targetTransform)};
+}
+
+template <IsShape ShapeA, IsShape ShapeB>
+bool sweepAreColliding(const ShapeA& movingShape,
+                       Transform startTransform,
+                       Transform endTransform,
+                       const ShapeB& targetShape,
+                       Transform targetTransform)
+{
+    const auto isCollidingFunc = [&](const Transform& sweepTransform) -> bool
+    { return areColliding(movingShape, sweepTransform, targetShape, targetTransform); };
+
+    return boolSweepHelper(startTransform, endTransform, isCollidingFunc);
 }
 
 template <IsShape ShapeA, IsShape ShapeB>
@@ -238,6 +306,20 @@ std::optional<SweepManifold> sweep(const ShapeA& movingShape1,
     return SweepManifold{*collisionFraction, collide(movingShape1, targetTransform1, movingShape2, targetTransform2)};
 }
 
+template <IsShape ShapeA, IsShape ShapeB>
+bool sweepAreColliding(const ShapeA& movingShape1,
+                       Transform startTransform1,
+                       Transform endTransform1,
+                       const ShapeB& movingShape2,
+                       Transform startTransform2,
+                       Transform endTransform2)
+{
+    const auto areCollidingFunc = [&](const Transform& transformShapeA, const Transform& transformShapeB) -> bool
+    { return areColliding(movingShape1, transformShapeA, movingShape2, transformShapeB); };
+
+    return boolSweepHelper(startTransform1, endTransform1, startTransform2, endTransform2, areCollidingFunc);
+}
+
 template <IsShape ShapeA, IsRay RayType>
 std::optional<std::pair<float, float>> sweep(const ShapeA& movingShape,
                                              Transform startTransform,
@@ -245,6 +327,7 @@ std::optional<std::pair<float, float>> sweep(const ShapeA& movingShape,
                                              RayType ray)
 {
     std::optional<std::pair<float, float>> raycastResult = std::nullopt;
+
     const auto isCollidingFunc = [&](const Transform& sweepTransform) -> bool
     {
         const auto currentRaycastResult = raycast(movingShape, sweepTransform, ray);
@@ -255,9 +338,18 @@ std::optional<std::pair<float, float>> sweep(const ShapeA& movingShape,
         }
         return false;
     };
-
     sweepHelper(startTransform, endTransform, isCollidingFunc);
+
     return raycastResult;
+}
+
+template <IsShape ShapeA, IsRay RayType>
+bool sweepAreColliding(const ShapeA& movingShape, Transform startTransform, Transform endTransform, RayType ray)
+{
+    const auto isCollidingFunc = [&](const Transform& sweepTransform) -> bool
+    { return raycast(movingShape, sweepTransform, ray); };
+
+    return boolSweepHelper(startTransform, endTransform, isCollidingFunc);
 }
 
 } // namespace c2d

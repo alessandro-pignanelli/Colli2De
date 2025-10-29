@@ -174,3 +174,95 @@ Polygon makeRegularPolygon(uint8_t n, Vec2 center, float radius, float rotationA
 Polygon makePolygon(const std::initializer_list<Vec2>& points);
 
 } // namespace c2d
+
+template <>
+struct std::formatter<c2d::ShapeType> : std::formatter<std::string>
+{
+    template <typename FormatContext>
+    auto format(const c2d::ShapeType& shapeType, FormatContext& ctx) const
+    {
+        switch (shapeType)
+        {
+        case c2d::ShapeType::Circle:
+            return std::formatter<std::string>::format("Circle", ctx);
+        case c2d::ShapeType::Capsule:
+            return std::formatter<std::string>::format("Capsule", ctx);
+        case c2d::ShapeType::Segment:
+            return std::formatter<std::string>::format("Segment", ctx);
+        case c2d::ShapeType::Polygon:
+            return std::formatter<std::string>::format("Polygon", ctx);
+        default:
+            return std::formatter<std::string>::format("Unknown", ctx);
+        }
+    }
+};
+
+template <>
+struct std::formatter<c2d::ShapeVariant> : std::formatter<std::string>
+{
+    template <typename FormatContext>
+    auto format(const c2d::ShapeVariant& shapeVariant, FormatContext& ctx) const
+    {
+        return std::visit(
+            [&](const auto& shapeConcrete)
+            {
+                return std::formatter<std::string>::format(
+                    std::format("ShapeVariant(type={}, data={})", shapeConcrete.getType(), shapeConcrete), ctx);
+            },
+            shapeVariant);
+    }
+};
+
+template <>
+struct std::formatter<c2d::Circle> : std::formatter<std::string>
+{
+    template <typename FormatContext>
+    auto format(const c2d::Circle& circle, FormatContext& ctx) const
+    {
+        return std::formatter<std::string>::format(
+            std::format("Circle(center={}, radius={})", circle.center, circle.radius), ctx);
+    }
+};
+
+template <>
+struct std::formatter<c2d::Capsule> : std::formatter<std::string>
+{
+    template <typename FormatContext>
+    auto format(const c2d::Capsule& capsule, FormatContext& ctx) const
+    {
+        return std::formatter<std::string>::format(
+            std::format("Capsule(center1={}, center2={}, radius={})", capsule.center1, capsule.center2, capsule.radius),
+            ctx);
+    }
+};
+
+template <>
+struct std::formatter<c2d::Segment> : std::formatter<std::string>
+{
+    template <typename FormatContext>
+    auto format(const c2d::Segment& segment, FormatContext& ctx) const
+    {
+        return std::formatter<std::string>::format(std::format("Segment(start={}, end={})", segment.start, segment.end),
+                                                   ctx);
+    }
+};
+
+template <>
+struct std::formatter<c2d::Polygon> : std::formatter<std::string>
+{
+    template <typename FormatContext>
+    auto format(const c2d::Polygon& polygon, FormatContext& ctx) const
+    {
+        std::string vertsStr = "[";
+        for (uint8_t i = 0; i < polygon.count; ++i)
+        {
+            vertsStr += polygon.vertices[i].toString();
+            if (i < polygon.count - 1)
+                vertsStr += ", ";
+        }
+        vertsStr += "]";
+
+        return std::formatter<std::string>::format(
+            std::format("Polygon(count={}, vertices={})", polygon.count, vertsStr), ctx);
+    }
+};

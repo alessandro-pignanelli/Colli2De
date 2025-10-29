@@ -51,5 +51,5 @@ TEST_CASE("Registry | Bullet raycast", "[Registry][Benchmark][Raycast][Bullet]")
     }
 
     BENCHMARK_FUNCTION(
-        "Registry | Bullet raycast among 100k entities", 20ms, [&]() { return registry.rayCast(ray).size(); });
+        "Registry | Bullet raycast among 100k entities", 10ms, [&]() { return registry.rayCast(ray).size(); });
 }

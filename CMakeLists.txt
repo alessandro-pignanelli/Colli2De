@@ -9,6 +9,7 @@ project(colli2de
 
 # static link
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set(ENABLE_LTO OFF CACHE BOOL "Enable Link Time Optimization (LTO) / Interprocedural Optimization (IPO)")
 
 # Deterministic math
 if (MINGW OR APPLE OR UNIX)

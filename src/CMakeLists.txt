@@ -2,13 +2,27 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 cmake_minimum_required(VERSION 3.16)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(DBG)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL" CACHE STRING "" FORCE)
-    if (WIN32)
-        add_compile_options(-fdiagnostics-color=always -fno-diagnostics-show-caret)
-    endif()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-demangle")
 else()
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "" FORCE)
+endif()
+
+# Include custom CMake modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(IncludePackageWithFallback)
+
+# Include required packages
+include_package_with_fallback(
+    tsl-robin-map
+    robin-map
+    "https://github.com/Tessil/robin-map.git"
+    1.4.0
+    USE_LOCAL_ROBIN_MAP
+)
+if (NOT USE_LOCAL_ROBIN_MAP)
+    set(ROBIN_MAP_TARGET robin_map)
 endif()
 
 # ---- Gather source files (.cpp) ----
@@ -25,6 +39,11 @@ else()
 endif()
 set(CMAKE_DEBUG_POSTFIX "d")
 
+target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+    tsl::robin_map
+)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}
@@ -32,6 +51,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED ON
 )
+
+if(ENABLE_LTO)
+    message(STATUS "IPO / LTO enabled")
+    set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 
 # Add support for std::execution::par
 if (MSVC)
@@ -81,7 +105,7 @@ install(
 
 # Install library
 install(
-    TARGETS ${PROJECT_NAME}
+    TARGETS ${PROJECT_NAME} ${ROBIN_MAP_TARGET}
     EXPORT ${PROJECT_NAME}Config
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

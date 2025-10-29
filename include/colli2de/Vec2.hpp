@@ -1,5 +1,6 @@
 #pragma once
 
+#include <colli2de/internal/utils/Debug.hpp>
 #include <colli2de/internal/utils/Methods.hpp>
 
 #include <cassert>
@@ -73,8 +74,9 @@ class Vec2
 
     constexpr float operator[](int index) const
     {
-        assert(index == 0 || index == 1);
-        return index == 0 ? x : y;
+        DEBUG_ASSERT(index == 0 || index == 1);
+        const float arr[2] = {x, y};
+        return arr[index];
     }
 
     constexpr bool operator==(Vec2 other) const;

@@ -260,7 +260,7 @@ registry.moveEntity(1, c2d::Translation{1.0f, -1.0f}); // Same as above, but fas
 
 #### Collision queries
 
-The registry provides several methods to query collisions between entities and shapes. They are designed to return a list of objects describing the colliding pairs of entities and their shapes, and there is no support for collision callbacks. This is because a callback might access the registry and modify it while the registry is iterating over the colliding pairs, leading to undefined behavior. Instead, you should use the returned list of collisions to handle them in your game logic. If you need to, wrapping the collision queries methods to calling listeners and callbacks on the returned pairs should be pretty straightforward.
+The registry provides several methods to query collisions between entities and shapes. They are designed to return a list of objects describing the colliding pairs of entities and their shapes, and there is no support for collision callbacks. This is because a callback might access the registry and modify it while the registry is iterating over the colliding pairs, leading to undefined behavior. Instead, you should use the returned list of collisions to handle them in your game logic. If you need to, wrapping the collision queries methods to calling listeners and callbacks on the returned pairs should be pretty straightforward.  
 
 `std::vector<EntityCollision> getCollidingPairs()`:
 - -> `std::vector<EntityCollision>`: list of objects representing all currently colliding entity pairs in the registry.  
@@ -371,6 +371,29 @@ if (firstHit)
 else
 {
     std::println("No hit");
+}
+```
+
+#### Serialization
+
+The registry provides methods to serialize and deserialize its state to and from a binary stream. This allows you, e.g., to save the current state of the registry to a file and load it back later, preserving all entities, shapes, and their properties.  
+  
+`void serialize(std::ostream& out)`: serializes the registry to the given output stream.  
+
+`static Registry deserialize(std::istream& in)`: deserializes a registry from the given input stream and returns the reconstructed registry. Note that this method assumes that the input stream contains a valid serialized registry. Providing an invalid or corrupted stream will lead to undefined behavior.  
+
+```cpp  
+std::ofstream outFile("registry.bin", std::ios::binary);
+if (outFile)
+    registry.serialize(outFile);
+
+// ...
+
+std::ifstream inFile("registry.bin", std::ios::binary);
+if (inFile)
+{
+    c2d::Registry registry = c2d::Registry::deserialize(inFile);
+    // Use the deserialized registry
 }
 ```
 

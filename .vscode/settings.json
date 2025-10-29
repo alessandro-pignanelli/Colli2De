@@ -2,14 +2,15 @@
     "C_Cpp.intelliSenseEngine": "disabled",
     "clangd.arguments": ["-log=verbose", 
                          "-pretty", 
-                         "--background-index"],
+                         "--background-index",
+                        "-compile-commands-dir=${workspaceFolder}/build/Debug"],
     "clangd.fallbackFlags": [
         "-isystem${workspaceFolder}/src",
         "-isystem${workspaceFolder}/include",
         "-isystem${workspaceFolder}/tests",
-        "-isystem${workspaceFolder}/libs/catch2/install/Debug/include",
-        "-isystem${workspaceFolder}/libs/oneTBB/include",
         "-isystem${workspaceFolder}/build/Debug/_deps/catch2-build/generated-includes",
-        "-isystem${workspaceFolder}/build/Debug/_deps/tbb-src/include",
+        "-isystem${workspaceFolder}/libs/catch2/install/Debug/include",
+        "-isystem${workspaceFolder}/build/Debug/_deps/tsl-robin-map-src/include",
+        "-isystem${workspaceFolder}/libs/robin-map/install/Debug/include"
     ],
 }

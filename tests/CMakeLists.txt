@@ -4,24 +4,18 @@ cmake_minimum_required(VERSION 3.16)
 include(CTest)
 enable_testing()
 
+# Include custom CMake modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(IncludePackageWithFallback)
+
 # Use Catch2
-if (USE_LOCAL_CATCH2)
-    find_package(Catch2 3.8 REQUIRED PATHS ${CMAKE_SOURCE_DIR}/libs/catch2/install/${CMAKE_BUILD_TYPE})
-else()
-    find_package(Catch2 3.8 QUIET PATHS ${CMAKE_SOURCE_DIR}/libs/catch2/install/${CMAKE_BUILD_TYPE})
-    if (NOT Catch2_FOUND)
-        message(STATUS "Catch2 not found, fetching from GitHub")
-        include(FetchContent)
-        FetchContent_Declare(
-            Catch2
-            GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-            GIT_TAG        v3.8.1
-        )
-        FetchContent_MakeAvailable(Catch2)
-    else()
-        message(STATUS "Using local Catch2 from ${Catch2_DIR}")
-    endif()
-endif()
+include_package_with_fallback(
+    Catch2
+    catch2
+    "https://github.com/catchorg/Catch2.git"
+    3.11.0
+    USE_LOCAL_CATCH2
+)
 
 file(GLOB_RECURSE TESTS "test_*.cpp")
 
@@ -40,11 +34,16 @@ target_link_libraries(Colli2DeTests
     colli2de
 )
 
-if (WIN32)
+if (NOT LINUX)
     target_link_libraries(Colli2DeTests
         PRIVATE
         stdc++exp # std::print
     )
+endif()
+
+if(ENABLE_LTO)
+    message(STATUS "IPO / LTO enabled")
+    set_property(TARGET Colli2DeTests PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 target_include_directories(Colli2DeTests

@@ -1,4 +1,5 @@
 #include <colli2de/Shapes.hpp>
+#include <colli2de/internal/utils/Debug.hpp>
 
 namespace c2d
 {
@@ -6,7 +7,7 @@ namespace c2d
 // --- Create a rectangle (box) centered at `center`, with given half extents and rotation ---
 Polygon makeRectangle(Vec2 center, float halfWidth, float halfHeight, float angle)
 {
-    assert(halfWidth > 0.0f && halfHeight > 0.0f);
+    DEBUG_ASSERT(halfWidth > 0.0f && halfHeight > 0.0f);
 
     Polygon poly;
     poly.count = 4;
@@ -50,7 +51,7 @@ Polygon makeTriangle(Vec2 v0, Vec2 v1, Vec2 v2)
 // --- Create a regular convex n-gon (centered at `center`, given radius, n >= 3) ---
 Polygon makeRegularPolygon(uint8_t n, Vec2 center, float radius, float rotationAngle)
 {
-    assert(n >= 3 && n <= MAX_POLYGON_VERTICES);
+    DEBUG_ASSERT(n >= 3 && n <= MAX_POLYGON_VERTICES);
 
     Polygon poly;
     poly.count = n;
@@ -71,7 +72,7 @@ Polygon makeRegularPolygon(uint8_t n, Vec2 center, float radius, float rotationA
 // TODO: Implement a real convex hull for robustness!
 Polygon makePolygon(const std::initializer_list<Vec2>& points)
 {
-    assert(points.size() >= 3 && points.size() <= MAX_POLYGON_VERTICES);
+    DEBUG_ASSERT(points.size() >= 3 && points.size() <= MAX_POLYGON_VERTICES);
 
     Polygon poly;
     // TODO: Implement robust convex hull algorithm, for now just copy as-is

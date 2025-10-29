@@ -45,6 +45,11 @@ struct Rotation
         return Vec2{cos * vec.x + sin * vec.y, -sin * vec.x + cos * vec.y};
     }
 
+    std::string toString() const
+    {
+        return std::format("Rotation(angleRadians={}, sin={}, cos={})", angleRadians, sin, cos);
+    }
+
     constexpr Rotation operator+(const Rotation& other) const
     {
         return Rotation{
@@ -138,6 +143,11 @@ struct Transform
         return rotation.inverse(vec - translation);
     }
 
+    std::string toString() const
+    {
+        return std::format("Transform(translation={}, rotation={})", translation.toString(), rotation.toString());
+    }
+
     constexpr Transform operator+(const Transform& other) const
     {
         return Transform{translation + other.translation, rotation + other.rotation};
@@ -222,3 +232,23 @@ struct Transform
 };
 
 } // namespace c2d
+
+template <>
+struct std::formatter<c2d::Rotation> : std::formatter<std::string>
+{
+    template <typename FormatContext>
+    auto format(const c2d::Rotation& rotation, FormatContext& ctx) const
+    {
+        return std::formatter<std::string>::format(rotation.toString(), ctx);
+    }
+};
+
+template <>
+struct std::formatter<c2d::Transform> : std::formatter<std::string>
+{
+    template <typename FormatContext>
+    auto format(const c2d::Transform& transform, FormatContext& ctx) const
+    {
+        return std::formatter<std::string>::format(transform.toString(), ctx);
+    }
+};

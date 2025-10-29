@@ -8,8 +8,8 @@
         "testsIncludePath": [
             "${workspaceFolder}/build/Debug/_deps/catch2-src/src",
             "${workspaceFolder}/libs/catch2/install/Debug/include",
-            "${workspaceFolder}/build/Debug/_deps/tbb-src/include",
-            "${workspaceFolder}/libs/oneTBB/include"
+            "${workspaceFolder}/build/Debug/_deps/tsl-robin-map-src/include",
+            "${workspaceFolder}/libs/robin-map/install/Debug/include"
         ]
     },
     "configurations": [

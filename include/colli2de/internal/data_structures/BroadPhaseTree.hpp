@@ -3,6 +3,7 @@
 #include <colli2de/Ray.hpp>
 #include <colli2de/internal/data_structures/DynamicBVH.hpp>
 #include <colli2de/internal/geometry/AABB.hpp>
+#include <colli2de/internal/utils/Debug.hpp>
 #include <colli2de/internal/utils/Methods.hpp>
 
 #include <functional>
@@ -203,7 +204,7 @@ BroadPhaseTreeHandle BroadPhaseTree<IdType>::addProxy(IdType entityId,
 template <typename IdType>
 void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
 {
-    assert(isValidHandle(handle));
+    DEBUG_ASSERT(isValidHandle(handle));
 
     Proxy& proxy = proxies.at(handle);
 
@@ -228,7 +229,7 @@ void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
 template <typename IdType>
 void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 {
-    assert(isValidHandle(handle));
+    DEBUG_ASSERT(isValidHandle(handle));
     Proxy& proxy = proxies.at(handle);
 
     if (proxy.aabb.contains(aabb))
@@ -240,8 +241,8 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
     const auto newMaxCell = getCellFor(aabb.max, cellSize);
 
     proxy.aabb = aabb;
-    const bool isSameCellRange = oldMinCell == newMinCell && oldMaxCell == newMaxCell;
 
+    const bool isSameCellRange = oldMinCell == newMinCell && oldMaxCell == newMaxCell;
     if (isSameCellRange)
     {
         for (const auto& [cell, bvhHandle] : proxy.bvhHandles)
@@ -272,7 +273,7 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
         // Destroy the proxy from the BVH in that region and remove the bvh handle
         auto& proxy = proxies.at(handle);
         const auto bvhHandleInRegion = proxy.bvhHandles.find(cell);
-        assert(bvhHandleInRegion != proxy.bvhHandles.end());
+        DEBUG_ASSERT(bvhHandleInRegion != proxy.bvhHandles.end());
         bvh.removeProxy(bvhHandleInRegion->second);
         proxy.bvhHandles.erase(bvhHandleInRegion);
 

@@ -93,7 +93,7 @@ TEST_CASE("Registry | Move entities", "[Registry][Benchmark][Move]")
 
     BENCHMARK_FUNCTION(
         "Registry | Move 100k entities",
-        80ms,
+        50ms,
         [&]()
         {
             for (uint32_t i = 0; i < 100'000; ++i)
@@ -157,7 +157,7 @@ TEST_CASE("Registry | Collision query dynamic", "[Registry][Query][AllPairs][Ben
     }
 
     BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k entities",
-                       280ms,
+                       150ms,
                        [&]() { return reg.getCollidingPairs().size(); });
 }
 
@@ -199,6 +199,6 @@ TEST_CASE("Registry | Collision query bullets", "[Registry][Query][AllPairs][Ben
     }
 
     BENCHMARK_FUNCTION("Registry | Find all colliding pairs among 100k bullets",
-                       600ms,
+                       250ms,
                        [&]() { return reg.getCollidingPairs().size(); });
 }

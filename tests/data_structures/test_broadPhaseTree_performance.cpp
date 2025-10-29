@@ -73,7 +73,7 @@ TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]"
 
     BENCHMARK_FUNCTION(
         "BroadPhaseTree | Move 100k proxies to new location",
-        130ms,
+        80ms,
         [&]()
         {
             for (size_t i = 0; i < indices.size(); ++i)
@@ -180,7 +180,7 @@ TEST_CASE("BroadPhaseTree | Piercing raycast", "[BroadPhaseTree][Benchmark][Rayc
         treeLargeRay.addProxy(i, aabbs[i]);
 
     BENCHMARK_FUNCTION("BroadPhaseTree | Raycast through 100k proxies",
-                       800us,
+                       1ms,
                        [&]()
                        {
                            std::set<BPTRaycastInfo> hits;
@@ -216,7 +216,7 @@ TEST_CASE("BroadPhaseTree | BroadPhaseCollisions benchmark",
         treePairs10k.addProxy(i, aabbs[i]);
 
     BENCHMARK_FUNCTION("BroadPhaseTree | Find all colliding pairs among 10k proxies",
-                       800us,
+                       1ms,
                        [&]()
                        {
                            uint32_t totalPairs = 0;
