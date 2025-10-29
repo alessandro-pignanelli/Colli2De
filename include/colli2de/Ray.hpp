@@ -22,7 +22,8 @@ struct InfiniteRay
 template <typename RayType>
 concept IsRay = std::is_same_v<RayType, Ray> || std::is_same_v<RayType, InfiniteRay>;
 
-template <typename IdType> struct RaycastHit
+template <typename IdType>
+struct RaycastHit
 {
     IdType id;
     Vec2 entry;
@@ -97,9 +98,11 @@ template <typename IdType> struct RaycastHit
 } // namespace c2d
 
 // Specialization for std::formatter to allow formatted output of Ray
-template <> struct std::formatter<c2d::Ray> : std::formatter<std::string>
+template <>
+struct std::formatter<c2d::Ray> : std::formatter<std::string>
 {
-    template <typename FormatContext> auto format(c2d::Ray ray, FormatContext& ctx) const
+    template <typename FormatContext>
+    auto format(c2d::Ray ray, FormatContext& ctx) const
     {
         std::stringstream ss;
         ss << "Ray(start: " << ray.start << ", end: " << ray.end << ")";
@@ -108,9 +111,11 @@ template <> struct std::formatter<c2d::Ray> : std::formatter<std::string>
 };
 
 // Specialization for std::formatter to allow formatted output of InfiniteRay
-template <> struct std::formatter<c2d::InfiniteRay> : std::formatter<std::string>
+template <>
+struct std::formatter<c2d::InfiniteRay> : std::formatter<std::string>
 {
-    template <typename FormatContext> auto format(c2d::InfiniteRay ray, FormatContext& ctx) const
+    template <typename FormatContext>
+    auto format(c2d::InfiniteRay ray, FormatContext& ctx) const
     {
         std::stringstream ss;
         ss << "InfiniteRay(start: " << ray.start << ", direction: " << ray.direction << ")";
@@ -119,9 +124,11 @@ template <> struct std::formatter<c2d::InfiniteRay> : std::formatter<std::string
 };
 
 // Specialization for std::formatter to allow formatted output of RaycastHit
-template <typename IdType> struct std::formatter<c2d::RaycastHit<IdType>> : std::formatter<std::string>
+template <typename IdType>
+struct std::formatter<c2d::RaycastHit<IdType>> : std::formatter<std::string>
 {
-    template <typename FormatContext> auto format(c2d::RaycastHit<IdType> hit, FormatContext& ctx) const
+    template <typename FormatContext>
+    auto format(c2d::RaycastHit<IdType> hit, FormatContext& ctx) const
     {
         std::stringstream ss;
         ss << "RaycastHit(id: " << hit.id << ", entry: " << hit.entry << ", exit: " << hit.exit

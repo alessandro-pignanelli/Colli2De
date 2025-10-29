@@ -32,7 +32,8 @@ enum class PartitioningMethod
     Grid,
 };
 
-template <typename EntityId, PartitioningMethod Method = PartitioningMethod::None> class Registry
+template <typename EntityId, PartitioningMethod Method = PartitioningMethod::None>
+class Registry
 {
   public:
     struct EntityCollision
@@ -217,7 +218,8 @@ ShapeId Registry<EntityId, Method>::addShape(EntityId entityId,
     return shapeId;
 }
 
-template <typename EntityId, PartitioningMethod Method> void Registry<EntityId, Method>::removeShape(ShapeId shapeId)
+template <typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::removeShape(ShapeId shapeId)
 {
     assert(shapeEntity.size() > shapeId && "Shape ID out of bounds");
     const EntityId entityId = shapeEntity.at(shapeId).first;
@@ -249,7 +251,8 @@ void Registry<EntityId, Method>::setShapeActive(ShapeId shapeId, bool isActive)
     entity.shapes[shapeIndex].isActive = isActive;
 }
 
-template <typename EntityId, PartitioningMethod Method> void Registry<EntityId, Method>::removeEntity(EntityId id)
+template <typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::removeEntity(EntityId id)
 {
     auto it = entities.find(id);
     assert(it != entities.end());
@@ -1083,12 +1086,14 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
     return hits;
 }
 
-template <typename EntityId, PartitioningMethod Method> size_t Registry<EntityId, Method>::size() const
+template <typename EntityId, PartitioningMethod Method>
+size_t Registry<EntityId, Method>::size() const
 {
     return entities.size();
 }
 
-template <typename EntityId, PartitioningMethod Method> void Registry<EntityId, Method>::clear()
+template <typename EntityId, PartitioningMethod Method>
+void Registry<EntityId, Method>::clear()
 {
     entities.clear();
     shapeEntity.clear();

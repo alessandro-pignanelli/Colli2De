@@ -311,9 +311,11 @@ static_assert(std::is_trivially_copyable_v<Vec2>, "Vec2 must be trivially copyab
 } // namespace c2d
 
 // Specialization for std::formatter to allow formatted output of Vec2
-template <> struct std::formatter<c2d::Vec2> : std::formatter<std::string>
+template <>
+struct std::formatter<c2d::Vec2> : std::formatter<std::string>
 {
-    template <typename FormatContext> auto format(c2d::Vec2 vec, FormatContext& ctx) const
+    template <typename FormatContext>
+    auto format(c2d::Vec2 vec, FormatContext& ctx) const
     {
         return std::formatter<std::string>::format(vec.toString(), ctx);
     }

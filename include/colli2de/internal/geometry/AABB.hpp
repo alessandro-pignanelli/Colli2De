@@ -76,9 +76,11 @@ static_assert(std::is_trivially_copyable_v<AABB>, "AABB must be trivially copyab
 } // namespace c2d
 
 // Specialization for std::formatter to allow formatted output of AABB
-template <> struct std::formatter<c2d::AABB> : std::formatter<std::string>
+template <>
+struct std::formatter<c2d::AABB> : std::formatter<std::string>
 {
-    template <typename FormatContext> auto format(c2d::AABB aabb, FormatContext& ctx) const
+    template <typename FormatContext>
+    auto format(c2d::AABB aabb, FormatContext& ctx) const
     {
         return std::formatter<std::string>::format(aabb.toString(), ctx);
     }

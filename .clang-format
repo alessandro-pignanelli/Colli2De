@@ -17,6 +17,7 @@ PackConstructorInitializers: CurrentLine
 RequiresClausePosition: WithPreceding
 RequiresExpressionIndentation: Keyword
 SeparateDefinitionBlocks: Always
+AlwaysBreakTemplateDeclarations: Yes
 SortUsingDeclarations: Lexicographic
 IncludeBlocks: Regroup
 IncludeCategories:

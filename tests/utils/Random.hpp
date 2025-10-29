@@ -33,7 +33,8 @@ class DeterministicRNG
     }
 };
 
-template <typename Iterator> void randomShuffle(Iterator begin, Iterator end)
+template <typename Iterator>
+void randomShuffle(Iterator begin, Iterator end)
 {
     // The random number generator that we want to use (Mersenne Twister)
     std::mt19937 rng(std::time(nullptr));

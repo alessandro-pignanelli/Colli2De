@@ -76,25 +76,31 @@ struct SweepManifold
 
 } // namespace c2d
 
-template <> struct std::formatter<c2d::ManifoldPoint> : std::formatter<std::string>
+template <>
+struct std::formatter<c2d::ManifoldPoint> : std::formatter<std::string>
 {
-    template <typename FormatContext> auto format(const c2d::ManifoldPoint& point, FormatContext& ctx) const
+    template <typename FormatContext>
+    auto format(const c2d::ManifoldPoint& point, FormatContext& ctx) const
     {
         return std::formatter<std::string>::format(point.toString(), ctx);
     }
 };
 
-template <> struct std::formatter<c2d::Manifold> : std::formatter<std::string>
+template <>
+struct std::formatter<c2d::Manifold> : std::formatter<std::string>
 {
-    template <typename FormatContext> auto format(const c2d::Manifold& manifold, FormatContext& ctx) const
+    template <typename FormatContext>
+    auto format(const c2d::Manifold& manifold, FormatContext& ctx) const
     {
         return std::formatter<std::string>::format(manifold.toString(), ctx);
     }
 };
 
-template <> struct std::formatter<c2d::SweepManifold> : std::formatter<std::string>
+template <>
+struct std::formatter<c2d::SweepManifold> : std::formatter<std::string>
 {
-    template <typename FormatContext> auto format(const c2d::SweepManifold& sweepManifold, FormatContext& ctx) const
+    template <typename FormatContext>
+    auto format(const c2d::SweepManifold& sweepManifold, FormatContext& ctx) const
     {
         return std::formatter<std::string>::format(
             std::format("SweepManifold(fraction={}, manifold={})", sweepManifold.fraction, sweepManifold.manifold),

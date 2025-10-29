@@ -23,7 +23,8 @@ namespace c2d
 namespace test
 {
 
-template <class... _Types> inline void println(const std::format_string<_Types...> _Fmt, _Types&&... _Args)
+template <class... _Types>
+inline void println(const std::format_string<_Types...> _Fmt, _Types&&... _Args)
 {
     _println(_Fmt, std::forward<_Types>(_Args)...);
 }

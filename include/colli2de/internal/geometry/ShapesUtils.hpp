@@ -181,24 +181,28 @@ inline Vec2 closestPoint(const Polygon& polygon, Transform transform, Vec2 point
 // --- Minimum distance between shapes ---
 namespace
 {
-template <typename Shape, typename Visitor> inline void forEachVertex(const Shape& shape, const Visitor& visitor)
+template <typename Shape, typename Visitor>
+inline void forEachVertex(const Shape& shape, const Visitor& visitor)
 {
     for (uint8_t i = 0; i < shape.count; ++i)
         visitor(shape.vertices[i]);
 }
 
-template <typename Visitor> inline void forEachVertex(const Circle& circle, const Visitor& visitor)
+template <typename Visitor>
+inline void forEachVertex(const Circle& circle, const Visitor& visitor)
 {
     visitor(circle.center);
 }
 
-template <typename Visitor> inline void forEachVertex(const Capsule& capsule, const Visitor& visitor)
+template <typename Visitor>
+inline void forEachVertex(const Capsule& capsule, const Visitor& visitor)
 {
     visitor(capsule.center1);
     visitor(capsule.center2);
 }
 
-template <typename Visitor> inline void forEachVertex(const Segment& segment, const Visitor& visitor)
+template <typename Visitor>
+inline void forEachVertex(const Segment& segment, const Visitor& visitor)
 {
     visitor(segment.start);
     visitor(segment.end);

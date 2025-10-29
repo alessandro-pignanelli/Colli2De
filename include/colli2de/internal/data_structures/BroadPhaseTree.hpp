@@ -13,7 +13,8 @@
 namespace c2d
 {
 
-template <typename IdType> using RaycastInfo = typename DynamicBVH<IdType>::RaycastInfo;
+template <typename IdType>
+using RaycastInfo = typename DynamicBVH<IdType>::RaycastInfo;
 using BroadPhaseTreeHandle = std::size_t;
 
 constexpr int32_t INFINITE_RAY_CELL_SPAN = 50;
@@ -78,7 +79,8 @@ inline void forEachCell(c2d::AABB aabb, int32_t cellSize, std::function<void(Gri
 
 } // namespace
 
-template <typename IdType> class BroadPhaseTree
+template <typename IdType>
+class BroadPhaseTree
 {
   public:
     BroadPhaseTree(int32_t cellSize = 120) : cellSize(cellSize)
@@ -198,7 +200,8 @@ BroadPhaseTreeHandle BroadPhaseTree<IdType>::addProxy(IdType entityId,
     return treeHandle;
 }
 
-template <typename IdType> void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
+template <typename IdType>
+void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
 {
     assert(isValidHandle(handle));
 
@@ -222,7 +225,8 @@ template <typename IdType> void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTr
     proxiesFreeList.push_back(handle);
 }
 
-template <typename IdType> void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
+template <typename IdType>
+void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 {
     assert(isValidHandle(handle));
     Proxy& proxy = proxies.at(handle);
@@ -506,7 +510,8 @@ void BroadPhaseTree<IdType>::piercingRaycast(InfiniteRay ray,
         Ray{ray.start, ray.start + ray.direction.normalize() * cellSize * INFINITE_RAY_CELL_SPAN}, hits, maskBits);
 }
 
-template <typename IdType> void BroadPhaseTree<IdType>::serialize(std::ostream& out) const
+template <typename IdType>
+void BroadPhaseTree<IdType>::serialize(std::ostream& out) const
 {
     Writer writer(out);
 
@@ -552,7 +557,8 @@ template <typename IdType> void BroadPhaseTree<IdType>::serialize(std::ostream& 
         writer(index);
 }
 
-template <typename IdType> BroadPhaseTree<IdType> BroadPhaseTree<IdType>::deserialize(std::istream& in)
+template <typename IdType>
+BroadPhaseTree<IdType> BroadPhaseTree<IdType>::deserialize(std::istream& in)
 {
     Reader reader(in);
 
@@ -627,7 +633,8 @@ template <typename IdType> BroadPhaseTree<IdType> BroadPhaseTree<IdType>::deseri
     return tree;
 }
 
-template <typename IdType> void BroadPhaseTree<IdType>::Proxy::serialize(std::ostream& out) const
+template <typename IdType>
+void BroadPhaseTree<IdType>::Proxy::serialize(std::ostream& out) const
 {
     Writer writer(out);
 
@@ -685,12 +692,14 @@ typename BroadPhaseTree<IdType>::Proxy BroadPhaseTree<IdType>::Proxy::deserializ
     return proxy;
 }
 
-template <typename IdType> bool BroadPhaseTree<IdType>::isValidHandle(BroadPhaseTreeHandle handle) const
+template <typename IdType>
+bool BroadPhaseTree<IdType>::isValidHandle(BroadPhaseTreeHandle handle) const
 {
     return static_cast<size_t>(handle) < proxies.size();
 }
 
-template <typename IdType> size_t BroadPhaseTree<IdType>::getBVHIndexForCell(GridCell cell)
+template <typename IdType>
+size_t BroadPhaseTree<IdType>::getBVHIndexForCell(GridCell cell)
 {
     const auto it = regions.find(cell);
     if (it != regions.end())
@@ -714,7 +723,8 @@ template <typename IdType> size_t BroadPhaseTree<IdType>::getBVHIndexForCell(Gri
     }
 }
 
-template <typename IdType> void BroadPhaseTree<IdType>::clear()
+template <typename IdType>
+void BroadPhaseTree<IdType>::clear()
 {
     proxies.clear();
     proxies.reserve(32);
@@ -724,7 +734,8 @@ template <typename IdType> void BroadPhaseTree<IdType>::clear()
     bvhFreeList.clear();
 }
 
-template <typename IdType> bool BroadPhaseTree<IdType>::operator==(const BroadPhaseTree& other) const
+template <typename IdType>
+bool BroadPhaseTree<IdType>::operator==(const BroadPhaseTree& other) const
 {
     if (cellSize != other.cellSize)
         return false;
@@ -742,7 +753,8 @@ template <typename IdType> bool BroadPhaseTree<IdType>::operator==(const BroadPh
     return true;
 }
 
-template <typename IdType> bool BroadPhaseTree<IdType>::Proxy::operator==(const Proxy& other) const
+template <typename IdType>
+bool BroadPhaseTree<IdType>::Proxy::operator==(const Proxy& other) const
 {
     if (bvhHandles != other.bvhHandles)
         return false;

@@ -25,7 +25,8 @@ using BitMaskType = uint64_t;
 using NodeIndex = int32_t;
 static constexpr NodeIndex INVALID_NODE_INDEX = -99;
 
-template <typename IdType> struct BVHNode
+template <typename IdType>
+struct BVHNode
 {
     AABB aabb;
     BitMaskType categoryBits = 1;      // for collision filtering
@@ -60,7 +61,8 @@ template <typename IdType> struct BVHNode
     }
 };
 
-template <typename IdType> class DynamicBVH
+template <typename IdType>
+class DynamicBVH
 {
   public:
     class LeafConstIterator;
@@ -257,12 +259,14 @@ template <typename IdType> class DynamicBVH
 
 static_assert(std::is_trivially_copyable_v<BVHNode<uint32_t>>, "BVHNode must be trivially copyable");
 
-template <typename IdType> DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin) : fatAABBMargin(fatAABBMargin)
+template <typename IdType>
+DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin) : fatAABBMargin(fatAABBMargin)
 {
     allocateNodes(initialCapacity);
 }
 
-template <typename IdType> void DynamicBVH<IdType>::allocateNodes(int32_t capacity)
+template <typename IdType>
+void DynamicBVH<IdType>::allocateNodes(int32_t capacity)
 {
     nodes.resize(capacity);
 
@@ -276,7 +280,8 @@ template <typename IdType> void DynamicBVH<IdType>::allocateNodes(int32_t capaci
     nodeCount = 0;
 }
 
-template <typename IdType> void DynamicBVH<IdType>::doubleCapacity()
+template <typename IdType>
+void DynamicBVH<IdType>::doubleCapacity()
 {
     assert(nextAvailableIndex == INVALID_NODE_INDEX);
 
@@ -293,7 +298,8 @@ template <typename IdType> void DynamicBVH<IdType>::doubleCapacity()
     nextAvailableIndex = currentCapacity;
 }
 
-template <typename IdType> NodeIndex DynamicBVH<IdType>::createNode()
+template <typename IdType>
+NodeIndex DynamicBVH<IdType>::createNode()
 {
     if (nextAvailableIndex == INVALID_NODE_INDEX)
         doubleCapacity();
@@ -312,7 +318,8 @@ template <typename IdType> NodeIndex DynamicBVH<IdType>::createNode()
     return nodeId;
 }
 
-template <typename IdType> void DynamicBVH<IdType>::destroyNode(NodeIndex nodeId)
+template <typename IdType>
+void DynamicBVH<IdType>::destroyNode(NodeIndex nodeId)
 {
     assert(0 <= nodeId && nodeId < static_cast<NodeIndex>(nodes.size()));
     BVHNode<IdType>& node = nodes[nodeId];
@@ -343,14 +350,16 @@ NodeIndex DynamicBVH<IdType>::addProxy(IdType id, AABB aabb, BitMaskType categor
     return nodeId;
 }
 
-template <typename IdType> void DynamicBVH<IdType>::removeProxy(NodeIndex leafIndex)
+template <typename IdType>
+void DynamicBVH<IdType>::removeProxy(NodeIndex leafIndex)
 {
     --proxyCount;
     removeLeaf(leafIndex);
     destroyNode(leafIndex);
 }
 
-template <typename IdType> void DynamicBVH<IdType>::clear()
+template <typename IdType>
+void DynamicBVH<IdType>::clear()
 {
     nodes.clear();
     nodeCount = 0;
@@ -359,7 +368,8 @@ template <typename IdType> void DynamicBVH<IdType>::clear()
     allocateNodes(initialCapacity);
 }
 
-template <typename IdType> bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB)
+template <typename IdType>
+bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB)
 {
     // If the current fattened AABB contains the new AABB, no need to update the
     // tree
@@ -389,7 +399,8 @@ template <typename IdType> bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeInde
     return true;
 }
 
-template <typename IdType> void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
+template <typename IdType>
+void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
 {
     if (rootIndex == INVALID_NODE_INDEX)
     {
@@ -447,7 +458,8 @@ template <typename IdType> void DynamicBVH<IdType>::insertLeaf(NodeIndex leafInd
     }
 }
 
-template <typename IdType> void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
+template <typename IdType>
+void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
 {
     if (leafIndex == rootIndex)
     {
@@ -496,7 +508,8 @@ template <typename IdType> void DynamicBVH<IdType>::removeLeaf(NodeIndex leafInd
     }
 }
 
-template <typename IdType> NodeIndex DynamicBVH<IdType>::findBestSiblingIndex(AABB leaf) const
+template <typename IdType>
+NodeIndex DynamicBVH<IdType>::findBestSiblingIndex(AABB leaf) const
 {
     NodeIndex index = rootIndex;
 
@@ -526,7 +539,8 @@ template <typename IdType> NodeIndex DynamicBVH<IdType>::findBestSiblingIndex(AA
     return index;
 }
 
-template <typename IdType> NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
+template <typename IdType>
+NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 {
     BVHNode<IdType>& node = nodes[index];
 
@@ -637,7 +651,8 @@ template <typename IdType> NodeIndex DynamicBVH<IdType>::balance(NodeIndex index
     return movingUpChildIndex;
 }
 
-template <typename IdType> std::vector<std::pair<IdType, AABB>> DynamicBVH<IdType>::data() const
+template <typename IdType>
+std::vector<std::pair<IdType, AABB>> DynamicBVH<IdType>::data() const
 {
     if (rootIndex == INVALID_NODE_INDEX)
         return {};
@@ -654,7 +669,8 @@ template <typename IdType> std::vector<std::pair<IdType, AABB>> DynamicBVH<IdTyp
     return result;
 }
 
-template <typename IdType> auto DynamicBVH<IdType>::leavesView() const
+template <typename IdType>
+auto DynamicBVH<IdType>::leavesView() const
 {
     return nodes | std::views::filter([](const auto& node) { return node.isLeaf(); }) |
            std::views::transform([](const auto& node) { return std::pair<IdType, AABB>{node.id, node.aabb}; });
@@ -972,7 +988,8 @@ void DynamicBVH<IdType>::findAllCollisionsRecursive(NodeIndex nodeIdx,
     findAllCollisionsRecursive(node.child2Index, callback);
 }
 
-template <typename IdType> void DynamicBVH<IdType>::serialize(std::ostream& out) const
+template <typename IdType>
+void DynamicBVH<IdType>::serialize(std::ostream& out) const
 {
     Writer writer(out);
 
@@ -991,7 +1008,8 @@ template <typename IdType> void DynamicBVH<IdType>::serialize(std::ostream& out)
         node.serialize(out);
 }
 
-template <typename IdType> DynamicBVH<IdType> DynamicBVH<IdType>::deserialize(std::istream& in)
+template <typename IdType>
+DynamicBVH<IdType> DynamicBVH<IdType>::deserialize(std::istream& in)
 {
     Reader reader(in);
 
@@ -1017,7 +1035,8 @@ template <typename IdType> DynamicBVH<IdType> DynamicBVH<IdType>::deserialize(st
     return bvh;
 }
 
-template <typename IdType> bool DynamicBVH<IdType>::operator==(const DynamicBVH& other) const
+template <typename IdType>
+bool DynamicBVH<IdType>::operator==(const DynamicBVH& other) const
 {
     if (!float_equals(fatAABBMargin, other.fatAABBMargin))
         return false;
@@ -1035,7 +1054,8 @@ template <typename IdType> bool DynamicBVH<IdType>::operator==(const DynamicBVH&
     return true;
 }
 
-template <typename IdType> void BVHNode<IdType>::serialize(std::ostream& out) const
+template <typename IdType>
+void BVHNode<IdType>::serialize(std::ostream& out) const
 {
     Writer writer(out);
 
@@ -1052,7 +1072,8 @@ template <typename IdType> void BVHNode<IdType>::serialize(std::ostream& out) co
     writer(id);
 }
 
-template <typename IdType> BVHNode<IdType> BVHNode<IdType>::deserialize(std::istream& in)
+template <typename IdType>
+BVHNode<IdType> BVHNode<IdType>::deserialize(std::istream& in)
 {
     Reader reader(in);
     BVHNode<IdType> node;
@@ -1072,7 +1093,8 @@ template <typename IdType> BVHNode<IdType> BVHNode<IdType>::deserialize(std::ist
     return node;
 }
 
-template <typename IdType> bool BVHNode<IdType>::operator==(const BVHNode& other) const
+template <typename IdType>
+bool BVHNode<IdType>::operator==(const BVHNode& other) const
 {
     if (aabb != other.aabb)
         return false;
