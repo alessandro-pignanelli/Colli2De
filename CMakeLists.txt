@@ -19,6 +19,8 @@ endif()
 set (UNIT_TESTS ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_VERBOSE_MAKEFILE ON)
+set(COLLI2DE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+list(APPEND CMAKE_MODULE_PATH "${COLLI2DE_SOURCE_DIR}/cmake")
 
 message(STATUS "Building Colli2De version ${PROJECT_VERSION} with C++ standard ${CMAKE_CXX_STANDARD}")
 add_subdirectory(src)

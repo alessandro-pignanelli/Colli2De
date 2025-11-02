@@ -5,7 +5,6 @@ include(CTest)
 enable_testing()
 
 # Include custom CMake modules
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(IncludePackageWithFallback)
 
 # Use Catch2
@@ -34,7 +33,7 @@ target_link_libraries(Colli2DeTests
     colli2de
 )
 
-if (NOT LINUX)
+if (WIN32)
     target_link_libraries(Colli2DeTests
         PRIVATE
         stdc++exp # std::print
