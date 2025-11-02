@@ -29,7 +29,12 @@ template <typename ShapeType>
 concept IsShape = std::is_same_v<ShapeType, Circle> || std::is_same_v<ShapeType, Capsule> ||
                   std::is_same_v<ShapeType, Segment> || std::is_same_v<ShapeType, Polygon>;
 
-using ShapeVariant = std::variant<Circle, Capsule, Segment, Polygon>;
+constexpr uint8_t shapeTypesCount = 4;
+using Shape0 = Circle;
+using Shape1 = Capsule;
+using Shape2 = Segment;
+using Shape3 = Polygon;
+using ShapeVariant = std::variant<Shape0, Shape1, Shape2, Shape3>;
 
 struct Circle
 {

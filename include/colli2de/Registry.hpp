@@ -21,6 +21,7 @@ namespace c2d
 
 using ShapeId = uint32_t;
 
+constexpr uint8_t bodyTypesCount = 3;
 enum class BodyType : uint8_t
 {
     Static = 0,
@@ -50,9 +51,7 @@ class Registry
     Registry() = default;
 
     Registry(uint32_t cellSize) requires(Method == PartitioningMethod::Grid)
-        : treeStatic(cellSize),
-          treeDynamic(cellSize),
-          treeBullet(cellSize)
+        : trees{BroadPhaseTree<ShapeId>(cellSize), BroadPhaseTree<ShapeId>(cellSize), BroadPhaseTree<ShapeId>(cellSize)}
     {
     }
 
@@ -100,10 +99,10 @@ class Registry
     {
         ShapeVariant shape;
         AABB aabb;
-        std::function<void(ShapeInstance&, Transform)> move;
-        std::function<void(ShapeInstance&, Translation)> translate;
         BitMaskType categoryBits = {1};
         BitMaskType maskBits = {~0ull};
+        std::pair<uint8_t, uint8_t> moveFncIndices;
+        uint8_t translateFncIndex;
         bool isActive = true;
 
         void serialize(std::ostream& out) const;
@@ -142,13 +141,20 @@ class Registry
 
     using TreeType =
         std::conditional_t<Method == PartitioningMethod::Grid, BroadPhaseTree<ShapeId>, DynamicBVH<ShapeId>>;
-    TreeType treeStatic;
-    TreeType treeDynamic;
-    TreeType treeBullet;
+    TreeType trees[3]; // 0: Static, 1: Dynamic, 2: Bullet
+
     tsl::robin_map<EntityId, Transform> bulletPreviousTransforms;
     uint32_t previousAllCollisionsCount = 1024;
 
-    constexpr TreeType& treeFor(BodyType type);
+    constexpr inline TreeType& treeFor(BodyType type)
+    {
+        return trees[static_cast<size_t>(type)];
+    }
+
+    constexpr inline const TreeType& treeFor(BodyType type) const
+    {
+        return trees[static_cast<size_t>(type)];
+    }
 
     void narrowPhaseCollision(ShapeId shapeAId,
                               ShapeId shapeBId,
@@ -158,23 +164,78 @@ class Registry
                                std::vector<EntityCollision>& outCollisionsInfo) const;
     void narrowPhaseCollisions(std::vector<std::pair<ShapeId, ShapeId>>& collisions,
                                std::vector<EntityCollision>& outCollisionsInfo) const;
-};
 
-template <typename EntityId, PartitioningMethod Method>
-constexpr typename Registry<EntityId, Method>::TreeType& Registry<EntityId, Method>::treeFor(BodyType type)
-{
-    switch (type)
+    template <IsShape Shape>
+    static void moveDynamicShape(ShapeInstance& shapeInstance,
+                                 Transform newTransform,
+                                 TreeType& tree,
+                                 BroadPhaseTreeHandle treeHandle)
     {
-    case BodyType::Static:
-        return treeStatic;
-    case BodyType::Dynamic:
-        return treeDynamic;
-    case BodyType::Bullet:
-        return treeBullet;
-    default:
-        throw std::invalid_argument("Invalid body type");
+        const auto& concreteShape = std::get<Shape>(shapeInstance.shape);
+        shapeInstance.aabb = computeAABB(concreteShape, newTransform);
+        tree.moveProxy(treeHandle, shapeInstance.aabb);
     }
-}
+
+    template <IsShape Shape>
+    static void moveBulletShape(ShapeInstance& shapeInstance,
+                                Transform newTransform,
+                                TreeType& tree,
+                                BroadPhaseTreeHandle treeHandle)
+    {
+        const auto& concreteShape = std::get<Shape>(shapeInstance.shape);
+        const auto oldAABB = shapeInstance.aabb;
+        shapeInstance.aabb = computeAABB(concreteShape, newTransform);
+        tree.moveProxy(treeHandle, AABB::combine(oldAABB, shapeInstance.aabb));
+    }
+
+    static void translateDynamicShape(ShapeInstance& shapeInstance,
+                                      Translation translation,
+                                      TreeType& tree,
+                                      BroadPhaseTreeHandle treeHandle)
+    {
+        shapeInstance.aabb.translate(translation);
+        tree.moveProxy(treeHandle, shapeInstance.aabb);
+    }
+
+    static void translateBulletShape(ShapeInstance& shapeInstance,
+                                     Translation translation,
+                                     TreeType& tree,
+                                     BroadPhaseTreeHandle treeHandle)
+    {
+        const auto oldAABB = shapeInstance.aabb;
+        shapeInstance.aabb.translate(translation);
+        tree.moveProxy(treeHandle, AABB::combine(oldAABB, shapeInstance.aabb));
+    }
+
+    using MoveFunction = std::function<void(ShapeInstance&, Transform, TreeType&, BroadPhaseTreeHandle)>;
+    using TranslateFunction = std::function<void(ShapeInstance&, Translation, TreeType&, BroadPhaseTreeHandle)>;
+
+    inline static MoveFunction moveFnc[bodyTypesCount][shapeTypesCount] = {
+        {
+            &Registry<EntityId, Method>::moveDynamicShape<Shape0>,
+            &Registry<EntityId, Method>::moveDynamicShape<Shape1>,
+            &Registry<EntityId, Method>::moveDynamicShape<Shape2>,
+            &Registry<EntityId, Method>::moveDynamicShape<Shape3>,
+        },
+        {
+            &Registry<EntityId, Method>::moveDynamicShape<Shape0>,
+            &Registry<EntityId, Method>::moveDynamicShape<Shape1>,
+            &Registry<EntityId, Method>::moveDynamicShape<Shape2>,
+            &Registry<EntityId, Method>::moveDynamicShape<Shape3>,
+        },
+        {
+            &Registry<EntityId, Method>::moveBulletShape<Shape0>,
+            &Registry<EntityId, Method>::moveBulletShape<Shape1>,
+            &Registry<EntityId, Method>::moveBulletShape<Shape2>,
+            &Registry<EntityId, Method>::moveBulletShape<Shape3>,
+        },
+    };
+    inline static TranslateFunction translateFnc[bodyTypesCount] = {
+        &Registry<EntityId, Method>::translateDynamicShape,
+        &Registry<EntityId, Method>::translateDynamicShape,
+        &Registry<EntityId, Method>::translateBulletShape,
+    };
+};
 
 template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::createEntity(EntityId id, BodyType type, const Transform& transform)
@@ -214,58 +275,31 @@ ShapeId Registry<EntityId, Method>::addShape(EntityId entityId,
     const auto shapeAABB = computeAABB(shape, entity.transform);
     const auto treeHandle = tree.addProxy(shapeId, shapeAABB, categoryBits, maskBits);
 
-    const auto moveFunction = entity.type != BodyType::Bullet
-                                  ? std::function<void(ShapeInstance&, Transform)>(
-                                        [&tree, treeHandle](ShapeInstance& shapeInstance, Transform newTransform)
-                                        {
-                                            const auto& concreteShape = std::get<Shape>(shapeInstance.shape);
-                                            shapeInstance.aabb = computeAABB(concreteShape, newTransform);
-                                            tree.moveProxy(treeHandle, shapeInstance.aabb);
-                                        })
-                                  : std::function<void(ShapeInstance&, Transform)>(
-                                        [&tree, treeHandle](ShapeInstance& shapeInstance, Transform newTransform)
-                                        {
-                                            const auto& concreteShape = std::get<Shape>(shapeInstance.shape);
-                                            const auto oldAABB = shapeInstance.aabb;
-                                            shapeInstance.aabb = computeAABB(concreteShape, newTransform);
-                                            tree.moveProxy(treeHandle, AABB::combine(oldAABB, shapeInstance.aabb));
-                                        });
-    const auto translateFunction = entity.type != BodyType::Bullet
-                                       ? std::function<void(ShapeInstance&, Translation)>(
-                                             [&tree, treeHandle](ShapeInstance& shapeInstance, Translation translation)
-                                             {
-                                                 shapeInstance.aabb.translate(translation);
-                                                 tree.moveProxy(treeHandle, shapeInstance.aabb);
-                                             })
-                                       : std::function<void(ShapeInstance&, Translation)>(
-                                             [&tree, treeHandle](ShapeInstance& shapeInstance, Translation translation)
-                                             {
-                                                 const auto oldAABB = shapeInstance.aabb;
-                                                 shapeInstance.aabb.translate(translation);
-                                                 tree.moveProxy(treeHandle, AABB::combine(oldAABB, shapeInstance.aabb));
-                                             });
-
     if (reuseShapeId)
     {
         shapeEntity[shapeId] = entityId;
-        shapes[shapeId] = ShapeInstance{.shape = shape,
-                                        .aabb = shapeAABB,
-                                        .move = moveFunction,
-                                        .translate = translateFunction,
-                                        .categoryBits = categoryBits,
-                                        .maskBits = maskBits};
+        shapes[shapeId] = ShapeInstance{
+            .shape = shape,
+            .aabb = shapeAABB,
+            .moveFncIndices = {static_cast<uint8_t>(entity.type), static_cast<uint8_t>(shape.getType())},
+            .translateFncIndex = static_cast<uint8_t>(entity.type),
+            .categoryBits = categoryBits,
+            .maskBits = maskBits,
+        };
         shapeTreeHandles[shapeId] = treeHandle;
         entity.shapeIds.push_back(shapeId);
     }
     else
     {
         shapeEntity.push_back(entityId);
-        shapes.emplace_back(ShapeInstance{.shape = shape,
-                                          .aabb = shapeAABB,
-                                          .move = moveFunction,
-                                          .translate = translateFunction,
-                                          .categoryBits = categoryBits,
-                                          .maskBits = maskBits});
+        shapes.emplace_back(ShapeInstance{
+            .shape = shape,
+            .aabb = shapeAABB,
+            .moveFncIndices = {static_cast<uint8_t>(entity.type), static_cast<uint8_t>(shape.getType())},
+            .translateFncIndex = static_cast<uint8_t>(entity.type),
+            .categoryBits = categoryBits,
+            .maskBits = maskBits,
+        });
         shapeTreeHandles.push_back(treeHandle);
         entity.shapeIds.push_back(shapeId);
     }
@@ -327,12 +361,14 @@ void Registry<EntityId, Method>::teleportEntity(EntityId entityId, const Transfo
 {
     DEBUG_ASSERT(entities.find(entityId) != entities.end());
     EntityInfo& entity = entities.at(entityId);
+    auto& tree = treeFor(entity.type);
 
     for (const auto shapeId : entity.shapeIds)
     {
         DEBUG_ASSERT(shapeId < shapes.size(), "Shape ID out of bounds");
+        const auto treeHandle = shapeTreeHandles[shapeId];
         auto& shape = shapes[shapeId];
-        shape.move(shape, transform);
+        moveFnc[shape.moveFncIndices.first][shape.moveFncIndices.second](shape, transform, tree, treeHandle);
     }
 
     if (entity.type == BodyType::Bullet)
@@ -366,8 +402,9 @@ void Registry<EntityId, Method>::moveEntity(EntityId entityId, const Transform& 
     for (const auto shapeId : entity.shapeIds)
     {
         DEBUG_ASSERT(shapeId < shapes.size(), "Shape ID out of bounds");
+        const auto treeHandle = shapeTreeHandles[shapeId];
         auto& shape = shapes[shapeId];
-        shape.move(shape, entity.transform);
+        moveFnc[shape.moveFncIndices.first][shape.moveFncIndices.second](shape, entity.transform, tree, treeHandle);
     }
 }
 
@@ -381,9 +418,9 @@ void Registry<EntityId, Method>::moveEntity(EntityId id, Translation deltaTransl
     for (const auto shapeId : entity.shapeIds)
     {
         DEBUG_ASSERT(shapeId < shapes.size(), "Shape ID out of bounds");
+        const auto treeHandle = shapeTreeHandles[shapeId];
         auto& shape = shapes[shapeId];
-
-        shape.translate(shape, deltaTranslation);
+        translateFnc[shape.translateFncIndex](shape, deltaTranslation, tree, treeHandle);
     }
 
     if (entity.type == BodyType::Bullet)
@@ -413,31 +450,31 @@ std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<Entit
     { collisions.emplace_back(shapeAId, shapeBId); };
 
     // Dynamic vs Static
-    treeDynamic.findAllCollisions(treeStatic, handlePairCollisions);
+    treeFor(BodyType::Dynamic).findAllCollisions(treeFor(BodyType::Static), handlePairCollisions);
     if (!collisions.empty())
         narrowPhaseCollisions(collisions, collisionsInfo);
 
     // Dynamic vs Dynamic
     collisions.clear();
-    treeDynamic.findAllCollisions(handlePairCollisions);
+    treeFor(BodyType::Dynamic).findAllCollisions(handlePairCollisions);
     if (!collisions.empty())
         narrowPhaseCollisions(collisions, collisionsInfo);
 
     // Bullet vs Static
     collisions.clear();
-    treeBullet.findAllCollisions(treeStatic, handlePairCollisions);
+    treeFor(BodyType::Bullet).findAllCollisions(treeFor(BodyType::Static), handlePairCollisions);
     if (!collisions.empty())
         narrowPhaseCollisions(collisions, collisionsInfo);
 
     // Bullet vs Dynamic
     collisions.clear();
-    treeBullet.findAllCollisions(treeDynamic, handlePairCollisions);
+    treeFor(BodyType::Bullet).findAllCollisions(treeFor(BodyType::Dynamic), handlePairCollisions);
     if (!collisions.empty())
         narrowPhaseCollisions(collisions, collisionsInfo);
 
     // Bullet vs Bullet
     collisions.clear();
-    treeBullet.findAllCollisions(handlePairCollisions);
+    treeFor(BodyType::Bullet).findAllCollisions(handlePairCollisions);
     if (!collisions.empty())
         narrowPhaseCollisions(collisions, collisionsInfo);
 
@@ -488,19 +525,15 @@ std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<Entit
     }
 
     std::vector<EntityCollision> collisionsInfo;
+    const auto onCollision = [&](size_t i, std::vector<ShapeId> collisions)
+    { narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo); };
 
     if (entity.type != BodyType::Static)
     {
-        treeStatic.batchQuery(queries,
-                              [&](size_t i, std::vector<ShapeId> collisions)
-                              { narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo); });
+        treeFor(BodyType::Static).batchQuery(queries, onCollision);
     }
-    treeDynamic.batchQuery(queries,
-                           [&](size_t i, std::vector<ShapeId> collisions)
-                           { narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo); });
-    treeBullet.batchQuery(queries,
-                          [&](size_t i, std::vector<ShapeId> collisions)
-                          { narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo); });
+    treeFor(BodyType::Dynamic).batchQuery(queries, onCollision);
+    treeFor(BodyType::Bullet).batchQuery(queries, onCollision);
 
     return collisionsInfo;
 }
@@ -771,9 +804,9 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Metho
     float bestEntryTime = std::numeric_limits<float>::max();
 
     std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
-    treeStatic.piercingRaycast(ray, staticHits, maskBits);
-    treeDynamic.piercingRaycast(ray, dynamicHits, maskBits);
-    treeBullet.piercingRaycast(ray, bulletHits, maskBits);
+    treeFor(BodyType::Static).piercingRaycast(ray, staticHits, maskBits);
+    treeFor(BodyType::Dynamic).piercingRaycast(ray, dynamicHits, maskBits);
+    treeFor(BodyType::Bullet).piercingRaycast(ray, bulletHits, maskBits);
 
     uint32_t toCheck = staticHits.size();
     for (const auto& hit : staticHits)
@@ -860,9 +893,9 @@ std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Metho
     InfiniteRay ray, BitMaskType maskBits) const
 {
     std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
-    treeStatic.piercingRaycast(ray, staticHits, maskBits);
-    treeDynamic.piercingRaycast(ray, dynamicHits, maskBits);
-    treeBullet.piercingRaycast(ray, bulletHits, maskBits);
+    treeFor(BodyType::Static).piercingRaycast(ray, staticHits, maskBits);
+    treeFor(BodyType::Dynamic).piercingRaycast(ray, dynamicHits, maskBits);
+    treeFor(BodyType::Bullet).piercingRaycast(ray, bulletHits, maskBits);
 
     std::optional<RaycastHit<std::pair<EntityId, ShapeId>>> bestHit;
     float bestEntryTime = std::numeric_limits<float>::max();
@@ -952,9 +985,9 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
                                                                                        BitMaskType maskBits) const
 {
     std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
-    treeStatic.piercingRaycast(ray, staticHits, maskBits);
-    treeDynamic.piercingRaycast(ray, dynamicHits, maskBits);
-    treeBullet.piercingRaycast(ray, bulletHits, maskBits);
+    treeFor(BodyType::Static).piercingRaycast(ray, staticHits, maskBits);
+    treeFor(BodyType::Dynamic).piercingRaycast(ray, dynamicHits, maskBits);
+    treeFor(BodyType::Bullet).piercingRaycast(ray, bulletHits, maskBits);
 
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> hits;
 
@@ -1019,9 +1052,9 @@ std::set<RaycastHit<std::pair<EntityId, ShapeId>>> Registry<EntityId, Method>::r
                                                                                        BitMaskType maskBits) const
 {
     std::set<typename DynamicBVH<ShapeId>::RaycastInfo> staticHits, dynamicHits, bulletHits;
-    treeStatic.piercingRaycast(ray, staticHits, maskBits);
-    treeDynamic.piercingRaycast(ray, dynamicHits, maskBits);
-    treeBullet.piercingRaycast(ray, bulletHits, maskBits);
+    treeFor(BodyType::Static).piercingRaycast(ray, staticHits, maskBits);
+    treeFor(BodyType::Dynamic).piercingRaycast(ray, dynamicHits, maskBits);
+    treeFor(BodyType::Bullet).piercingRaycast(ray, bulletHits, maskBits);
 
     std::set<RaycastHit<std::pair<EntityId, ShapeId>>> hits;
 
@@ -1095,9 +1128,9 @@ void Registry<EntityId, Method>::clear()
     shapes.clear();
     shapeTreeHandles.clear();
     freeShapeIds.clear();
-    treeStatic.clear();
-    treeDynamic.clear();
-    treeBullet.clear();
+    treeFor(BodyType::Static).clear();
+    treeFor(BodyType::Dynamic).clear();
+    treeFor(BodyType::Bullet).clear();
     bulletPreviousTransforms.clear();
     previousAllCollisionsCount = 1000;
 }
@@ -1141,9 +1174,9 @@ void Registry<EntityId, Method>::serialize(std::ostream& out) const
         writer(shapeId);
 
     // Write broad-phase trees
-    treeStatic.serialize(out);
-    treeDynamic.serialize(out);
-    treeBullet.serialize(out);
+    treeFor(BodyType::Static).serialize(out);
+    treeFor(BodyType::Dynamic).serialize(out);
+    treeFor(BodyType::Bullet).serialize(out);
 
     // Write bullet previous transforms
     const size_t bulletPrevTransformsSize = bulletPreviousTransforms.size();
@@ -1215,9 +1248,9 @@ Registry<EntityId, Method> Registry<EntityId, Method>::deserialize(std::istream&
         reader(freeShapeId);
 
     // Read broad-phase trees
-    registry.treeStatic = TreeType::deserialize(in);
-    registry.treeDynamic = TreeType::deserialize(in);
-    registry.treeBullet = TreeType::deserialize(in);
+    registry.treeFor(BodyType::Static) = TreeType::deserialize(in);
+    registry.treeFor(BodyType::Dynamic) = TreeType::deserialize(in);
+    registry.treeFor(BodyType::Bullet) = TreeType::deserialize(in);
 
     // Read bullet previous transforms
     size_t bulletPrevTransformsSize;
@@ -1353,6 +1386,11 @@ void Registry<EntityId, Method>::ShapeInstance::serialize(std::ostream& out) con
     writer(categoryBits);
     writer(maskBits);
 
+    // Write function indices
+    writer(moveFncIndices.first);
+    writer(moveFncIndices.second);
+    writer(translateFncIndex);
+
     // Write isActive
     writer(isActive);
 }
@@ -1425,6 +1463,11 @@ typename Registry<EntityId, Method>::ShapeInstance Registry<EntityId, Method>::S
     reader(shapeInstance.categoryBits);
     reader(shapeInstance.maskBits);
 
+    // Read function indices
+    reader(shapeInstance.moveFncIndices.first);
+    reader(shapeInstance.moveFncIndices.second);
+    reader(shapeInstance.translateFncIndex);
+
     // Read isActive
     reader(shapeInstance.isActive);
 
@@ -1453,11 +1496,11 @@ bool Registry<EntityId, Method>::operator==(const Registry& other) const
     if (freeShapeIds != other.freeShapeIds)
         return false;
 
-    if (treeStatic != other.treeStatic)
+    if (treeFor(BodyType::Static) != other.treeFor(BodyType::Static))
         return false;
-    if (treeDynamic != other.treeDynamic)
+    if (treeFor(BodyType::Dynamic) != other.treeFor(BodyType::Dynamic))
         return false;
-    if (treeBullet != other.treeBullet)
+    if (treeFor(BodyType::Bullet) != other.treeFor(BodyType::Bullet))
         return false;
 
     if (bulletPreviousTransforms.size() != other.bulletPreviousTransforms.size())

@@ -74,133 +74,45 @@ for f in "${files[@]}"; do
   fi
 done
 
+# Check if Python is available
+if ! command -v python3 &> /dev/null; then
+  echo "Error: Python 3 is required but not found in PATH" >&2
+  exit 1
+fi
+
+# Check if parse script exists
+if [ ! -f "compare_tests_parse.py" ]; then
+  echo "Error: compare_tests_parse.py not found" >&2
+  exit 1
+fi
+
+# Check if format script exists
+if [ ! -f "compare_tests_format.py" ]; then
+  echo "Error: compare_tests_format.py not found" >&2
+  exit 1
+fi
+
 # Temporary files
 tmp_data=$(mktemp)
 tmp_names=$(mktemp)
 cleanup() { rm -f "$tmp_data" "$tmp_names"; }
 trap cleanup EXIT
 
-# 1) Parse each file and emit normalized TSV: fileIndex \t name \t status \t thr \t avg \t min \t max
-#    We skip header and separator lines, and trim whitespace.
-awk '
-  BEGIN { OFS="\t"; fileIdx=0 }
-  function ltrim(s){ sub(/^[ \t]+/, "", s); return s }
-  function rtrim(s){ sub(/[ \t]+$/, "", s); return s }
-  function trim(s){ return rtrim(ltrim(s)) }
-  # Detect separator lines like "--- | --- | ---" or lines of only pipes/dashes/spaces
-  function is_sep_line(line) { return (line ~ /^[ \t\-|]+$/) }
-  FNR==1 { fileIdx++; fb=FILENAME; gsub(/.*\//, "", fb) }
-  {
-    if (is_sep_line($0)) next;
-    # Split by raw pipe; the first field(s) up to the last 5 pipes are the name
-  n = split($0, a, /\|/);
-  # Drop trailing empty fields due to a trailing pipe at line end
-  while (n > 0 && trim(a[n]) == "") { n--; }
-  if (n < 6) next;
-    maxv = trim(a[n]);
-    minv = trim(a[n-1]);
-    avg  = trim(a[n-2]);
-    thr  = trim(a[n-3]);
-    status = trim(a[n-4]);
-    # Join remaining parts back as the name (may contain internal pipes)
-    name = "";
-    for (i=1; i<=n-5; i++) {
-      part = trim(a[i]);
-      if (part == "") continue;
-      if (name == "") name = part; else name = name " | " part;
-    }
-    name = trim(name);
-    if (name ~ /^[Bb]enchmark[ ]+[Nn]ame$/) next; # skip header
-    if (name == "") next;
-    print fileIdx, fb, name, status, thr, avg, minv, maxv;
-  }
-' "${files[@]}" > "$tmp_data"
+# Parse files using Python script
+python3 compare_tests_parse.py "$tmp_data" "${files[@]}"
 
-# 2) Collect and sort unique benchmark names
-# names are in column 3 of tmp_data
+# Extract and sort unique benchmark names
 cut -f3 "$tmp_data" | LC_ALL=C sort -u > "$tmp_names"
 
 N=${#files[@]}  # number of input files
 
-# 3) Prepare output stream
+# Generate output
 if [ -n "$out" ]; then
   case "$out" in
     ../test_data/*) :;;
     *) out="../test_data/$out";;
   esac
-  exec >"$out"
+  python3 compare_tests_format.py "$tmp_data" "$tmp_names" "$N" > "$out"
+else
+  python3 compare_tests_format.py "$tmp_data" "$tmp_names" "$N"
 fi
-
-# 4+5) Compute widths, then print header, separator, and rows with padding
-awk -v N="$N" -F"\t" '
-  BEGIN { OFS = " | " }
-  function esc(s) { gsub(/\|/, "|", s); return s }
-  function pad(s, w) { return sprintf("%-*s", w, s) }
-  function rep(ch, n,   r,i) { r=""; for (i=1; i<=n; i++) r=r ch; return r }
-  FNR==NR {
-    # dataset columns: 1=idx,2=fileBase,3=name,4=status,5=thr,6=avg,7=min,8=max
-    i=$1; fb=$2; name=$3;
-    data[i, name, 1]=$4; data[i, name, 2]=$5; data[i, name, 3]=$6; data[i, name, 4]=$7; data[i, name, 5]=$8;
-    # remember file index existence
-    files[i]=1;
-    next
-  }
-  {
-    names[++cnt]=$0
-  }
-  END {
-    # headers and widths for 7 columns
-    header[1] = "File"; widths[1] = (length(header[1]) < 4 ? 4 : length(header[1]));
-    header[2] = "Benchmark Name"; widths[2] = length(header[2]);
-    header[3] = "Status"; widths[3] = length(header[3]);
-    header[4] = "Threshold (ms)"; widths[4] = length(header[4]);
-    header[5] = "Avg (ms)"; widths[5] = length(header[5]);
-    header[6] = "Min (ms)"; widths[6] = length(header[6]);
-    header[7] = "Max (ms)"; widths[7] = length(header[7]);
-
-    # compute widths
-    for (n=1; n<=cnt; n++) {
-      name = names[n];
-      escname = esc(name);
-      if (length(escname) > widths[2]) widths[2] = length(escname);
-      for (i=1; i<=N; i++) {
-        for (k=1; k<=5; k++) {
-          key = i SUBSEP name SUBSEP k;
-          val = (key in data) ? data[i, name, k] : "";
-          col = 2 + k; # map k=1..5 -> cols 3..7
-          if (length(val) > widths[col]) widths[col] = length(val);
-        }
-        if (length(i) > widths[1]) widths[1] = length(i);
-      }
-    }
-
-    # print header
-    line = pad(header[1], widths[1]);
-    line = line OFS pad(header[2], widths[2]);
-    for (c=3; c<=7; c++) line = line OFS pad(header[c], widths[c]);
-    print line;
-
-    # separator
-    sep = pad(rep("-", (widths[1] < 3 ? 3 : widths[1])), widths[1]);
-    sep = sep OFS pad(rep("-", (widths[2] < 3 ? 3 : widths[2])), widths[2]);
-    for (c=3; c<=7; c++) sep = sep OFS pad(rep("-", (widths[c] < 3 ? 3 : widths[c])), widths[c]);
-    print sep;
-
-    # print rows: for each name, one row per file i=1..N
-    for (n=1; n<=cnt; n++) {
-      print "";
-      name = names[n]; escname = esc(name);
-      for (i=1; i<=N; i++) {
-        row = pad(i, widths[1]);
-        row = row OFS pad(escname, widths[2]);
-        for (k=1; k<=5; k++) {
-          key = i SUBSEP name SUBSEP k;
-          val = (key in data) ? data[i, name, k] : "";
-          col = 2 + k;
-          row = row OFS pad(val, widths[col]);
-        }
-        print row;
-      }
-    }
-  }
-' "$tmp_data" "$tmp_names"
