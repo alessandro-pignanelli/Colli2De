@@ -27,18 +27,22 @@ pushd "$(dirname "$0")" > /dev/null
 #   $2 - Directory name (e.g., "catch2")
 #   $3 - Git repository URL
 #   $4 - Skip build (1 to skip, empty/0 to build)
+#   $@ - Additional CMake options (passed from $5 onwards)
 fetch_and_build_lib() {
     local LIB_NAME="$1"
     local LIB_DIR="$2"
     local GIT_URL="$3"
-    local SKIP_BUILD="$4"
+    local VERSION="$4"
+    local SKIP_BUILD="$5"
+    shift 5
+    local CMAKE_OPTIONS=("$@")
 
     echo -e "\033[34m==================== Fetching $LIB_NAME ====================\033[0m"
 
     # ---------- Git clone ----------
     if [ ! -d "libs/$LIB_DIR" ]; then
         echo -e "\033[32m[$LIB_NAME] Cloning repository...\033[0m"
-        git clone "$GIT_URL" "libs/$LIB_DIR"
+        git clone "$GIT_URL" "libs/$LIB_DIR" --branch "v$VERSION"
     fi
 
     # ---------- Check if build should be skipped ----------
@@ -56,13 +60,13 @@ fetch_and_build_lib() {
     cd build
 
     # ---------- Build for Debug ----------
-    build_and_install "$LIB_NAME" "Debug"
+    build_and_install "$LIB_NAME" "Debug" "${CMAKE_OPTIONS[@]}"
     if [ $? -ne 0 ]; then
         return 1
     fi
 
     # ---------- Build for Release ----------
-    build_and_install "$LIB_NAME" "Release"
+    build_and_install "$LIB_NAME" "Release" "${CMAKE_OPTIONS[@]}"
     if [ $? -ne 0 ]; then
         return 1
     fi
@@ -75,9 +79,12 @@ fetch_and_build_lib() {
 # Parameters:
 #   $1 - Library name
 #   $2 - Build type (Debug/Release)
+#   $@ - Additional CMake options (passed from $3 onwards)
 build_and_install() {
     local LIB_NAME="$1"
     local BUILD_TYPE="$2"
+    shift 2
+    local CMAKE_OPTIONS=("$@")
 
     if [ ! -d "$BUILD_TYPE" ]; then
         mkdir "$BUILD_TYPE"
@@ -88,7 +95,8 @@ build_and_install() {
     echo -e "\033[32m[$LIB_NAME] Configuring with CMake ($BUILD_TYPE)...\033[0m"
     cmake ../.. \
         -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-        -DCMAKE_OSX_ARCHITECTURES=arm64
+        -DCMAKE_OSX_ARCHITECTURES=arm64 \
+        "${CMAKE_OPTIONS[@]}"
     if [ $? -ne 0 ]; then
         echo -e "\033[31m[$LIB_NAME] CMake failed. Please check the output for details.\033[0m"
         return 1
@@ -126,11 +134,18 @@ build_and_install() {
     return 0
 }
 
+
+
+cd ..
+
 # ---------- Main execution ----------
-fetch_and_build_lib "Catch2" "catch2" "https://github.com/catchorg/Catch2.git"
+fetch_and_build_lib "Catch2" "catch2" "https://github.com/catchorg/Catch2.git" 3.11.0 ""
 if [ $? -ne 0 ]; then exit 1; fi
 
-fetch_and_build_lib "Robin Map" "robin-map" "https://github.com/Tessil/robin-map.git"
+fetch_and_build_lib "Robin Map" "robin-map" "https://github.com/Tessil/robin-map.git" 1.4.0 ""
+if [ $? -ne 0 ]; then exit 1; fi
+
+fetch_and_build_lib "Cereal" "cereal" "https://github.com/USCiLab/cereal.git" 1.3.2 "" -DJUST_INSTALL_CEREAL=ON
 if [ $? -ne 0 ]; then exit 1; fi
 
 popd > /dev/null

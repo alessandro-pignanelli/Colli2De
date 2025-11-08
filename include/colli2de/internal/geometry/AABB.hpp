@@ -73,6 +73,14 @@ struct AABB
 
 static_assert(std::is_trivially_copyable_v<AABB>, "AABB must be trivially copyable");
 
+#ifdef C2D_USE_CEREAL
+template <class Archive>
+void serialize(Archive& archive, c2d::AABB& aabb)
+{
+    archive(aabb.min, aabb.max);
+}
+#endif
+
 } // namespace c2d
 
 // Specialization for std::formatter to allow formatted output of AABB

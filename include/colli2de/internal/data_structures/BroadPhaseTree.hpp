@@ -54,6 +54,14 @@ struct GridCell
     {
         return !(*this < other);
     }
+
+#ifdef C2D_USE_CEREAL
+    template <class Archive>
+    void serialize(Archive& archive)
+    {
+        archive(x, y);
+    }
+#endif
 };
 
 namespace
@@ -114,6 +122,11 @@ class BroadPhaseTree
     void serialize(std::ostream& out) const;
     static BroadPhaseTree deserialize(std::istream& in);
 
+#ifdef C2D_USE_CEREAL
+    template <class Archive>
+    void serialize(Archive& archive);
+#endif
+
     // For debugging/statistics
     std::size_t size() const
     {
@@ -145,6 +158,11 @@ class BroadPhaseTree
 
         void serialize(std::ostream& out) const;
         static Proxy deserialize(std::istream& in);
+
+#ifdef C2D_USE_CEREAL
+        template <class Archive>
+        void serialize(Archive& archive);
+#endif
 
         bool operator==(const Proxy& other) const;
 
@@ -634,6 +652,20 @@ BroadPhaseTree<IdType> BroadPhaseTree<IdType>::deserialize(std::istream& in)
     return tree;
 }
 
+#ifdef C2D_USE_CEREAL
+template <typename IdType>
+template <class Archive>
+void BroadPhaseTree<IdType>::serialize(Archive& archive)
+{
+    archive(cellSize);
+    archive(proxies);
+    archive(proxiesFreeList);
+    archive(regions);
+    archive(bvhs);
+    archive(bvhFreeList);
+}
+#endif
+
 template <typename IdType>
 void BroadPhaseTree<IdType>::Proxy::serialize(std::ostream& out) const
 {
@@ -692,6 +724,15 @@ typename BroadPhaseTree<IdType>::Proxy BroadPhaseTree<IdType>::Proxy::deserializ
 
     return proxy;
 }
+
+#ifdef C2D_USE_CEREAL
+template <typename IdType>
+template <class Archive>
+void BroadPhaseTree<IdType>::Proxy::serialize(Archive& archive)
+{
+    archive(entityId, aabb, categoryBits, maskBits, bvhHandles);
+}
+#endif
 
 template <typename IdType>
 bool BroadPhaseTree<IdType>::isValidHandle(BroadPhaseTreeHandle handle) const

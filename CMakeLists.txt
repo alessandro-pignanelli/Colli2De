@@ -7,16 +7,18 @@ project(colli2de
 	LANGUAGES CXX
 )
 
+option(ENABLE_LTO "Enable Link Time Optimization (LTO) / Interprocedural Optimization (IPO)" OFF)
+option(C2D_USE_CEREAL "Enable Cereal serialization support" OFF)
+option(UNIT_TESTS "Build unit tests" ON)
+
 # static link
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-set(ENABLE_LTO OFF CACHE BOOL "Enable Link Time Optimization (LTO) / Interprocedural Optimization (IPO)")
 
 # Deterministic math
 if (MINGW OR APPLE OR UNIX)
 	add_compile_options(-ffp-contract=off)
 endif()
 
-set (UNIT_TESTS ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(COLLI2DE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})

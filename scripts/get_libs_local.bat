@@ -11,10 +11,13 @@ FOR %%A IN (%*) DO (
 
 
 REM ---------- Main execution ----------
-call :FETCH_AND_BUILD_LIB "Catch2" "catch2" "https://github.com/catchorg/Catch2.git"
+call :FETCH_AND_BUILD_LIB "Catch2" "catch2" "https://github.com/catchorg/Catch2.git" ""
 IF %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
-call :FETCH_AND_BUILD_LIB "Robin Map" "robin-map" "https://github.com/Tessil/robin-map.git"
+call :FETCH_AND_BUILD_LIB "Robin Map" "robin-map" "https://github.com/Tessil/robin-map.git" ""
+IF %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
+
+call :FETCH_AND_BUILD_LIB "Cereal" "cereal" "https://github.com/USCiLab/cereal.git" "" -DJUST_INSTALL_CEREAL=ON
 IF %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
 popd >nul
@@ -27,11 +30,13 @@ REM   %1 - Display name (e.g., "Catch2")
 REM   %2 - Directory name (e.g., "catch2")
 REM   %3 - Git repository URL
 REM   %4 - Skip build (1 to skip, 0 to build)
+REM   %5+ - Additional CMake options (optional)
 :FETCH_AND_BUILD_LIB
 SET LIB_NAME=%~1
 SET LIB_DIR=%~2
 SET GIT_URL=%~3
 SET SKIP_BUILD=%~4
+SET CMAKE_OPTIONS=%~5 %~6 %~7 %~8 %~9
 
 echo [34m==================== Fetching %LIB_NAME% ====================[0m
 
@@ -56,11 +61,11 @@ if not exist "build" (
 cd build
 
 REM ---------- Build for Debug ----------
-call :BUILD_AND_INSTALL "%LIB_NAME%" "Debug"
+call :BUILD_AND_INSTALL "%LIB_NAME%" "Debug" "%CMAKE_OPTIONS%"
 IF %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
 REM ---------- Build for Release ----------
-call :BUILD_AND_INSTALL "%LIB_NAME%" "Release"
+call :BUILD_AND_INSTALL "%LIB_NAME%" "Release" "%CMAKE_OPTIONS%"
 IF %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
 
 cd ..\..\..
@@ -71,9 +76,11 @@ REM ---------- BUILD_AND_INSTALL ----------
 REM Parameters:
 REM   %1 - Library name
 REM   %2 - Build type (Debug/Release)
+REM   %3 - Additional CMake options (optional)
 :BUILD_AND_INSTALL
 SET LIB_NAME=%~1
 SET BUILD_TYPE=%~2
+SET CMAKE_OPTIONS=%~3
 
 IF NOT EXIST "%BUILD_TYPE%" (
     mkdir "%BUILD_TYPE%"
@@ -86,7 +93,8 @@ cmake ../.. ^
     -G "Ninja" ^
     -DCMAKE_C_COMPILER=gcc ^
     -DCMAKE_CXX_COMPILER=g++ ^
-    -DCMAKE_BUILD_TYPE=%BUILD_TYPE%
+    -DCMAKE_BUILD_TYPE=%BUILD_TYPE% ^
+    %CMAKE_OPTIONS%
 IF %ERRORLEVEL% NEQ 0 (
     echo [31m[%LIB_NAME%] CMake failed. Please check the output for details.[0m
     exit /b %ERRORLEVEL%

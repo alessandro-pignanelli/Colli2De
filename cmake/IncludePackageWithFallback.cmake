@@ -6,6 +6,22 @@
 #   VERSION - Required version (e.g., 1.4.0)
 #   USE_LOCAL_VAR - Name of the CMake variable to force local (e.g., USE_LOCAL_ROBIN_MAP)
 function(include_package_with_fallback PACKAGE_NAME LIB_DIR GIT_REPO VERSION USE_LOCAL_VAR)
+    # Parse optional extra arguments as key-value pairs:
+    # Example call:
+    # include_package_with_fallback(... USE_LOCAL_VAR
+    #     BUILD_TESTS OFF
+    #     ANOTHER_OPTION ON
+    # )
+    set(extra_args ${ARGN})
+
+    # Apply overrides before MakeAvailable
+    while(extra_args)
+        list(POP_FRONT extra_args key)
+        list(POP_FRONT extra_args value)
+        message(STATUS "Setting ${key}=${value} for ${PACKAGE_NAME}")
+        set(${key} ${value} CACHE BOOL "" FORCE)
+    endwhile()
+
     if (${USE_LOCAL_VAR})
         find_package(${PACKAGE_NAME} ${VERSION} REQUIRED PATHS ${COLLI2DE_SOURCE_DIR}/libs/${LIB_DIR}/install/${CMAKE_BUILD_TYPE})
     else()

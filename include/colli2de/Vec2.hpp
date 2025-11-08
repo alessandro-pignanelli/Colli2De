@@ -310,6 +310,14 @@ constexpr float Vec2::cross(Vec2 other) const
 
 static_assert(std::is_trivially_copyable_v<Vec2>, "Vec2 must be trivially copyable");
 
+#ifdef C2D_USE_CEREAL
+template <class Archive>
+void serialize(Archive& archive, c2d::Vec2& vec)
+{
+    archive(vec.x, vec.y);
+}
+#endif
+
 } // namespace c2d
 
 // Specialization for std::formatter to allow formatted output of Vec2

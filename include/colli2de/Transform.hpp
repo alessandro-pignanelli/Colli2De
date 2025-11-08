@@ -231,6 +231,20 @@ struct Transform
     }
 };
 
+#ifdef C2D_USE_CEREAL
+template <class Archive>
+void serialize(Archive& archive, c2d::Rotation& rotation)
+{
+    archive(rotation.angleRadians, rotation.sin, rotation.cos);
+}
+
+template <class Archive>
+void serialize(Archive& archive, c2d::Transform& transform)
+{
+    archive(transform.translation, transform.rotation);
+}
+#endif
+
 } // namespace c2d
 
 template <>

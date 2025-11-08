@@ -178,6 +178,40 @@ Polygon makeTriangle(Vec2 v0, Vec2 v1, Vec2 v2);
 Polygon makeRegularPolygon(uint8_t n, Vec2 center, float radius, float rotationAngle = 0.0f);
 Polygon makePolygon(const std::initializer_list<Vec2>& points);
 
+#ifdef C2D_USE_CEREAL
+template <class Archive>
+void serialize(Archive& archive, c2d::Circle& circle)
+{
+    archive(circle.center, circle.radius);
+}
+
+template <class Archive>
+void serialize(Archive& archive, c2d::Capsule& capsule)
+{
+    archive(capsule.center1, capsule.center2, capsule.radius);
+}
+
+template <class Archive>
+void serialize(Archive& archive, c2d::Segment& segment)
+{
+    archive(segment.start, segment.end);
+}
+
+template <class Archive>
+void serialize(Archive& archive, c2d::Polygon& polygon)
+{
+    archive(polygon.count);
+    for (size_t i = 0; i < polygon.count; i++)
+    {
+        archive(polygon.vertices[i]);
+    }
+    for (size_t i = 0; i < polygon.count; i++)
+    {
+        archive(polygon.normals[i]);
+    }
+}
+#endif
+
 } // namespace c2d
 
 template <>

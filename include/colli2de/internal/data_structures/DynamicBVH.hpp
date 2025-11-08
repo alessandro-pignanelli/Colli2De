@@ -54,6 +54,11 @@ struct BVHNode
     void serialize(std::ostream& out) const;
     static BVHNode deserialize(std::istream& in);
 
+#ifdef C2D_USE_CEREAL
+    template <class Archive>
+    void serialize(Archive& archive);
+#endif
+
     bool operator==(const BVHNode& other) const;
 
     bool operator!=(const BVHNode& other) const
@@ -135,6 +140,11 @@ class DynamicBVH
 
     void serialize(std::ostream& out) const;
     static DynamicBVH deserialize(std::istream& in);
+
+#ifdef C2D_USE_CEREAL
+    template <class Archive>
+    void serialize(Archive& archive);
+#endif
 
     bool operator==(const DynamicBVH& other) const;
 
@@ -1041,6 +1051,20 @@ DynamicBVH<IdType> DynamicBVH<IdType>::deserialize(std::istream& in)
     return bvh;
 }
 
+#ifdef C2D_USE_CEREAL
+template <typename IdType>
+template <class Archive>
+void DynamicBVH<IdType>::serialize(Archive& archive)
+{
+    archive(fatAABBMargin);
+    archive(rootIndex);
+    archive(nodeCount);
+    archive(proxyCount);
+    archive(nextAvailableIndex);
+    archive(nodes);
+}
+#endif
+
 template <typename IdType>
 bool DynamicBVH<IdType>::operator==(const DynamicBVH& other) const
 {
@@ -1084,10 +1108,7 @@ BVHNode<IdType> BVHNode<IdType>::deserialize(std::istream& in)
     Reader reader(in);
     BVHNode<IdType> node;
 
-    reader(node.aabb.min.x);
-    reader(node.aabb.min.y);
-    reader(node.aabb.max.x);
-    reader(node.aabb.max.y);
+    reader(node.aabb);
     reader(node.categoryBits);
     reader(node.isHittingBits);
     reader(node.parentIndex);
@@ -1098,6 +1119,15 @@ BVHNode<IdType> BVHNode<IdType>::deserialize(std::istream& in)
 
     return node;
 }
+
+#ifdef C2D_USE_CEREAL
+template <typename IdType>
+template <class Archive>
+void BVHNode<IdType>::serialize(Archive& archive)
+{
+    archive(aabb, categoryBits, isHittingBits, parentIndex, child1Index, child2Index, height, id);
+}
+#endif
 
 template <typename IdType>
 bool BVHNode<IdType>::operator==(const BVHNode& other) const

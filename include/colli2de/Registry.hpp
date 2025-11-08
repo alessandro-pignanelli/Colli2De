@@ -16,6 +16,12 @@
 #include <variant>
 #include <vector>
 
+#ifdef C2D_USE_CEREAL
+#include <cereal/types/utility.hpp>
+#include <cereal/types/variant.hpp>
+#include <cereal/types/vector.hpp>
+#endif
+
 namespace c2d
 {
 
@@ -86,6 +92,14 @@ class Registry
     void serialize(std::ostream& out) const;
     static Registry deserialize(std::istream& in);
 
+#ifdef C2D_USE_CEREAL
+    template <class Archive>
+    void save(Archive& archive) const;
+
+    template <class Archive>
+    void load(Archive& archive);
+#endif
+
     // Used for testing equality
     bool operator==(const Registry& other) const;
 
@@ -108,6 +122,11 @@ class Registry
         void serialize(std::ostream& out) const;
         static ShapeInstance deserialize(std::istream& in);
 
+#ifdef C2D_USE_CEREAL
+        template <class Archive>
+        void serialize(Archive& archive);
+#endif
+
         bool operator==(const ShapeInstance& other) const;
 
         bool operator!=(const ShapeInstance& other) const
@@ -124,6 +143,11 @@ class Registry
 
         void serialize(std::ostream& out) const;
         static EntityInfo deserialize(std::istream& in);
+
+#ifdef C2D_USE_CEREAL
+        template <class Archive>
+        void serialize(Archive& archive);
+#endif
 
         bool operator==(const EntityInfo& other) const;
 
@@ -1276,6 +1300,104 @@ Registry<EntityId, Method> Registry<EntityId, Method>::deserialize(std::istream&
     return registry;
 }
 
+#ifdef C2D_USE_CEREAL
+template <typename EntityId, PartitioningMethod Method>
+template <class Archive>
+void Registry<EntityId, Method>::save(Archive& archive) const
+{
+    // Write entities
+    const size_t entitiesSize = entities.size();
+    archive(entitiesSize);
+    for (const auto& [entityId, entityInfo] : entities)
+    {
+        archive(entityId);
+        archive(entityInfo);
+    }
+
+    // Write shape to entity map
+    archive(shapeEntity);
+
+    // Write shapes
+    archive(shapes);
+
+    // Write shape tree handles
+    archive(shapeTreeHandles);
+
+    // Write free shape IDs
+    archive(freeShapeIds);
+
+    // Write broad-phase trees
+    archive(treeFor(BodyType::Static));
+    archive(treeFor(BodyType::Dynamic));
+    archive(treeFor(BodyType::Bullet));
+
+    // Write bullet previous transforms
+    const size_t bulletPrevTransformsSize = bulletPreviousTransforms.size();
+    archive(bulletPrevTransformsSize);
+    for (const auto& [entityId, transform] : bulletPreviousTransforms)
+    {
+        archive(entityId);
+        archive(transform);
+    }
+
+    archive(previousAllCollisionsCount);
+}
+
+template <typename EntityId, PartitioningMethod Method>
+template <class Archive>
+void Registry<EntityId, Method>::load(Archive& archive)
+{
+    // Read entities
+    size_t entitiesSize;
+    archive(entitiesSize);
+
+    for (size_t i = 0; i < entitiesSize; i++)
+    {
+        EntityId entityId;
+        archive(entityId);
+
+        EntityInfo entityInfo;
+        archive(entityInfo);
+
+        entities.emplace(entityId, std::move(entityInfo));
+    }
+
+    // Read shape to entity map
+    archive(shapeEntity);
+
+    // Read shapes
+    archive(shapes);
+
+    // Read shape tree handles
+    archive(shapeTreeHandles);
+
+    // Read free shape IDs
+    archive(freeShapeIds);
+
+    // Read broad-phase trees
+    archive(treeFor(BodyType::Static));
+    archive(treeFor(BodyType::Dynamic));
+    archive(treeFor(BodyType::Bullet));
+
+    // Read bullet previous transforms
+    size_t bulletPrevTransformsSize;
+    archive(bulletPrevTransformsSize);
+
+    for (size_t i = 0; i < bulletPrevTransformsSize; i++)
+    {
+        EntityId entityId;
+        archive(entityId);
+
+        Transform transform;
+        archive(transform);
+
+        bulletPreviousTransforms.emplace(entityId, std::move(transform));
+    }
+
+    archive(previousAllCollisionsCount);
+}
+#endif
+
 template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::EntityInfo::serialize(std::ostream& out) const
 {
@@ -1324,6 +1446,15 @@ Registry<EntityId, Method>::EntityInfo Registry<EntityId, Method>::EntityInfo::d
 
     return entityInfo;
 }
+
+#ifdef C2D_USE_CEREAL
+template <typename EntityId, PartitioningMethod Method>
+template <class Archive>
+void Registry<EntityId, Method>::EntityInfo::serialize(Archive& archive)
+{
+    archive(type, transform, shapeIds);
+}
+#endif
 
 template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::ShapeInstance::serialize(std::ostream& out) const
@@ -1473,6 +1604,19 @@ typename Registry<EntityId, Method>::ShapeInstance Registry<EntityId, Method>::S
 
     return shapeInstance;
 }
+
+#ifdef C2D_USE_CEREAL
+template <typename EntityId, PartitioningMethod Method>
+template <class Archive>
+void Registry<EntityId, Method>::ShapeInstance::serialize(Archive& archive)
+{
+    archive(shape);
+    archive(aabb);
+    archive(categoryBits, maskBits);
+    archive(moveFncIndices);
+    archive(translateFncIndex, isActive);
+}
+#endif
 
 template <typename EntityId, PartitioningMethod Method>
 bool Registry<EntityId, Method>::operator==(const Registry& other) const

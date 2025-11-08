@@ -24,6 +24,22 @@ if (NOT USE_LOCAL_ROBIN_MAP)
     set(ROBIN_MAP_TARGET robin_map)
 endif()
 
+if (C2D_USE_CEREAL)
+    message(STATUS "Cereal serialization support enabled")
+
+    include_package_with_fallback(
+        cereal
+        cereal
+        "https://github.com/USCiLab/cereal.git"
+        1.3.2
+        USE_LOCAL_CEREAL
+        JUST_INSTALL_CEREAL ON
+    )
+    if (NOT USE_LOCAL_CEREAL)
+        set(CEREAL_TARGET cereal)
+    endif()
+endif()
+
 # ---- Gather source files (.cpp) ----
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
@@ -37,6 +53,10 @@ else()
     add_library(${PROJECT_NAME} STATIC ${SOURCES} ${HEADERS})
 endif()
 set(CMAKE_DEBUG_POSTFIX "d")
+
+if (C2D_USE_CEREAL)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC C2D_USE_CEREAL)
+endif()
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
