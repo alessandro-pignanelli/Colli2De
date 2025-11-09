@@ -18,7 +18,7 @@ TEST_CASE("BroadPhaseTree | handle many proxies", "[BroadPhaseTree][Stress]")
     }
 
     AABB query{Vec2{10, 0}, Vec2{20, 1}};
-    std::vector<uint32_t> hits;
+    std::pmr::vector<uint32_t> hits;
     tree.query(query, hits);
     std::set<uint32_t> uniqueHits(hits.begin(), hits.end());
     CHECK(uniqueHits.size() >= 90);

@@ -9,6 +9,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <algorithm>
 #include <cstdint>
+#include <memory_resource>
 #include <set>
 
 using namespace c2d;
@@ -64,7 +65,8 @@ TEST_CASE("BroadPhaseTree | query finds all overlapping proxies", "[BroadPhaseTr
         }
     }
 
-    std::vector<uint32_t> foundIds;
+    std::pmr::unsynchronized_pool_resource pool;
+    std::pmr::vector<uint32_t> foundIds{&pool};
 
     // Query an area covering (2,2) to (4,4)
     AABB queryAABB{Vec2{2.0f, 2.0f}, Vec2{4.0f, 4.0f}};
@@ -553,7 +555,7 @@ TEST_CASE("BroadPhaseTree batchQuery with multiple threads", "[BroadPhaseTree][B
 
     std::vector<std::vector<uint32_t>> results;
     results.resize(queries.size());
-    tree.batchQuery(queries, [&results](size_t i, std::vector<uint32_t> hits) { results[i] = std::move(hits); });
+    tree.batchQuery(queries, [&results](size_t i, std::vector<uint32_t>& hits) { results[i] = hits; });
     CHECK(results.size() == expectedResults.size());
 
     for (size_t i = 0; i < results.size(); ++i)

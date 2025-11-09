@@ -33,7 +33,7 @@ TEST_CASE("DynamicBVH | Bulk insertion", "[DynamicBVH][Benchmark][Insert]")
                        });
 
     BENCHMARK_FUNCTION("DynamicBVH | Insert 100k proxies",
-                       100ms,
+                       80ms,
                        [&]()
                        {
                            DynamicBVH<uint32_t> bvh;
@@ -109,7 +109,7 @@ TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]
                        10us,
                        [&]()
                        {
-                           std::vector<uint32_t> foundIds;
+                           std::pmr::vector<uint32_t> foundIds;
                            bvh.query(query, foundIds);
                            return foundIds.size();
                        });
@@ -122,7 +122,7 @@ TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]
                        50us,
                        [&]()
                        {
-                           std::vector<uint32_t> foundIds;
+                           std::pmr::vector<uint32_t> foundIds;
                            bvh.query(query, foundIds);
                            return foundIds.size();
                        });
@@ -140,7 +140,7 @@ TEST_CASE("DynamicBVH | Broad-phase AABB query", "[DynamicBVH][Benchmark][Query]
                        150ms,
                        [&]()
                        {
-                           std::vector<uint32_t> foundIds;
+                           std::pmr::vector<uint32_t> foundIds;
                            for (const auto& query : queries)
                                bvh.query(query, foundIds);
                            return foundIds.size();

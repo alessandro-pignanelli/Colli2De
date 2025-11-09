@@ -17,7 +17,7 @@ TEST_CASE("BroadPhaseTree | proxies can be added and queried", "[BroadPhaseTree]
 
     REQUIRE(tree.size() == 2);
 
-    std::vector<uint32_t> hits;
+    std::pmr::vector<uint32_t> hits;
     tree.query({{0, 0}, {3, 3}}, hits);
     CHECK(std::find(hits.begin(), hits.end(), 1) != hits.end());
     CHECK(std::find(hits.begin(), hits.end(), 2) != hits.end());
@@ -34,7 +34,7 @@ TEST_CASE("BroadPhaseTree | proxies can be added and queried", "[BroadPhaseTree]
 TEST_CASE("BroadPhaseTree | moveProxy updates location", "[BroadPhaseTree]")
 {
     BroadPhaseTree<uint32_t> tree;
-    std::vector<uint32_t> hits;
+    std::pmr::vector<uint32_t> hits;
     auto h = tree.addProxy(1, {{0, 0}, {1, 1}});
 
     tree.moveProxy(h, {{5, 5}, {6, 6}});

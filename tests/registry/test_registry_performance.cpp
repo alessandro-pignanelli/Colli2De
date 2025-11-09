@@ -202,3 +202,71 @@ TEST_CASE("Registry | Collision query bullets", "[Registry][Query][AllPairs][Ben
                        250ms,
                        [&]() { return reg.getCollidingPairs().size(); });
 }
+
+TEST_CASE("Registry | Single collisions query", "[Registry][Query][AllPairs][Benchmark]")
+{
+    const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
+    std::vector<Circle> circles = generateRandomCircles(100'000, -1920.0f, 3840.0f, 12.0f, seed);
+    Registry<uint32_t, PartitioningMethod::Grid> reg;
+    for (uint32_t i = 0; i < 1'000; ++i)
+    {
+        const bool isBullet = (i % 1000) == 0;
+        const bool isStatic = !isBullet && (i % 3) == 0;
+        const BodyType type = (isStatic) ? BodyType::Static : (isBullet) ? BodyType::Bullet : BodyType::Dynamic;
+        reg.createEntity(i, type, Transform(circles[i].center));
+        reg.addShape(i, Circle({0, 0}, circles[i].radius));
+        reg.moveEntity(i, Translation(3.0f, 3.0f));
+    }
+
+    BENCHMARK_FUNCTION("Registry | Find collisions 1-by-1 among 1k entities",
+                       1ms,
+                       [&]()
+                       {
+                           size_t size = 0;
+                           for (uint32_t i = 0; i < 1000; ++i)
+                               size += reg.getCollisions(i).size();
+                           return size;
+                       });
+
+    reg.clear();
+    for (uint32_t i = 0; i < 10'000; ++i)
+    {
+        const bool isBullet = (i % 1000) == 0;
+        const bool isStatic = !isBullet && (i % 3) == 0;
+        const BodyType type = (isStatic) ? BodyType::Static : (isBullet) ? BodyType::Bullet : BodyType::Dynamic;
+        reg.createEntity(i, type, Transform(circles[i].center));
+        reg.addShape(i, Circle({0, 0}, circles[i].radius));
+        reg.moveEntity(i, Translation(3.0f, 3.0f));
+    }
+
+    BENCHMARK_FUNCTION("Registry | Find collisions 1-by-1 entity among 10k entities",
+                       2ms,
+                       [&]()
+                       {
+                           size_t size = 0;
+                           for (uint32_t i = 0; i < 1000; ++i)
+                               size += reg.getCollisions(i).size();
+                           return size;
+                       });
+
+    reg.clear();
+    for (uint32_t i = 0; i < 100'000; ++i)
+    {
+        const bool isBullet = (i % 1000) == 0;
+        const bool isStatic = !isBullet && (i % 3) == 0;
+        const BodyType type = (isStatic) ? BodyType::Static : (isBullet) ? BodyType::Bullet : BodyType::Dynamic;
+        reg.createEntity(i, type, Transform(circles[i].center));
+        reg.addShape(i, Circle({0, 0}, circles[i].radius));
+        reg.moveEntity(i, Translation(3.0f, 3.0f));
+    }
+
+    BENCHMARK_FUNCTION("Registry | Find collisions 1-by-1 entity among 100k entities",
+                       5ms,
+                       [&]()
+                       {
+                           size_t size = 0;
+                           for (uint32_t i = 0; i < 1000; ++i)
+                               size += reg.getCollisions(i).size();
+                           return size;
+                       });
+}

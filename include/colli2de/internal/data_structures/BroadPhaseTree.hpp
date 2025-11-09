@@ -106,9 +106,10 @@ class BroadPhaseTree
     void moveProxy(BroadPhaseTreeHandle handle, AABB aabb);
 
     // AABB queries
-    void query(AABB queryAABB, std::vector<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
+    template <typename Allocator>
+    void query(AABB queryAABB, std::vector<IdType, Allocator>& intersections, BitMaskType maskBits = ~0ull) const;
     void batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
-                    const std::function<void(size_t, std::vector<IdType>)>& callback) const;
+                    const std::function<void(size_t, std::vector<IdType>&)>& callback) const;
     void findAllCollisions(const std::function<void(IdType, IdType)>& callback) const;
     void findAllCollisions(const BroadPhaseTree<IdType>& other,
                            const std::function<void(IdType, IdType)>& callback) const;
@@ -333,7 +334,10 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 
 // AABB queries
 template <typename IdType>
-void BroadPhaseTree<IdType>::query(AABB queryAABB, std::vector<IdType>& intersections, BitMaskType maskBits) const
+template <typename Allocator>
+void BroadPhaseTree<IdType>::query(AABB queryAABB,
+                                   std::vector<IdType, Allocator>& intersections,
+                                   BitMaskType maskBits) const
 {
     forEachCell(queryAABB,
                 cellSize,
@@ -350,7 +354,7 @@ void BroadPhaseTree<IdType>::query(AABB queryAABB, std::vector<IdType>& intersec
 
 template <typename IdType>
 void BroadPhaseTree<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
-                                        const std::function<void(size_t, std::vector<IdType>)>& callback) const
+                                        const std::function<void(size_t, std::vector<IdType>&)>& callback) const
 {
     C2D_PARALLEL_FOR(0,
                      queries.size(),
@@ -359,7 +363,7 @@ void BroadPhaseTree<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMas
                          std::vector<IdType> hits;
                          query(queries[i].first, hits, queries[i].second);
                          if (!hits.empty())
-                             callback(i, std::move(hits));
+                             callback(i, hits);
                      });
 }
 

@@ -49,6 +49,8 @@ The library can also be added to an existing CMake project using `add_subdirecto
 
 Tests are written with [Catch2](https://github.com/catchorg/Catch2) and can be built and executed with:
 
+#### Windows
+
 ```batch
 REM configure and build tests in Debug mode
 test.bat --cmake --build --debug
@@ -56,6 +58,8 @@ test.bat --cmake --build --debug
 REM build tests in Release mode to execute performance tests
 test.bat --cmake --build --release
 ```
+
+#### MacOS / Linux
 
 ```bash
 # configure and build tests in Debug mode
@@ -140,7 +144,7 @@ The registry's methods are designed to assume that the user won't make any inval
 
 #### Creating the registry
 
-`Registry<EntityIdType, PartitioningMethod>::Registry()`: creates a new registry with the default cell size of 64.
+`Registry<EntityIdType, PartitioningMethod::Grid>::Registry()`: creates a new registry with the default cell size of 120.
 `Registry<EntityIdType, PartitioningMethod::Grid>::Registry(cellSize)`: creates a new registry with the specified cell size.
 
 The `Registry` class is a templated class that takes two template parameters, `EntityIdType`, which is the type of the entity ID, and `PartitioningMethod`, which determines how the registry partitions space for efficient collision detection.  
@@ -154,10 +158,10 @@ The `Registry` class is not unit-agnostic, meaning you can use any unit of measu
 
 #### Creating and removing entities
 
-`void createEntity(id, BodyType, Transform)`:
+`void createEntity(id, bodyType, transform)`:
 - `id`: unique identifier for the entity.
-- `BodyType`: describes how the entity responds to collisions.
-- `Transform`: specifies the position and rotation of the entity.  
+- `bodyType`: describes how the entity responds to collisions.
+- `transform`: specifies the position and rotation of the entity.  
 
 This method creates a new entity in the registry without any shapes. Until you add shapes to the entity, it will not participate in collision detection. Make sure that the specified entity ID does not already exist in the registry before calling this method.
 
@@ -394,6 +398,27 @@ if (inFile)
 {
     c2d::Registry registry = c2d::Registry::deserialize(inFile);
     // Use the deserialized registry
+}
+```
+
+In addition, Colli2De support serialization through the [Cereal](https://uscilab.github.io/cereal/) library, which provides a flexible and efficient way to serialize C++ data structures, also supporting various formats and cross-platform compatibility.  
+To use cereal serialization, compile with `-DC2D_USE_CEREAL=ON` or manully change the CMake option `C2D_USE_CEREAL` to `ON` when building the library.
+
+```cpp
+std::ofstream outFile("registry.cereal", std::ios::binary);
+if (outFile)
+{
+    cereal::BinaryOutputArchive archive(outFile);
+    archive(registry);
+}
+
+// ...
+
+std::ifstream inFile("registry.cereal", std::ios::binary);
+if (inFile)
+{
+    cereal::BinaryInputArchive archive(inFile);
+    archive(registry);
 }
 ```
 

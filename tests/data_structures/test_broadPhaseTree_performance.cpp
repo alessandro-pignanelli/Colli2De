@@ -92,7 +92,6 @@ TEST_CASE("BroadPhaseTree | Moving proxies", "[BroadPhaseTree][Benchmark][Move]"
 TEST_CASE("BroadPhaseTree | Broad-phase AABB query", "[BroadPhaseTree][Benchmark][Query]")
 {
     const auto seed = Catch::getCurrentContext().getConfig()->rngSeed();
-    microseconds elapsed;
     std::vector<AABB> aabbs = generateRandomAABBs(100'000, 0.0f, 100.0f, 2.0f, seed);
     AABB query{Vec2{20, 0}, Vec2{50, 4}};
 

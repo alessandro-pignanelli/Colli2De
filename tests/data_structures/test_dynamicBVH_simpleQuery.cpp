@@ -64,7 +64,7 @@ TEST_CASE("DynamicBVH | query finds all overlapping proxies", "[DynamicBVH][Quer
         }
     }
 
-    std::vector<uint32_t> foundIds;
+    std::pmr::vector<uint32_t> foundIds;
 
     // Query an area covering (2,2) to (4,4)
     AABB queryAABB{Vec2{2.0f, 2.0f}, Vec2{4.0f, 4.0f}};

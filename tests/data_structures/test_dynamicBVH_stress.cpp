@@ -115,7 +115,7 @@ TEST_CASE("DynamicBVH | handle many proxies", "[DynamicBVH][Stress]")
 
     // Query a range covering many
     AABB query{Vec2{10, 0}, Vec2{20, 1}};
-    std::vector<uint32_t> hits;
+    std::pmr::vector<uint32_t> hits;
     bvh.query(query, hits);
 
     // Should find about (20-10)/0.1 = 100 proxies

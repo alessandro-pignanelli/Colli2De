@@ -1,5 +1,7 @@
 #pragma once
 
+#include "colli2de/internal/utils/Methods.hpp"
+
 #include <colli2de/Manifold.hpp>
 #include <colli2de/Ray.hpp>
 #include <colli2de/Shapes.hpp>
@@ -15,6 +17,7 @@
 #include <algorithm>
 #include <variant>
 #include <vector>
+
 
 #ifdef C2D_USE_CEREAL
 #include <cereal/types/utility.hpp>
@@ -183,10 +186,12 @@ class Registry
     void narrowPhaseCollision(ShapeId shapeAId,
                               ShapeId shapeBId,
                               std::vector<EntityCollision>& outCollisionsInfo) const;
+    template <typename Allocator>
     void narrowPhaseCollisions(ShapeId shapeQueried,
-                               std::vector<ShapeId>& collisions,
+                               std::vector<ShapeId, Allocator>& collisions,
                                std::vector<EntityCollision>& outCollisionsInfo) const;
-    void narrowPhaseCollisions(std::vector<std::pair<ShapeId, ShapeId>>& collisions,
+    template <typename Allocator>
+    void narrowPhaseCollisions(std::vector<std::pair<ShapeId, ShapeId>, Allocator>& collisions,
                                std::vector<EntityCollision>& outCollisionsInfo) const;
 
     template <IsShape Shape>
@@ -305,10 +310,10 @@ ShapeId Registry<EntityId, Method>::addShape(EntityId entityId,
         shapes[shapeId] = ShapeInstance{
             .shape = shape,
             .aabb = shapeAABB,
-            .moveFncIndices = {static_cast<uint8_t>(entity.type), static_cast<uint8_t>(shape.getType())},
-            .translateFncIndex = static_cast<uint8_t>(entity.type),
             .categoryBits = categoryBits,
             .maskBits = maskBits,
+            .moveFncIndices = {static_cast<uint8_t>(entity.type), static_cast<uint8_t>(shape.getType())},
+            .translateFncIndex = static_cast<uint8_t>(entity.type),
         };
         shapeTreeHandles[shapeId] = treeHandle;
         entity.shapeIds.push_back(shapeId);
@@ -319,10 +324,10 @@ ShapeId Registry<EntityId, Method>::addShape(EntityId entityId,
         shapes.emplace_back(ShapeInstance{
             .shape = shape,
             .aabb = shapeAABB,
-            .moveFncIndices = {static_cast<uint8_t>(entity.type), static_cast<uint8_t>(shape.getType())},
-            .translateFncIndex = static_cast<uint8_t>(entity.type),
             .categoryBits = categoryBits,
             .maskBits = maskBits,
+            .moveFncIndices = {static_cast<uint8_t>(entity.type), static_cast<uint8_t>(shape.getType())},
+            .translateFncIndex = static_cast<uint8_t>(entity.type),
         });
         shapeTreeHandles.push_back(treeHandle);
         entity.shapeIds.push_back(shapeId);
@@ -467,40 +472,83 @@ std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<Entit
     std::vector<EntityCollision> collisionsInfo;
     collisionsInfo.reserve(previousAllCollisionsCount + 10);
 
-    std::vector<std::pair<ShapeId, ShapeId>> collisions;
-    collisions.reserve(previousAllCollisionsCount);
+    const bool runInParallel = shapes.size() > 9'000;
 
-    const auto handlePairCollisions = [&](ShapeId shapeAId, ShapeId shapeBId)
-    { collisions.emplace_back(shapeAId, shapeBId); };
+    std::vector<std::pmr::unsynchronized_pool_resource> poolResource(runInParallel ? 5 : 1);
 
-    // Dynamic vs Static
-    treeFor(BodyType::Dynamic).findAllCollisions(treeFor(BodyType::Static), handlePairCollisions);
-    if (!collisions.empty())
-        narrowPhaseCollisions(collisions, collisionsInfo);
+    auto collisions = runInParallel ? std::array<std::pmr::vector<std::pair<ShapeId, ShapeId>>, 5>{
+        std::pmr::vector<std::pair<ShapeId, ShapeId>>{&poolResource[0]},
+        std::pmr::vector<std::pair<ShapeId, ShapeId>>{&poolResource[1]},
+        std::pmr::vector<std::pair<ShapeId, ShapeId>>{&poolResource[2]},
+        std::pmr::vector<std::pair<ShapeId, ShapeId>>{&poolResource[3]},
+        std::pmr::vector<std::pair<ShapeId, ShapeId>>{&poolResource[4]},
+    } : std::array<std::pmr::vector<std::pair<ShapeId, ShapeId>>, 5>{
+        std::pmr::vector<std::pair<ShapeId, ShapeId>>{&poolResource[0]},
+        std::pmr::vector<std::pair<ShapeId, ShapeId>>{&poolResource[0]},
+        std::pmr::vector<std::pair<ShapeId, ShapeId>>{&poolResource[0]},
+        std::pmr::vector<std::pair<ShapeId, ShapeId>>{&poolResource[0]},
+        std::pmr::vector<std::pair<ShapeId, ShapeId>>{&poolResource[0]},
+    };
 
-    // Dynamic vs Dynamic
-    collisions.clear();
-    treeFor(BodyType::Dynamic).findAllCollisions(handlePairCollisions);
-    if (!collisions.empty())
-        narrowPhaseCollisions(collisions, collisionsInfo);
+    const auto dynamicVsStatic = [&]()
+    {
+        treeFor(BodyType::Dynamic)
+            .findAllCollisions(treeFor(BodyType::Static),
+                               [&](ShapeId shapeAId, ShapeId shapeBId)
+                               { collisions[0].emplace_back(shapeAId, shapeBId); });
 
-    // Bullet vs Static
-    collisions.clear();
-    treeFor(BodyType::Bullet).findAllCollisions(treeFor(BodyType::Static), handlePairCollisions);
-    if (!collisions.empty())
-        narrowPhaseCollisions(collisions, collisionsInfo);
+        // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
+        std::sort(collisions[0].begin(), collisions[0].end());
+    };
+    const auto dynamicVsDynamic = [&]()
+    {
+        treeFor(BodyType::Dynamic)
+            .findAllCollisions([&](ShapeId shapeAId, ShapeId shapeBId)
+                               { collisions[1].emplace_back(shapeAId, shapeBId); });
 
-    // Bullet vs Dynamic
-    collisions.clear();
-    treeFor(BodyType::Bullet).findAllCollisions(treeFor(BodyType::Dynamic), handlePairCollisions);
-    if (!collisions.empty())
-        narrowPhaseCollisions(collisions, collisionsInfo);
+        // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
+        std::sort(collisions[1].begin(), collisions[1].end());
+    };
+    const auto bulletVsStatic = [&]()
+    {
+        treeFor(BodyType::Bullet)
+            .findAllCollisions(treeFor(BodyType::Static),
+                               [&](ShapeId shapeAId, ShapeId shapeBId)
+                               { collisions[2].emplace_back(shapeAId, shapeBId); });
 
-    // Bullet vs Bullet
-    collisions.clear();
-    treeFor(BodyType::Bullet).findAllCollisions(handlePairCollisions);
-    if (!collisions.empty())
-        narrowPhaseCollisions(collisions, collisionsInfo);
+        // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
+        std::sort(collisions[2].begin(), collisions[2].end());
+    };
+    const auto bulletVsDynamic = [&]()
+    {
+        treeFor(BodyType::Bullet)
+            .findAllCollisions(treeFor(BodyType::Dynamic),
+                               [&](ShapeId shapeAId, ShapeId shapeBId)
+                               { collisions[3].emplace_back(shapeAId, shapeBId); });
+
+        // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
+        std::sort(collisions[3].begin(), collisions[3].end());
+    };
+    const auto bulletVsBullet = [&]()
+    {
+        treeFor(BodyType::Bullet)
+            .findAllCollisions([&](ShapeId shapeAId, ShapeId shapeBId)
+                               { collisions[4].emplace_back(shapeAId, shapeBId); });
+
+        // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
+        std::sort(collisions[4].begin(), collisions[4].end());
+    };
+
+    if (runInParallel)
+        C2D_RUN_PARALLEL_AND_WAIT(dynamicVsStatic, dynamicVsDynamic, bulletVsStatic, bulletVsDynamic, bulletVsBullet);
+    else
+        C2D_RUN_AND_WAIT(dynamicVsStatic, dynamicVsDynamic, bulletVsStatic, bulletVsDynamic, bulletVsBullet);
+
+    for (size_t i = 0; i < 5; ++i)
+    {
+        if (!collisions[i].empty())
+            narrowPhaseCollisions(collisions[i], collisionsInfo);
+    }
 
     previousAllCollisionsCount = collisionsInfo.size();
     return collisionsInfo;
@@ -549,7 +597,7 @@ std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<Entit
     }
 
     std::vector<EntityCollision> collisionsInfo;
-    const auto onCollision = [&](size_t i, std::vector<ShapeId> collisions)
+    const auto onCollision = [&](size_t i, std::vector<ShapeId>& collisions)
     { narrowPhaseCollisions(shapesQueried[i], collisions, collisionsInfo); };
 
     if (entity.type != BodyType::Static)
@@ -665,11 +713,11 @@ void Registry<EntityId, Method>::narrowPhaseCollision(ShapeId shapeAId,
 }
 
 template <typename EntityId, PartitioningMethod Method>
-void Registry<EntityId, Method>::narrowPhaseCollisions(std::vector<std::pair<ShapeId, ShapeId>>& collisions,
+template <typename Allocator>
+void Registry<EntityId, Method>::narrowPhaseCollisions(std::vector<std::pair<ShapeId, ShapeId>, Allocator>& collisions,
                                                        std::vector<EntityCollision>& outCollisionsInfo) const
 {
-    // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
-    std::sort(collisions.begin(), collisions.end());
+    // NOTE: collisions are already sorted when passed to this function
 
     narrowPhaseCollision(collisions[0].first, collisions[0].second, outCollisionsInfo);
     for (size_t i = 1; i < collisions.size(); i++)
@@ -684,13 +732,11 @@ void Registry<EntityId, Method>::narrowPhaseCollisions(std::vector<std::pair<Sha
 }
 
 template <typename EntityId, PartitioningMethod Method>
+template <typename Allocator>
 void Registry<EntityId, Method>::narrowPhaseCollisions(ShapeId shapeQueried,
-                                                       std::vector<ShapeId>& collisions,
+                                                       std::vector<ShapeId, Allocator>& collisions,
                                                        std::vector<EntityCollision>& outCollisionsInfo) const
 {
-    // Sort to detect duplicates -> duplicates will be adjacent in the sorted vector
-    std::sort(collisions.begin(), collisions.end());
-
     narrowPhaseCollision(shapeQueried, collisions[0], outCollisionsInfo);
     for (size_t i = 1; i < collisions.size(); i++)
     {

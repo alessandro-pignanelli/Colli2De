@@ -40,7 +40,7 @@ TEST_CASE("BroadPhaseTree | query with mask bits filters correctly", "[BroadPhas
     SECTION("BroadPhaseTree | Query with mask for category 2")
     {
         BitMaskType only2 = 0b0100;
-        std::vector<uint32_t> result;
+        std::pmr::vector<uint32_t> result;
         tree.query(allAABB, result, only2);
         CHECK(result.size() == 1);
         CHECK(std::find(result.begin(), result.end(), 3) !=
@@ -51,7 +51,7 @@ TEST_CASE("BroadPhaseTree | query with mask bits filters correctly", "[BroadPhas
     SECTION("BroadPhaseTree | Query with mask for category 1 and 3")
     {
         BitMaskType oneAndThree = 0b1010;
-        std::vector<uint32_t> result;
+        std::pmr::vector<uint32_t> result;
         tree.query(allAABB, result, oneAndThree);
         CHECK(result.size() == 2);
         CHECK(std::find(result.begin(), result.end(), 2) != result.end());
@@ -62,7 +62,7 @@ TEST_CASE("BroadPhaseTree | query with mask bits filters correctly", "[BroadPhas
     SECTION("BroadPhaseTree | Query with mask for all categories")
     {
         BitMaskType all = 0b1111;
-        std::vector<uint32_t> result;
+        std::pmr::vector<uint32_t> result;
         tree.query(allAABB, result, all);
         CHECK(result.size() == 4);
         CHECK(std::find(result.begin(), result.end(), 1) != result.end());

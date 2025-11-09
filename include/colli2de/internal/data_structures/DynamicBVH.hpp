@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <functional>
+#include <memory_resource>
 #include <ranges>
 #include <set>
 #include <utility>
@@ -124,9 +125,13 @@ class DynamicBVH
     auto leavesView() const;
 
     // AABB queries
-    void query(AABB queryAABB, std::vector<IdType>& intersections, BitMaskType maskBits = ~0ull) const;
+    template <typename Allocator>
+    void query(AABB queryAABB, std::vector<IdType, Allocator>& intersections, BitMaskType maskBits = ~0ull) const;
+    void batchQuery(std::pmr::monotonic_buffer_resource& poolResource,
+                    const std::pmr::vector<std::pair<AABB, BitMaskType>>& queries,
+                    const std::function<void(size_t, std::pmr::vector<IdType>&)>& callback) const;
     void batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
-                    const std::function<void(size_t, std::vector<IdType>)>& callback) const;
+                    const std::function<void(size_t, std::vector<IdType>&)>& callback) const;
     void findAllCollisions(const std::function<void(IdType, IdType)>& callback) const;
     void findAllCollisions(const DynamicBVH<IdType>& other, const std::function<void(IdType, IdType)>& callback) const;
 
@@ -698,7 +703,10 @@ auto DynamicBVH<IdType>::leavesView() const
 }
 
 template <typename IdType>
-void DynamicBVH<IdType>::query(AABB queryAABB, std::vector<IdType>& intersections, BitMaskType maskBits) const
+template <typename Allocator>
+void DynamicBVH<IdType>::query(AABB queryAABB,
+                               std::vector<IdType, Allocator>& intersections,
+                               BitMaskType maskBits) const
 {
     if (rootIndex == INVALID_NODE_INDEX)
         return;
@@ -731,8 +739,24 @@ void DynamicBVH<IdType>::query(AABB queryAABB, std::vector<IdType>& intersection
 }
 
 template <typename IdType>
+void DynamicBVH<IdType>::batchQuery(std::pmr::monotonic_buffer_resource& poolResource,
+                                    const std::pmr::vector<std::pair<AABB, BitMaskType>>& queries,
+                                    const std::function<void(size_t, std::pmr::vector<IdType>&)>& callback) const
+{
+    C2D_PARALLEL_FOR(0,
+                     queries.size(),
+                     [&](size_t i)
+                     {
+                         std::pmr::vector<IdType> hits{&poolResource};
+                         query(queries[i].first, hits, queries[i].second);
+                         if (!hits.empty())
+                             callback(i, hits);
+                     });
+}
+
+template <typename IdType>
 void DynamicBVH<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
-                                    const std::function<void(size_t, std::vector<IdType>)>& callback) const
+                                    const std::function<void(size_t, std::vector<IdType>&)>& callback) const
 {
     C2D_PARALLEL_FOR(0,
                      queries.size(),
@@ -741,7 +765,7 @@ void DynamicBVH<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskTyp
                          std::vector<IdType> hits;
                          query(queries[i].first, hits, queries[i].second);
                          if (!hits.empty())
-                             callback(i, std::move(hits));
+                             callback(i, hits);
                      });
 }
 

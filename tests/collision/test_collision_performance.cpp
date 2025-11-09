@@ -23,7 +23,7 @@ TEST_CASE("Collision performance: Circle vs Circle", "[collision][Benchmark][Cir
     Transform t{Vec2{0.0f, 0.0f}, 0.0f};
 
     BENCHMARK_FUNCTION("Collide 10k circle pairs",
-                       300us,
+                       50us,
                        [&]()
                        {
                            uint32_t total = 0;
@@ -33,7 +33,7 @@ TEST_CASE("Collision performance: Circle vs Circle", "[collision][Benchmark][Cir
                        });
 
     BENCHMARK_FUNCTION("Collide 100k circle pairs",
-                       3ms,
+                       1ms,
                        [&]()
                        {
                            uint32_t total = 0;
@@ -62,7 +62,7 @@ TEST_CASE("Collision performance: Segment vs Segment", "[collision][Benchmark][S
                        });
 
     BENCHMARK_FUNCTION("Collide 100k segment pairs",
-                       10ms,
+                       5ms,
                        [&]()
                        {
                            uint32_t total = 0;
@@ -91,7 +91,7 @@ TEST_CASE("Collision performance: Capsule vs Capsule", "[collision][Benchmark][C
                        });
 
     BENCHMARK_FUNCTION("Collide 100k capsule pairs",
-                       10ms,
+                       5ms,
                        [&]()
                        {
                            uint32_t total = 0;
