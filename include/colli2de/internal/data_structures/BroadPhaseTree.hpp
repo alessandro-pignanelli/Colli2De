@@ -5,6 +5,7 @@
 #include <colli2de/internal/geometry/AABB.hpp>
 #include <colli2de/internal/utils/Debug.hpp>
 #include <colli2de/internal/utils/Methods.hpp>
+#include <colli2de/internal/utils/Serialization.hpp>
 
 #include <functional>
 #include <map>
@@ -56,7 +57,7 @@ struct GridCell
     }
 
 #ifdef C2D_USE_CEREAL
-    template <class Archive>
+    template <IsCerealArchive Archive>
     void serialize(Archive& archive)
     {
         archive(x, y);
@@ -76,10 +77,10 @@ inline GridCell getCellFor(c2d::Vec2 position, int32_t cellSize)
             .y = int32_t(position.y) - (position.y >= 0 ? posY % cellSize : (posY % cellSize) + cellSize)};
 }
 
-inline void forEachCell(c2d::AABB aabb, int32_t cellSize, std::function<void(GridCell)> callback)
+inline void forEachCell(c2d::AABB boundingBox, int32_t cellSize, std::function<void(GridCell)> callback)
 {
-    const GridCell startCell = getCellFor(aabb.min, cellSize);
-    const GridCell endCell = getCellFor(aabb.max, cellSize);
+    const GridCell startCell = getCellFor(boundingBox.min, cellSize);
+    const GridCell endCell = getCellFor(boundingBox.max, cellSize);
 
     for (int32_t y = startCell.y; y <= endCell.y; y += cellSize)
         for (int32_t x = startCell.x; x <= endCell.x; x += cellSize)
@@ -92,22 +93,24 @@ template <typename IdType>
 class BroadPhaseTree
 {
   public:
-    BroadPhaseTree(int32_t cellSize = 120) : cellSize(cellSize)
+    BroadPhaseTree(int32_t cellSize = 120) : mCellSize(cellSize)
     {
-        proxies.reserve(32);
+        mProxies.reserve(32);
     }
 
     // Add a new proxy, returns handle for later moves/removal
     BroadPhaseTreeHandle addProxy(IdType entityId,
-                                  AABB aabb,
+                                  AABB boundingBox,
                                   BitMaskType categoryBits = 1,
                                   BitMaskType maskBits = ~0ull);
     void removeProxy(BroadPhaseTreeHandle handle);
-    void moveProxy(BroadPhaseTreeHandle handle, AABB aabb);
+    void moveProxy(BroadPhaseTreeHandle handle, AABB boundingBox);
 
     // AABB queries
     template <typename Allocator>
-    void query(AABB queryAABB, std::vector<IdType, Allocator>& intersections, BitMaskType maskBits = ~0ull) const;
+    void query(AABB queryBoundingBox,
+               std::vector<IdType, Allocator>& intersections,
+               BitMaskType maskBits = ~0ull) const;
     void batchQuery(const std::vector<std::pair<AABB, BitMaskType>>& queries,
                     const std::function<void(size_t, std::vector<IdType>&)>& callback) const;
     void findAllCollisions(const std::function<void(IdType, IdType)>& callback) const;
@@ -124,14 +127,14 @@ class BroadPhaseTree
     static BroadPhaseTree deserialize(std::istream& in);
 
 #ifdef C2D_USE_CEREAL
-    template <class Archive>
+    template <IsCerealArchive Archive>
     void serialize(Archive& archive);
 #endif
 
     // For debugging/statistics
     std::size_t size() const
     {
-        return proxies.size() - proxiesFreeList.size();
+        return mProxies.size() - mProxiesFreeList.size();
     }
 
     void clear();
@@ -151,17 +154,17 @@ class BroadPhaseTree
 
     struct Proxy
     {
-        std::map<GridCell, NodeIndex> bvhHandles;
-        IdType entityId;
-        AABB aabb;
-        BitMaskType categoryBits; // For collision filtering
-        BitMaskType maskBits;     // For collision filtering
+        std::map<GridCell, NodeIndex> mBvhHandles;
+        IdType mEntityId;
+        AABB mBoundingBox;
+        BitMaskType mCategoryBits; // For collision filtering
+        BitMaskType mMaskBits;     // For collision filtering
 
         void serialize(std::ostream& out) const;
         static Proxy deserialize(std::istream& in);
 
 #ifdef C2D_USE_CEREAL
-        template <class Archive>
+        template <IsCerealArchive Archive>
         void serialize(Archive& archive);
 #endif
 
@@ -173,48 +176,48 @@ class BroadPhaseTree
         }
     };
 
-    int32_t cellSize;                                          // Size of each grid cell for spatial partitioning
-    std::vector<Proxy> proxies;                                // Indexed by BroadPhaseTreeHandle
-    std::vector<BroadPhaseTreeHandle> proxiesFreeList;         // For fast recycling
-    std::vector<std::pair<GridCell, DynamicBVH<IdType>>> bvhs; // Each grid cell has its own BVH
-    std::map<GridCell, size_t> regions;                        // Maps grid cells to their BVH index
-    std::vector<size_t> bvhFreeList;                           // For fast recycling of BVH indices
+    int32_t mCellSize;                                          // Size of each grid cell for spatial partitioning
+    std::vector<Proxy> mProxies;                                // Indexed by BroadPhaseTreeHandle
+    std::vector<BroadPhaseTreeHandle> mProxiesFreeList;         // For fast recycling
+    std::vector<std::pair<GridCell, DynamicBVH<IdType>>> mBvhs; // Each grid cell has its own BVH
+    std::map<GridCell, size_t> mRegions;                        // Maps grid cells to their BVH index
+    std::vector<size_t> mBvhFreeList;                           // For fast recycling of BVH indices
 };
 
 template <typename IdType>
 BroadPhaseTreeHandle BroadPhaseTree<IdType>::addProxy(IdType entityId,
-                                                      AABB aabb,
+                                                      AABB boundingBox,
                                                       BitMaskType categoryBits,
                                                       BitMaskType maskBits)
 {
     BroadPhaseTreeHandle treeHandle;
-    if (!proxiesFreeList.empty())
+    if (!mProxiesFreeList.empty())
     {
-        treeHandle = proxiesFreeList.back();
-        proxiesFreeList.pop_back();
+        treeHandle = mProxiesFreeList.back();
+        mProxiesFreeList.pop_back();
     }
     else
     {
-        treeHandle = static_cast<IdType>(proxies.size());
-        proxies.emplace_back();
+        treeHandle = static_cast<IdType>(mProxies.size());
+        mProxies.emplace_back();
     }
 
-    auto& proxy = proxies[treeHandle];
-    proxy.entityId = entityId;
-    proxy.aabb = aabb;
-    proxy.categoryBits = categoryBits;
-    proxy.maskBits = maskBits;
+    auto& proxy = mProxies[treeHandle];
+    proxy.mEntityId = entityId;
+    proxy.mBoundingBox = boundingBox;
+    proxy.mCategoryBits = categoryBits;
+    proxy.mMaskBits = maskBits;
 
-    forEachCell(aabb,
-                cellSize,
+    forEachCell(boundingBox,
+                mCellSize,
                 [&](GridCell cell)
                 {
-                    size_t bvhIndex = getBVHIndexForCell(cell);
-                    DynamicBVH<IdType>& bvh = bvhs[bvhIndex].second;
+                    const size_t bvhIndex = getBVHIndexForCell(cell);
+                    DynamicBVH<IdType>& bvh = mBvhs[bvhIndex].second;
 
                     // Proxy stores the BVH handle for each cell (region) it belongs to
-                    const auto bvhHandle = bvh.addProxy(entityId, aabb, categoryBits, maskBits);
-                    proxy.bvhHandles.emplace(cell, bvhHandle);
+                    const auto bvhHandle = bvh.addProxy(entityId, boundingBox, categoryBits, maskBits);
+                    proxy.mBvhHandles.emplace(cell, bvhHandle);
                 });
 
     return treeHandle;
@@ -225,90 +228,90 @@ void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
 {
     DEBUG_ASSERT(isValidHandle(handle));
 
-    Proxy& proxy = proxies.at(handle);
+    Proxy& proxy = mProxies.at(handle);
 
     // Remove the proxy from all regions it belongs to
-    for (const auto& [cell, bvhHandle] : proxy.bvhHandles)
+    for (const auto& [cell, bvhHandle] : proxy.mBvhHandles)
     {
-        size_t bvhIndex = regions.at(cell);
-        auto& bvh = bvhs[bvhIndex].second;
+        const size_t bvhIndex = mRegions.at(cell);
+        auto& bvh = mBvhs[bvhIndex].second;
         bvh.removeProxy(bvhHandle);
 
         if (bvh.size() == 0)
         {
-            regions.erase(cell);
-            bvhFreeList.push_back(bvhIndex);
+            mRegions.erase(cell);
+            mBvhFreeList.push_back(bvhIndex);
         }
     }
 
-    proxy.bvhHandles.clear();
-    proxiesFreeList.push_back(handle);
+    proxy.mBvhHandles.clear();
+    mProxiesFreeList.push_back(handle);
 }
 
 template <typename IdType>
-void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
+void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB boundingBox)
 {
     DEBUG_ASSERT(isValidHandle(handle));
-    Proxy& proxy = proxies.at(handle);
+    Proxy& proxy = mProxies.at(handle);
 
-    if (proxy.aabb.contains(aabb))
+    if (proxy.mBoundingBox.contains(boundingBox))
         return;
 
-    const auto oldMinCell = getCellFor(proxy.aabb.min, cellSize);
-    const auto oldMaxCell = getCellFor(proxy.aabb.max, cellSize);
-    const auto newMinCell = getCellFor(aabb.min, cellSize);
-    const auto newMaxCell = getCellFor(aabb.max, cellSize);
+    const auto oldMinCell = getCellFor(proxy.mBoundingBox.min, mCellSize);
+    const auto oldMaxCell = getCellFor(proxy.mBoundingBox.max, mCellSize);
+    const auto newMinCell = getCellFor(boundingBox.min, mCellSize);
+    const auto newMaxCell = getCellFor(boundingBox.max, mCellSize);
 
-    proxy.aabb = aabb;
+    proxy.mBoundingBox = boundingBox;
 
     const bool isSameCellRange = oldMinCell == newMinCell && oldMaxCell == newMaxCell;
     if (isSameCellRange)
     {
-        for (const auto& [cell, bvhHandle] : proxy.bvhHandles)
+        for (const auto& [cell, bvhHandle] : proxy.mBvhHandles)
         {
-            size_t bvhIndex = regions.at(cell);
-            bvhs[bvhIndex].second.moveProxy(bvhHandle, aabb);
+            size_t bvhIndex = mRegions.at(cell);
+            mBvhs[bvhIndex].second.moveProxy(bvhHandle, boundingBox);
         }
         return;
     }
 
-    const auto addToCell = [this, handle, aabb](GridCell cell)
+    const auto addToCell = [this, handle, boundingBox](GridCell cell)
     {
         // Region stores every proxy that belongs to it
         size_t bvhIndex = getBVHIndexForCell(cell);
-        auto& bvh = bvhs[bvhIndex].second;
+        auto& bvh = mBvhs[bvhIndex].second;
 
         // Proxy stores the BVH handle for each cell (region) it belongs to
-        auto& proxy = proxies.at(handle);
-        const auto bvhHandle = bvh.addProxy(proxy.entityId, aabb, proxy.categoryBits, proxy.maskBits);
-        proxy.bvhHandles.emplace(cell, bvhHandle);
+        auto& proxy = mProxies.at(handle);
+        const auto bvhHandle = bvh.addProxy(proxy.mEntityId, boundingBox, proxy.mCategoryBits, proxy.mMaskBits);
+        proxy.mBvhHandles.emplace(cell, bvhHandle);
     };
     const auto removeFromCell = [this, handle](GridCell cell)
     {
         // Remove the proxy from the region
-        size_t bvhIndex = regions.at(cell);
-        auto& bvh = bvhs[bvhIndex].second;
+        const size_t bvhIndex = mRegions.at(cell);
+        auto& bvh = mBvhs[bvhIndex].second;
 
         // Destroy the proxy from the BVH in that region and remove the bvh handle
-        auto& proxy = proxies.at(handle);
-        const auto bvhHandleInRegion = proxy.bvhHandles.find(cell);
-        DEBUG_ASSERT(bvhHandleInRegion != proxy.bvhHandles.end());
+        auto& proxy = mProxies.at(handle);
+        const auto bvhHandleInRegion = proxy.mBvhHandles.find(cell);
+        DEBUG_ASSERT(bvhHandleInRegion != proxy.mBvhHandles.end());
         bvh.removeProxy(bvhHandleInRegion->second);
-        proxy.bvhHandles.erase(bvhHandleInRegion);
+        proxy.mBvhHandles.erase(bvhHandleInRegion);
 
         if (bvh.size() == 0)
         {
-            regions.erase(cell);
-            bvhFreeList.push_back(bvhIndex);
+            mRegions.erase(cell);
+            mBvhFreeList.push_back(bvhIndex);
         }
     };
-    const auto moveSameCell = [this, handle, aabb](GridCell cell)
+    const auto moveSameCell = [this, handle, boundingBox](GridCell cell)
     {
         // If the proxy is still in the same cell, just update the BVH
-        size_t bvhIndex = regions.at(cell);
-        auto& bvh = bvhs[bvhIndex].second;
-        const auto& proxy = proxies.at(handle);
-        bvh.moveProxy(proxy.bvhHandles.at(cell), aabb);
+        const size_t bvhIndex = mRegions.at(cell);
+        auto& bvh = mBvhs[bvhIndex].second;
+        const auto& proxy = mProxies.at(handle);
+        bvh.moveProxy(proxy.mBvhHandles.at(cell), boundingBox);
     };
 
     const int32_t minX = std::min(oldMinCell.x, newMinCell.x);
@@ -316,8 +319,8 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
     const int32_t maxX = std::max(oldMaxCell.x, newMaxCell.x);
     const int32_t maxY = std::max(oldMaxCell.y, newMaxCell.y);
 
-    for (int32_t x = minX; x <= maxX; x += cellSize)
-        for (int32_t y = minY; y <= maxY; y += cellSize)
+    for (int32_t x = minX; x <= maxX; x += mCellSize)
+        for (int32_t y = minY; y <= maxY; y += mCellSize)
         {
             const GridCell cell{x, y};
             const bool isNotInOld = (x < oldMinCell.x || x > oldMaxCell.x || y < oldMinCell.y || y > oldMaxCell.y);
@@ -335,20 +338,20 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB aabb)
 // AABB queries
 template <typename IdType>
 template <typename Allocator>
-void BroadPhaseTree<IdType>::query(AABB queryAABB,
+void BroadPhaseTree<IdType>::query(AABB queryBoundingBox,
                                    std::vector<IdType, Allocator>& intersections,
                                    BitMaskType maskBits) const
 {
-    forEachCell(queryAABB,
-                cellSize,
+    forEachCell(queryBoundingBox,
+                mCellSize,
                 [&](GridCell cell)
                 {
-                    const auto regionIt = regions.find(cell);
-                    if (regionIt == regions.end())
+                    const auto regionIt = mRegions.find(cell);
+                    if (regionIt == mRegions.end())
                         return; // No region here
 
-                    const auto& bvh = bvhs[regionIt->second].second;
-                    bvh.query(queryAABB, intersections, maskBits);
+                    const auto& bvh = mBvhs[regionIt->second].second;
+                    bvh.query(queryBoundingBox, intersections, maskBits);
                 });
 }
 
@@ -370,9 +373,9 @@ void BroadPhaseTree<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMas
 template <typename IdType>
 void BroadPhaseTree<IdType>::findAllCollisions(const std::function<void(IdType, IdType)>& callback) const
 {
-    for (size_t i = 0; i < bvhs.size(); i++)
+    for (size_t i = 0; i < mBvhs.size(); i++)
     {
-        const auto& bvh = bvhs[i].second;
+        const auto& bvh = mBvhs[i].second;
         bvh.findAllCollisions(callback);
     }
 }
@@ -381,17 +384,17 @@ template <typename IdType>
 void BroadPhaseTree<IdType>::findAllCollisions(const BroadPhaseTree<IdType>& other,
                                                const std::function<void(IdType, IdType)>& callback) const
 {
-    for (size_t i = 0; i < bvhs.size(); ++i)
+    for (size_t i = 0; i < mBvhs.size(); ++i)
     {
-        const auto& cell = bvhs[i].first;
-        const auto& bvh = bvhs[i].second;
+        const auto& cell = mBvhs[i].first;
+        const auto& bvh = mBvhs[i].second;
 
         // No region in the other tree
-        const auto otherIt = other.regions.find(cell);
-        if (otherIt == other.regions.end())
+        const auto otherIt = other.mRegions.find(cell);
+        if (otherIt == other.mRegions.end())
             continue;
 
-        const auto& otherBvh = other.bvhs[otherIt->second].second;
+        const auto& otherBvh = other.mBvhs[otherIt->second].second;
         bvh.findAllCollisions(otherBvh, callback);
     }
 }
@@ -401,22 +404,22 @@ template <typename IdType>
 std::optional<RaycastInfo<IdType>> BroadPhaseTree<IdType>::firstHitRaycast(Ray ray, BitMaskType maskBits) const
 {
     const auto direction = ray.end - ray.start;
-    const int32_t directionX = (direction.x > 0 ? cellSize : -cellSize);
-    const int32_t directionY = (direction.y > 0 ? cellSize : -cellSize);
+    const int32_t directionX = (direction.x > 0 ? mCellSize : -mCellSize);
+    const int32_t directionY = (direction.y > 0 ? mCellSize : -mCellSize);
 
     const bool isParallelX = std::abs(direction.y) < 1e-6f;
     const bool isParallelY = std::abs(direction.x) < 1e-6f;
 
-    const GridCell lastCell = getCellFor(ray.end, cellSize);
-    auto currentCell = getCellFor(ray.start, cellSize);
+    const GridCell lastCell = getCellFor(ray.end, mCellSize);
+    auto currentCell = getCellFor(ray.start, mCellSize);
     auto currentPoint = ray.start;
 
     while (currentCell.x * directionX <= lastCell.x * directionX &&
            currentCell.y * directionY <= lastCell.y * directionY)
     {
-        if (const auto regionIt = regions.find(currentCell); regionIt != regions.end())
+        if (const auto regionIt = mRegions.find(currentCell); regionIt != mRegions.end())
         {
-            const auto& bvh = bvhs[regionIt->second].second;
+            const auto& bvh = mBvhs[regionIt->second].second;
             const auto firstHit = bvh.firstHitRaycast(ray, maskBits);
             if (firstHit)
                 return firstHit;
@@ -462,7 +465,7 @@ std::optional<RaycastInfo<IdType>> BroadPhaseTree<IdType>::firstHitRaycast(Ray r
 template <typename IdType>
 std::optional<RaycastInfo<IdType>> BroadPhaseTree<IdType>::firstHitRaycast(InfiniteRay ray, BitMaskType maskBits) const
 {
-    return firstHitRaycast(Ray{ray.start, ray.start + ray.direction.normalize() * cellSize * INFINITE_RAY_CELL_SPAN},
+    return firstHitRaycast(Ray{ray.start, ray.start + ray.direction.normalize() * mCellSize * INFINITE_RAY_CELL_SPAN},
                            maskBits);
 }
 
@@ -470,22 +473,22 @@ template <typename IdType>
 void BroadPhaseTree<IdType>::piercingRaycast(Ray ray, std::set<RaycastInfo<IdType>>& hits, BitMaskType maskBits) const
 {
     const auto direction = ray.end - ray.start;
-    const int32_t directionX = (direction.x > 0 ? cellSize : -cellSize);
-    const int32_t directionY = (direction.y > 0 ? cellSize : -cellSize);
+    const int32_t directionX = (direction.x > 0 ? mCellSize : -mCellSize);
+    const int32_t directionY = (direction.y > 0 ? mCellSize : -mCellSize);
 
     const bool isParallelX = std::abs(direction.y) < 1e-6f;
     const bool isParallelY = std::abs(direction.x) < 1e-6f;
 
-    const GridCell lastCell = getCellFor(ray.end, cellSize);
-    auto currentCell = getCellFor(ray.start, cellSize);
+    const GridCell lastCell = getCellFor(ray.end, mCellSize);
+    auto currentCell = getCellFor(ray.start, mCellSize);
     auto currentPoint = ray.start;
 
     while (currentCell.x * directionX <= lastCell.x * directionX &&
            currentCell.y * directionY <= lastCell.y * directionY)
     {
-        if (const auto regionIt = regions.find(currentCell); regionIt != regions.end())
+        if (const auto regionIt = mRegions.find(currentCell); regionIt != mRegions.end())
         {
-            const auto& bvh = bvhs[regionIt->second].second;
+            const auto& bvh = mBvhs[regionIt->second].second;
             bvh.piercingRaycast(ray, hits, maskBits);
         }
 
@@ -530,7 +533,7 @@ void BroadPhaseTree<IdType>::piercingRaycast(InfiniteRay ray,
                                              BitMaskType maskBits) const
 {
     piercingRaycast(
-        Ray{ray.start, ray.start + ray.direction.normalize() * cellSize * INFINITE_RAY_CELL_SPAN}, hits, maskBits);
+        Ray{ray.start, ray.start + ray.direction.normalize() * mCellSize * INFINITE_RAY_CELL_SPAN}, hits, maskBits);
 }
 
 template <typename IdType>
@@ -538,19 +541,19 @@ void BroadPhaseTree<IdType>::serialize(std::ostream& out) const
 {
     Writer writer(out);
 
-    writer(cellSize);
+    writer(mCellSize);
 
     // Write proxies
-    size_t proxiesSize = proxies.size();
+    size_t proxiesSize = mProxies.size();
     writer(proxiesSize);
 
-    for (const Proxy& proxy : proxies)
+    for (const Proxy& proxy : mProxies)
         proxy.serialize(out);
 
     // Write regions
-    size_t regionsSize = regions.size();
+    size_t regionsSize = mRegions.size();
     writer(regionsSize);
-    for (const auto& [cell, bvhIndex] : regions)
+    for (const auto& [cell, bvhIndex] : mRegions)
     {
         writer(cell.x);
         writer(cell.y);
@@ -558,9 +561,9 @@ void BroadPhaseTree<IdType>::serialize(std::ostream& out) const
     }
 
     // Write BVHs
-    size_t bvhsSize = bvhs.size();
+    size_t bvhsSize = mBvhs.size();
     writer(bvhsSize);
-    for (const auto& [cell, bvh] : bvhs)
+    for (const auto& [cell, bvh] : mBvhs)
     {
         writer(cell.x);
         writer(cell.y);
@@ -568,15 +571,15 @@ void BroadPhaseTree<IdType>::serialize(std::ostream& out) const
     }
 
     // Write proxies free list
-    size_t proxiesFreeListSize = proxiesFreeList.size();
+    size_t proxiesFreeListSize = mProxiesFreeList.size();
     writer(proxiesFreeListSize);
-    for (const BroadPhaseTreeHandle& handle : proxiesFreeList)
+    for (const BroadPhaseTreeHandle& handle : mProxiesFreeList)
         writer(handle);
 
     // Write BVH free list
-    size_t bvhFreeListSize = bvhFreeList.size();
+    size_t bvhFreeListSize = mBvhFreeList.size();
     writer(bvhFreeListSize);
-    for (const size_t index : bvhFreeList)
+    for (const size_t index : mBvhFreeList)
         writer(index);
 }
 
@@ -594,9 +597,9 @@ BroadPhaseTree<IdType> BroadPhaseTree<IdType>::deserialize(std::istream& in)
     size_t proxiesSize;
     reader(proxiesSize);
 
-    tree.proxies.reserve(proxiesSize);
+    tree.mProxies.reserve(proxiesSize);
     for (size_t i = 0; i < proxiesSize; ++i)
-        tree.proxies.push_back(Proxy::deserialize(in));
+        tree.mProxies.push_back(Proxy::deserialize(in));
 
     // Read regions
     size_t regionsSize;
@@ -611,14 +614,14 @@ BroadPhaseTree<IdType> BroadPhaseTree<IdType>::deserialize(std::istream& in)
         size_t bvhIndex;
         reader(bvhIndex);
 
-        tree.regions.emplace(cell, bvhIndex);
+        tree.mRegions.emplace(cell, bvhIndex);
     }
 
     // Read BVHs
     size_t bvhsSize;
     reader(bvhsSize);
 
-    tree.bvhs.reserve(bvhsSize);
+    tree.mBvhs.reserve(bvhsSize);
     for (size_t i = 0; i < bvhsSize; ++i)
     {
         GridCell cell;
@@ -626,31 +629,31 @@ BroadPhaseTree<IdType> BroadPhaseTree<IdType>::deserialize(std::istream& in)
         reader(cell.y);
 
         DynamicBVH<IdType> bvh = DynamicBVH<IdType>::deserialize(in);
-        tree.bvhs.emplace_back(cell, std::move(bvh));
+        tree.mBvhs.emplace_back(cell, std::move(bvh));
     }
 
     // Read proxies free list
     size_t proxiesFreeListSize;
     reader(proxiesFreeListSize);
 
-    tree.proxiesFreeList.reserve(proxiesFreeListSize);
+    tree.mProxiesFreeList.reserve(proxiesFreeListSize);
     for (size_t i = 0; i < proxiesFreeListSize; ++i)
     {
         BroadPhaseTreeHandle handle;
         reader(handle);
-        tree.proxiesFreeList.push_back(handle);
+        tree.mProxiesFreeList.push_back(handle);
     }
 
     // Read BVH free list
     size_t bvhFreeListSize;
     reader(bvhFreeListSize);
 
-    tree.bvhFreeList.reserve(bvhFreeListSize);
+    tree.mBvhFreeList.reserve(bvhFreeListSize);
     for (size_t i = 0; i < bvhFreeListSize; ++i)
     {
         size_t index;
         reader(index);
-        tree.bvhFreeList.push_back(index);
+        tree.mBvhFreeList.push_back(index);
     }
 
     return tree;
@@ -658,15 +661,15 @@ BroadPhaseTree<IdType> BroadPhaseTree<IdType>::deserialize(std::istream& in)
 
 #ifdef C2D_USE_CEREAL
 template <typename IdType>
-template <class Archive>
+template <IsCerealArchive Archive>
 void BroadPhaseTree<IdType>::serialize(Archive& archive)
 {
-    archive(cellSize);
-    archive(proxies);
-    archive(proxiesFreeList);
-    archive(regions);
-    archive(bvhs);
-    archive(bvhFreeList);
+    archive(mCellSize);
+    archive(mProxies);
+    archive(mProxiesFreeList);
+    archive(mRegions);
+    archive(mBvhs);
+    archive(mBvhFreeList);
 }
 #endif
 
@@ -675,20 +678,20 @@ void BroadPhaseTree<IdType>::Proxy::serialize(std::ostream& out) const
 {
     Writer writer(out);
 
-    writer(entityId);
-    writer(aabb.min.x);
-    writer(aabb.min.y);
-    writer(aabb.max.x);
-    writer(aabb.max.y);
-    writer(categoryBits);
-    writer(maskBits);
+    writer(mEntityId);
+    writer(mBoundingBox.min.x);
+    writer(mBoundingBox.min.y);
+    writer(mBoundingBox.max.x);
+    writer(mBoundingBox.max.y);
+    writer(mCategoryBits);
+    writer(mMaskBits);
 
     // Write bvhHandles size
-    size_t bvhHandlesSize = bvhHandles.size();
+    size_t bvhHandlesSize = mBvhHandles.size();
     writer(bvhHandlesSize);
 
     // Write bvhHandles
-    for (const auto& [cell, nodeIndex] : bvhHandles)
+    for (const auto& [cell, nodeIndex] : mBvhHandles)
     {
         writer(cell.x);
         writer(cell.y);
@@ -702,13 +705,13 @@ typename BroadPhaseTree<IdType>::Proxy BroadPhaseTree<IdType>::Proxy::deserializ
     Reader reader(in);
 
     Proxy proxy;
-    reader(proxy.entityId);
-    reader(proxy.aabb.min.x);
-    reader(proxy.aabb.min.y);
-    reader(proxy.aabb.max.x);
-    reader(proxy.aabb.max.y);
-    reader(proxy.categoryBits);
-    reader(proxy.maskBits);
+    reader(proxy.mEntityId);
+    reader(proxy.mBoundingBox.min.x);
+    reader(proxy.mBoundingBox.min.y);
+    reader(proxy.mBoundingBox.max.x);
+    reader(proxy.mBoundingBox.max.y);
+    reader(proxy.mCategoryBits);
+    reader(proxy.mMaskBits);
 
     // Read bvhHandles
     size_t bvhHandlesSize;
@@ -723,7 +726,7 @@ typename BroadPhaseTree<IdType>::Proxy BroadPhaseTree<IdType>::Proxy::deserializ
         NodeIndex nodeIndex;
         reader(nodeIndex);
 
-        proxy.bvhHandles.emplace(cell, nodeIndex);
+        proxy.mBvhHandles.emplace(cell, nodeIndex);
     }
 
     return proxy;
@@ -731,40 +734,40 @@ typename BroadPhaseTree<IdType>::Proxy BroadPhaseTree<IdType>::Proxy::deserializ
 
 #ifdef C2D_USE_CEREAL
 template <typename IdType>
-template <class Archive>
+template <IsCerealArchive Archive>
 void BroadPhaseTree<IdType>::Proxy::serialize(Archive& archive)
 {
-    archive(entityId, aabb, categoryBits, maskBits, bvhHandles);
+    archive(mEntityId, mBoundingBox, mCategoryBits, mMaskBits, mBvhHandles);
 }
 #endif
 
 template <typename IdType>
 bool BroadPhaseTree<IdType>::isValidHandle(BroadPhaseTreeHandle handle) const
 {
-    return static_cast<size_t>(handle) < proxies.size();
+    return static_cast<size_t>(handle) < mProxies.size();
 }
 
 template <typename IdType>
 size_t BroadPhaseTree<IdType>::getBVHIndexForCell(GridCell cell)
 {
-    const auto it = regions.find(cell);
-    if (it != regions.end())
+    const auto it = mRegions.find(cell);
+    if (it != mRegions.end())
         return it->second;
 
     // If the cell does not exist, create a new BVH for it
-    if (!bvhFreeList.empty())
+    if (!mBvhFreeList.empty())
     {
-        size_t bvhIndex = bvhFreeList.back();
-        bvhFreeList.pop_back();
-        regions.emplace(cell, bvhIndex);
-        bvhs[bvhIndex].first = cell;
+        size_t bvhIndex = mBvhFreeList.back();
+        mBvhFreeList.pop_back();
+        mRegions.emplace(cell, bvhIndex);
+        mBvhs[bvhIndex].first = cell;
         return bvhIndex;
     }
     else
     {
-        size_t newBvhIndex = bvhs.size();
-        bvhs.emplace_back(cell, DynamicBVH<IdType>());
-        regions.emplace(cell, newBvhIndex);
+        size_t newBvhIndex = mBvhs.size();
+        mBvhs.emplace_back(cell, DynamicBVH<IdType>());
+        mRegions.emplace(cell, newBvhIndex);
         return newBvhIndex;
     }
 }
@@ -772,28 +775,28 @@ size_t BroadPhaseTree<IdType>::getBVHIndexForCell(GridCell cell)
 template <typename IdType>
 void BroadPhaseTree<IdType>::clear()
 {
-    proxies.clear();
-    proxies.reserve(32);
-    proxiesFreeList.clear();
-    regions.clear();
-    bvhs.clear();
-    bvhFreeList.clear();
+    mProxies.clear();
+    mProxies.reserve(32);
+    mProxiesFreeList.clear();
+    mRegions.clear();
+    mBvhs.clear();
+    mBvhFreeList.clear();
 }
 
 template <typename IdType>
 bool BroadPhaseTree<IdType>::operator==(const BroadPhaseTree& other) const
 {
-    if (cellSize != other.cellSize)
+    if (mCellSize != other.mCellSize)
         return false;
-    if (proxies != other.proxies)
+    if (mProxies != other.mProxies)
         return false;
-    if (proxiesFreeList != other.proxiesFreeList)
+    if (mProxiesFreeList != other.mProxiesFreeList)
         return false;
-    if (regions != other.regions)
+    if (mRegions != other.mRegions)
         return false;
-    if (bvhs != other.bvhs)
+    if (mBvhs != other.mBvhs)
         return false;
-    if (bvhFreeList != other.bvhFreeList)
+    if (mBvhFreeList != other.mBvhFreeList)
         return false;
 
     return true;
@@ -802,15 +805,15 @@ bool BroadPhaseTree<IdType>::operator==(const BroadPhaseTree& other) const
 template <typename IdType>
 bool BroadPhaseTree<IdType>::Proxy::operator==(const Proxy& other) const
 {
-    if (bvhHandles != other.bvhHandles)
+    if (mBvhHandles != other.mBvhHandles)
         return false;
-    if (entityId != other.entityId)
+    if (mEntityId != other.mEntityId)
         return false;
-    if (aabb != other.aabb)
+    if (mBoundingBox != other.mBoundingBox)
         return false;
-    if (categoryBits != other.categoryBits)
+    if (mCategoryBits != other.mCategoryBits)
         return false;
-    if (maskBits != other.maskBits)
+    if (mMaskBits != other.mMaskBits)
         return false;
 
     return true;

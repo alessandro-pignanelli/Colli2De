@@ -7,9 +7,9 @@ project(colli2de
 	LANGUAGES CXX
 )
 
-option(ENABLE_LTO "Enable Link Time Optimization (LTO) / Interprocedural Optimization (IPO)" OFF)
+option(C2D_ENABLE_LTO "Enable Link Time Optimization (LTO) / Interprocedural Optimization (IPO)" OFF)
 option(C2D_USE_CEREAL "Enable Cereal serialization support" OFF)
-option(UNIT_TESTS "Build unit tests" ON)
+option(C2D_UNIT_TESTS "Build unit tests" ON)
 
 # static link
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -27,7 +27,7 @@ list(APPEND CMAKE_MODULE_PATH "${COLLI2DE_SOURCE_DIR}/cmake")
 message(STATUS "Building Colli2De version ${PROJECT_VERSION} with C++ standard ${CMAKE_CXX_STANDARD}")
 add_subdirectory(src)
 
-if(UNIT_TESTS AND (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR))
+if(C2D_UNIT_TESTS AND (CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR))
 	message(STATUS "Building unit tests")
 	add_subdirectory(tests)
 else()

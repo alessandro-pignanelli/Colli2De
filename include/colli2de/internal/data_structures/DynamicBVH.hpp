@@ -30,33 +30,33 @@ static constexpr NodeIndex INVALID_NODE_INDEX = -99;
 template <typename IdType>
 struct BVHNode
 {
-    AABB aabb;
-    BitMaskType categoryBits = 1;      // for collision filtering
-    BitMaskType isHittingBits = ~0ull; // for collision filtering
+    AABB mBoundingBox;
+    BitMaskType mCategoryBits = 1;      // for collision filtering
+    BitMaskType mIsHittingBits = ~0ull; // for collision filtering
 
-    NodeIndex parentIndex = INVALID_NODE_INDEX;
-    NodeIndex child1Index = INVALID_NODE_INDEX;
-    NodeIndex child2Index = INVALID_NODE_INDEX;
+    NodeIndex mParentIndex = INVALID_NODE_INDEX;
+    NodeIndex mChild1Index = INVALID_NODE_INDEX;
+    NodeIndex mChild2Index = INVALID_NODE_INDEX;
 
-    int32_t height = -1;
+    int32_t mHeight = -1;
 
-    IdType id{}; // stored payload (instead of void*)
+    IdType mId{}; // stored payload (instead of void*)
 
     bool isLeaf() const
     {
-        return child1Index == -1;
+        return mChild1Index == -1;
     }
 
     bool matchesMask(BitMaskType mask) const
     {
-        return (categoryBits & mask) != 0;
+        return (mCategoryBits & mask) != 0;
     }
 
     void serialize(std::ostream& out) const;
     static BVHNode deserialize(std::istream& in);
 
 #ifdef C2D_USE_CEREAL
-    template <class Archive>
+    template <IsCerealArchive Archive>
     void serialize(Archive& archive);
 #endif
 
@@ -83,42 +83,42 @@ class DynamicBVH
     NodeIndex createNode();
     void destroyNode(NodeIndex nodeId);
 
-    // Inserts a new object {aabb, id} into the BVH and returns the index of the created node
-    NodeIndex addProxy(IdType id, AABB aabb, BitMaskType categoryBits = 1, BitMaskType isHittingBits = ~0ull);
+    // Inserts a new object {boundingBox, id} into the BVH and returns the index of the created node
+    NodeIndex addProxy(IdType id, AABB boundingBox, BitMaskType categoryBits = 1, BitMaskType isHittingBits = ~0ull);
     void removeProxy(NodeIndex leafIndex);
     // Moves the proxy to a new AABB, returns true if the tree structure has changed
-    bool moveProxy(NodeIndex nodeIndex, AABB aabb);
+    bool moveProxy(NodeIndex nodeIndex, AABB boundingBox);
 
     void clear();
 
     float getFatAABBMargin() const
     {
-        return fatAABBMargin;
+        return mFatAABBMargin;
     }
 
     size_t size() const
     {
-        return nodeCount;
+        return mNodeCount;
     }
 
     size_t capacity() const
     {
-        return nodes.size();
+        return mNodes.size();
     }
 
     size_t proxies() const
     {
-        return proxyCount;
+        return mProxyCount;
     }
 
     NodeIndex getRootIndex() const
     {
-        return rootIndex;
+        return mRootIndex;
     }
 
     const BVHNode<IdType>& getNode(NodeIndex index) const
     {
-        return nodes[index];
+        return mNodes[index];
     }
 
     std::vector<std::pair<IdType, AABB>> data() const;
@@ -147,7 +147,7 @@ class DynamicBVH
     static DynamicBVH deserialize(std::istream& in);
 
 #ifdef C2D_USE_CEREAL
-    template <class Archive>
+    template <IsCerealArchive Archive>
     void serialize(Archive& archive);
 #endif
 
@@ -159,13 +159,13 @@ class DynamicBVH
     }
 
   private:
-    std::vector<BVHNode<IdType>> nodes;
-    float fatAABBMargin = 0.0f;
-    uint32_t nodeCount = 0;
-    uint32_t proxyCount = 0;
+    std::vector<BVHNode<IdType>> mNodes;
+    float mFatAABBMargin = 0.0f;
+    uint32_t mNodeCount = 0;
+    uint32_t mProxyCount = 0;
 
-    NodeIndex rootIndex = INVALID_NODE_INDEX;
-    NodeIndex nextAvailableIndex = INVALID_NODE_INDEX;
+    NodeIndex mRootIndex = INVALID_NODE_INDEX;
+    NodeIndex mNextAvailableIndex = INVALID_NODE_INDEX;
 
     void doubleCapacity();
     void allocateNodes(int32_t capacity);
@@ -195,23 +195,23 @@ class DynamicBVH
         using reference = const std::pair<IdType, AABB>&;
 
         LeafConstIterator(const std::vector<BVHNode<IdType>>& nodes, uint32_t nodeIndex)
-            : nodes(nodes),
-              m_nodeIndex(nodeIndex)
+            : mNodes(nodes),
+              mNodeIndex(nodeIndex)
         {
-            if (m_nodeIndex < nodes.size() && !nodes[m_nodeIndex].isLeaf())
+            if (mNodeIndex < nodes.size() && !nodes[mNodeIndex].isLeaf())
                 next();
         }
 
         value_type operator*() const
         {
-            cache = std::make_pair(nodes[m_nodeIndex].id, nodes[m_nodeIndex].aabb);
-            return cache;
+            mCache = std::make_pair(mNodes[mNodeIndex].mId, mNodes[mNodeIndex].mBoundingBox);
+            return mCache;
         }
 
         pointer operator->() const
         {
-            cache = std::make_pair(nodes[m_nodeIndex].id, nodes[m_nodeIndex].aabb);
-            return &cache;
+            mCache = std::make_pair(mNodes[mNodeIndex].mId, mNodes[mNodeIndex].mBoundingBox);
+            return &mCache;
         }
 
         LeafConstIterator& operator++()
@@ -229,7 +229,7 @@ class DynamicBVH
 
         bool operator==(const LeafConstIterator& other) const
         {
-            return m_nodeIndex == other.m_nodeIndex;
+            return mNodeIndex == other.mNodeIndex;
         }
 
         bool operator!=(const LeafConstIterator& other) const
@@ -238,43 +238,43 @@ class DynamicBVH
         }
 
       private:
-        const std::vector<BVHNode<IdType>>& nodes;
-        NodeIndex m_nodeIndex;
-        mutable value_type cache;
+        const std::vector<BVHNode<IdType>>& mNodes;
+        NodeIndex mNodeIndex;
+        mutable value_type mCache;
 
         void next()
         {
-            ++m_nodeIndex;
-            while (m_nodeIndex < nodes.size() && !nodes[m_nodeIndex].isLeaf())
-                ++m_nodeIndex;
+            ++mNodeIndex;
+            while (mNodeIndex < mNodes.size() && !mNodes[mNodeIndex].isLeaf())
+                ++mNodeIndex;
         }
     };
 
     LeafConstIterator begin() const
     {
-        return LeafConstIterator(nodes, 0);
+        return LeafConstIterator(mNodes, 0);
     }
 
     LeafConstIterator end() const
     {
-        return LeafConstIterator(nodes, nodes.size());
+        return LeafConstIterator(mNodes, mNodes.size());
     }
 
     LeafConstIterator cbegin() const
     {
-        return LeafConstIterator(nodes, 0);
+        return LeafConstIterator(mNodes, 0);
     }
 
     LeafConstIterator cend() const
     {
-        return LeafConstIterator(nodes, nodes.size());
+        return LeafConstIterator(mNodes, mNodes.size());
     }
 };
 
 static_assert(std::is_trivially_copyable_v<BVHNode<uint32_t>>, "BVHNode must be trivially copyable");
 
 template <typename IdType>
-DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin) : fatAABBMargin(fatAABBMargin)
+DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin) : mFatAABBMargin(fatAABBMargin)
 {
     allocateNodes(initialCapacity);
 }
@@ -282,84 +282,84 @@ DynamicBVH<IdType>::DynamicBVH(float fatAABBMargin) : fatAABBMargin(fatAABBMargi
 template <typename IdType>
 void DynamicBVH<IdType>::allocateNodes(int32_t capacity)
 {
-    nodes.resize(capacity);
+    mNodes.resize(capacity);
 
     // Create a singly-linked free list
     // [0] -> [1] -> [2] -> ... -> [capacity - 1] -> null
     for (NodeIndex i = 0; i < capacity - 1; ++i)
-        nodes[i].parentIndex = i + 1;
-    nodes[capacity - 1].parentIndex = INVALID_NODE_INDEX;
+        mNodes[i].mParentIndex = i + 1;
+    mNodes[capacity - 1].mParentIndex = INVALID_NODE_INDEX;
 
-    nextAvailableIndex = 0;
-    nodeCount = 0;
+    mNextAvailableIndex = 0;
+    mNodeCount = 0;
 }
 
 template <typename IdType>
 void DynamicBVH<IdType>::doubleCapacity()
 {
-    DEBUG_ASSERT(nextAvailableIndex == INVALID_NODE_INDEX);
+    DEBUG_ASSERT(mNextAvailableIndex == INVALID_NODE_INDEX);
 
     const size_t currentCapacity = capacity();
-    DEBUG_ASSERT(nodeCount == static_cast<uint32_t>(currentCapacity));
+    DEBUG_ASSERT(mNodeCount == static_cast<uint32_t>(currentCapacity));
 
     const size_t newCapacity = currentCapacity <= 4096 ? currentCapacity << 1 : currentCapacity << 1;
-    nodes.resize(newCapacity);
+    mNodes.resize(newCapacity);
 
     for (NodeIndex i = currentCapacity - 1; i < static_cast<int32_t>(newCapacity) - 1; ++i)
-        nodes[i].parentIndex = i + 1;
-    nodes[newCapacity - 1].parentIndex = INVALID_NODE_INDEX;
+        mNodes[i].mParentIndex = i + 1;
+    mNodes[newCapacity - 1].mParentIndex = INVALID_NODE_INDEX;
 
-    nextAvailableIndex = currentCapacity;
+    mNextAvailableIndex = currentCapacity;
 }
 
 template <typename IdType>
 NodeIndex DynamicBVH<IdType>::createNode()
 {
-    if (nextAvailableIndex == INVALID_NODE_INDEX)
+    if (mNextAvailableIndex == INVALID_NODE_INDEX)
         doubleCapacity();
 
-    const NodeIndex nodeId = nextAvailableIndex;
-    BVHNode<IdType>& node = nodes[nodeId];
+    const NodeIndex nodeId = mNextAvailableIndex;
+    BVHNode<IdType>& node = mNodes[nodeId];
 
-    nextAvailableIndex = node.parentIndex;
-    node.parentIndex = INVALID_NODE_INDEX;
-    node.child1Index = -1;
-    node.child2Index = -1;
-    node.height = 0;
-    node.id = IdType{};
+    mNextAvailableIndex = node.mParentIndex;
+    node.mParentIndex = INVALID_NODE_INDEX;
+    node.mChild1Index = -1;
+    node.mChild2Index = -1;
+    node.mHeight = 0;
+    node.mId = IdType{};
 
-    ++nodeCount;
+    ++mNodeCount;
     return nodeId;
 }
 
 template <typename IdType>
 void DynamicBVH<IdType>::destroyNode(NodeIndex nodeId)
 {
-    DEBUG_ASSERT(0 <= nodeId && nodeId < static_cast<NodeIndex>(nodes.size()));
-    BVHNode<IdType>& node = nodes[nodeId];
+    DEBUG_ASSERT(0 <= nodeId && nodeId < static_cast<NodeIndex>(mNodes.size()));
+    BVHNode<IdType>& node = mNodes[nodeId];
 
-    node.parentIndex = nextAvailableIndex;
-    node.height = -1;
-    node.child1Index = INVALID_NODE_INDEX;
-    node.child2Index = INVALID_NODE_INDEX;
-    node.id = IdType{};
+    node.mParentIndex = mNextAvailableIndex;
+    node.mHeight = -1;
+    node.mChild1Index = INVALID_NODE_INDEX;
+    node.mChild2Index = INVALID_NODE_INDEX;
+    node.mId = IdType{};
 
-    nextAvailableIndex = nodeId;
-    --nodeCount;
+    mNextAvailableIndex = nodeId;
+    --mNodeCount;
 }
 
 template <typename IdType>
-NodeIndex DynamicBVH<IdType>::addProxy(IdType id, AABB aabb, BitMaskType categoryBits, BitMaskType isHittingBits)
+NodeIndex DynamicBVH<IdType>::addProxy(IdType id, AABB boundingBox, BitMaskType categoryBits, BitMaskType isHittingBits)
 {
     const NodeIndex nodeId = createNode();
-    BVHNode<IdType>& node = nodes[nodeId];
+    BVHNode<IdType>& node = mNodes[nodeId];
 
-    node.aabb = aabb.fattened(fatAABBMargin);
-    node.id = id;
-    node.categoryBits = categoryBits;
-    node.isHittingBits = isHittingBits;
+    node.mBoundingBox = boundingBox.fattened(mFatAABBMargin);
+    node.mId = id;
+    node.mCategoryBits = categoryBits;
+    node.mIsHittingBits = isHittingBits;
 
-    ++proxyCount;
+    ++mProxyCount;
     insertLeaf(nodeId);
     return nodeId;
 }
@@ -367,7 +367,7 @@ NodeIndex DynamicBVH<IdType>::addProxy(IdType id, AABB aabb, BitMaskType categor
 template <typename IdType>
 void DynamicBVH<IdType>::removeProxy(NodeIndex leafIndex)
 {
-    --proxyCount;
+    --mProxyCount;
     removeLeaf(leafIndex);
     destroyNode(leafIndex);
 }
@@ -375,43 +375,43 @@ void DynamicBVH<IdType>::removeProxy(NodeIndex leafIndex)
 template <typename IdType>
 void DynamicBVH<IdType>::clear()
 {
-    nodes.clear();
-    nodeCount = 0;
-    rootIndex = INVALID_NODE_INDEX;
-    nextAvailableIndex = INVALID_NODE_INDEX;
+    mNodes.clear();
+    mNodeCount = 0;
+    mRootIndex = INVALID_NODE_INDEX;
+    mNextAvailableIndex = INVALID_NODE_INDEX;
     allocateNodes(initialCapacity);
 }
 
 template <typename IdType>
 bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB)
 {
-    auto& node = nodes[nodeIndex];
+    auto& node = mNodes[nodeIndex];
 
     // If the current fattened AABB contains the new AABB, no need to update the
     // tree
-    if (node.aabb.contains(newAABB))
+    if (node.mBoundingBox.contains(newAABB))
         return false;
 
     // Update the leaf AABB in place and propagate the change up the tree.
     // This avoids expensive remove/insert operations for large displacements.
-    const Vec2 displacement = Vec2((newAABB.min.x - node.aabb.min.x) * displacementFactor,
-                                   (newAABB.min.y - node.aabb.min.y) * displacementFactor);
-    const AABB fatAabb = newAABB.fattened(fatAABBMargin, displacement);
-    node.aabb = fatAabb;
+    const Vec2 displacement = Vec2((newAABB.min.x - node.mBoundingBox.min.x) * displacementFactor,
+                                   (newAABB.min.y - node.mBoundingBox.min.y) * displacementFactor);
+    const AABB fatAabb = newAABB.fattened(mFatAABBMargin, displacement);
+    node.mBoundingBox = fatAabb;
 
-    NodeIndex currentIndex = node.parentIndex;
+    NodeIndex currentIndex = node.mParentIndex;
     while (currentIndex != INVALID_NODE_INDEX)
     {
-        auto& parent = nodes[currentIndex];
-        const NodeIndex child1 = parent.child1Index;
-        const NodeIndex child2 = parent.child2Index;
+        auto& parent = mNodes[currentIndex];
+        const NodeIndex child1 = parent.mChild1Index;
+        const NodeIndex child2 = parent.mChild2Index;
 
-        const AABB newParentAABB = AABB::combine(nodes[child1].aabb, nodes[child2].aabb);
-        if (newParentAABB == parent.aabb)
+        const AABB newParentAABB = AABB::combine(mNodes[child1].mBoundingBox, mNodes[child2].mBoundingBox);
+        if (newParentAABB == parent.mBoundingBox)
             break;
 
-        parent.aabb = newParentAABB;
-        currentIndex = parent.parentIndex;
+        parent.mBoundingBox = newParentAABB;
+        currentIndex = parent.mParentIndex;
     }
     return true;
 }
@@ -419,96 +419,96 @@ bool DynamicBVH<IdType>::moveProxy(NodeIndex nodeIndex, AABB newAABB)
 template <typename IdType>
 void DynamicBVH<IdType>::insertLeaf(NodeIndex leafIndex)
 {
-    if (rootIndex == INVALID_NODE_INDEX)
+    if (mRootIndex == INVALID_NODE_INDEX)
     {
-        rootIndex = leafIndex;
-        nodes[rootIndex].parentIndex = INVALID_NODE_INDEX;
+        mRootIndex = leafIndex;
+        mNodes[mRootIndex].mParentIndex = INVALID_NODE_INDEX;
         return;
     }
 
-    const NodeIndex siblingIndex = findBestSiblingIndex(nodes[leafIndex].aabb);
-    const NodeIndex oldParentIndex = nodes[siblingIndex].parentIndex;
+    const NodeIndex siblingIndex = findBestSiblingIndex(mNodes[leafIndex].mBoundingBox);
+    const NodeIndex oldParentIndex = mNodes[siblingIndex].mParentIndex;
     const NodeIndex newParentIndex = createNode();
 
-    auto& leaf = nodes[leafIndex];
-    auto& sibling = nodes[siblingIndex];
-    auto& newParent = nodes[newParentIndex];
+    auto& leaf = mNodes[leafIndex];
+    auto& sibling = mNodes[siblingIndex];
+    auto& newParent = mNodes[newParentIndex];
 
-    newParent.parentIndex = oldParentIndex;
-    newParent.aabb = AABB::combine(leaf.aabb, sibling.aabb);
-    newParent.height = sibling.height + 1;
-    newParent.categoryBits = sibling.categoryBits | leaf.categoryBits;
+    newParent.mParentIndex = oldParentIndex;
+    newParent.mBoundingBox = AABB::combine(leaf.mBoundingBox, sibling.mBoundingBox);
+    newParent.mHeight = sibling.mHeight + 1;
+    newParent.mCategoryBits = sibling.mCategoryBits | leaf.mCategoryBits;
 
     if (oldParentIndex != INVALID_NODE_INDEX)
     {
-        auto& oldParent = nodes[oldParentIndex];
-        if (oldParent.child1Index == siblingIndex)
-            oldParent.child1Index = newParentIndex;
+        auto& oldParent = mNodes[oldParentIndex];
+        if (oldParent.mChild1Index == siblingIndex)
+            oldParent.mChild1Index = newParentIndex;
         else
-            oldParent.child2Index = newParentIndex;
+            oldParent.mChild2Index = newParentIndex;
 
-        newParent.child1Index = siblingIndex;
-        newParent.child2Index = leafIndex;
-        sibling.parentIndex = newParentIndex;
-        leaf.parentIndex = newParentIndex;
+        newParent.mChild1Index = siblingIndex;
+        newParent.mChild2Index = leafIndex;
+        sibling.mParentIndex = newParentIndex;
+        leaf.mParentIndex = newParentIndex;
     }
     else
     {
-        newParent.child1Index = siblingIndex;
-        newParent.child2Index = leafIndex;
-        sibling.parentIndex = newParentIndex;
-        leaf.parentIndex = newParentIndex;
-        rootIndex = newParentIndex;
+        newParent.mChild1Index = siblingIndex;
+        newParent.mChild2Index = leafIndex;
+        sibling.mParentIndex = newParentIndex;
+        leaf.mParentIndex = newParentIndex;
+        mRootIndex = newParentIndex;
     }
 
     // Walk up the tree fixing heights and AABBs
-    NodeIndex currentNodeIndex = leaf.parentIndex;
+    NodeIndex currentNodeIndex = leaf.mParentIndex;
     while (currentNodeIndex != INVALID_NODE_INDEX)
     {
         currentNodeIndex = balance(currentNodeIndex);
-        auto& currentNode = nodes[currentNodeIndex];
+        auto& currentNode = mNodes[currentNodeIndex];
 
-        const NodeIndex child1Index = currentNode.child1Index;
-        const NodeIndex child2Index = currentNode.child2Index;
-        auto& child1 = nodes[child1Index];
-        auto& child2 = nodes[child2Index];
+        const NodeIndex child1Index = currentNode.mChild1Index;
+        const NodeIndex child2Index = currentNode.mChild2Index;
+        auto& child1 = mNodes[child1Index];
+        auto& child2 = mNodes[child2Index];
 
-        currentNode.aabb = AABB::combine(child1.aabb, child2.aabb);
-        currentNode.height = 1 + std::max(child1.height, child2.height);
-        currentNode.categoryBits = child1.categoryBits | child2.categoryBits;
+        currentNode.mBoundingBox = AABB::combine(child1.mBoundingBox, child2.mBoundingBox);
+        currentNode.mHeight = 1 + std::max(child1.mHeight, child2.mHeight);
+        currentNode.mCategoryBits = child1.mCategoryBits | child2.mCategoryBits;
 
-        currentNodeIndex = currentNode.parentIndex;
+        currentNodeIndex = currentNode.mParentIndex;
     }
 }
 
 template <typename IdType>
 void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
 {
-    if (leafIndex == rootIndex)
+    if (leafIndex == mRootIndex)
     {
         // destroyNode(rootIndex);
-        rootIndex = INVALID_NODE_INDEX;
+        mRootIndex = INVALID_NODE_INDEX;
         return;
     }
 
-    const NodeIndex parentIndex = nodes[leafIndex].parentIndex;
-    const NodeIndex grandParentIndex = nodes[parentIndex].parentIndex;
-    const NodeIndex siblingIndex =
-        (nodes[parentIndex].child1Index == leafIndex) ? nodes[parentIndex].child2Index : nodes[parentIndex].child1Index;
+    const NodeIndex parentIndex = mNodes[leafIndex].mParentIndex;
+    const NodeIndex grandParentIndex = mNodes[parentIndex].mParentIndex;
+    const NodeIndex siblingIndex = (mNodes[parentIndex].mChild1Index == leafIndex) ? mNodes[parentIndex].mChild2Index
+                                                                                   : mNodes[parentIndex].mChild1Index;
 
     // Connect sibling to grandparent
     if (grandParentIndex != INVALID_NODE_INDEX)
     {
-        if (nodes[grandParentIndex].child1Index == parentIndex)
-            nodes[grandParentIndex].child1Index = siblingIndex;
+        if (mNodes[grandParentIndex].mChild1Index == parentIndex)
+            mNodes[grandParentIndex].mChild1Index = siblingIndex;
         else
-            nodes[grandParentIndex].child2Index = siblingIndex;
-        nodes[siblingIndex].parentIndex = grandParentIndex;
+            mNodes[grandParentIndex].mChild2Index = siblingIndex;
+        mNodes[siblingIndex].mParentIndex = grandParentIndex;
     }
     else
     {
-        rootIndex = siblingIndex;
-        nodes[siblingIndex].parentIndex = INVALID_NODE_INDEX;
+        mRootIndex = siblingIndex;
+        mNodes[siblingIndex].mParentIndex = INVALID_NODE_INDEX;
     }
 
     // Recycle parent node
@@ -519,45 +519,47 @@ void DynamicBVH<IdType>::removeLeaf(NodeIndex leafIndex)
     while (currentNodeIndex != INVALID_NODE_INDEX)
     {
         currentNodeIndex = balance(currentNodeIndex);
-        auto& currentNode = nodes[currentNodeIndex];
+        auto& currentNode = mNodes[currentNodeIndex];
 
-        const NodeIndex child1Index = currentNode.child1Index;
-        const NodeIndex child2Index = currentNode.child2Index;
-        auto& child1 = nodes[child1Index];
-        auto& child2 = nodes[child2Index];
+        const NodeIndex child1Index = currentNode.mChild1Index;
+        const NodeIndex child2Index = currentNode.mChild2Index;
+        auto& child1 = mNodes[child1Index];
+        auto& child2 = mNodes[child2Index];
 
-        currentNode.aabb = AABB::combine(child1.aabb, child2.aabb);
-        currentNode.height = 1 + std::max(child1.height, child2.height);
-        currentNode.categoryBits = child1.categoryBits | child2.categoryBits;
+        currentNode.mBoundingBox = AABB::combine(child1.mBoundingBox, child2.mBoundingBox);
+        currentNode.mHeight = 1 + std::max(child1.mHeight, child2.mHeight);
+        currentNode.mCategoryBits = child1.mCategoryBits | child2.mCategoryBits;
 
-        currentNodeIndex = currentNode.parentIndex;
+        currentNodeIndex = currentNode.mParentIndex;
     }
 }
 
 template <typename IdType>
 NodeIndex DynamicBVH<IdType>::findBestSiblingIndex(AABB leaf) const
 {
-    NodeIndex index = rootIndex;
+    NodeIndex index = mRootIndex;
 
     // Find the best sibling for the new leaf
-    while (!nodes[index].isLeaf())
+    while (!mNodes[index].isLeaf())
     {
-        const NodeIndex child1Index = nodes[index].child1Index;
-        const NodeIndex child2Index = nodes[index].child2Index;
+        const NodeIndex child1Index = mNodes[index].mChild1Index;
+        const NodeIndex child2Index = mNodes[index].mChild2Index;
 
-        const AABB combined = AABB::combine(leaf, nodes[index].aabb);
+        const AABB combined = AABB::combine(leaf, mNodes[index].mBoundingBox);
         const float cost = combined.perimeter();
         const float inheritedCost = 2.0f * cost;
 
-        const auto child1LeafCombined = AABB::combine(leaf, nodes[child1Index].aabb);
-        const float cost1 = nodes[child1Index].isLeaf()
-                                ? child1LeafCombined.perimeter() + inheritedCost
-                                : child1LeafCombined.perimeter() - nodes[child1Index].aabb.perimeter() + inheritedCost;
+        const auto child1LeafCombined = AABB::combine(leaf, mNodes[child1Index].mBoundingBox);
+        const float cost1 =
+            mNodes[child1Index].isLeaf()
+                ? child1LeafCombined.perimeter() + inheritedCost
+                : child1LeafCombined.perimeter() - mNodes[child1Index].mBoundingBox.perimeter() + inheritedCost;
 
-        const auto child2LeafCombined = AABB::combine(leaf, nodes[child2Index].aabb);
-        const float cost2 = nodes[child2Index].isLeaf()
-                                ? child2LeafCombined.perimeter() + inheritedCost
-                                : child2LeafCombined.perimeter() - nodes[child2Index].aabb.perimeter() + inheritedCost;
+        const auto child2LeafCombined = AABB::combine(leaf, mNodes[child2Index].mBoundingBox);
+        const float cost2 =
+            mNodes[child2Index].isLeaf()
+                ? child2LeafCombined.perimeter() + inheritedCost
+                : child2LeafCombined.perimeter() - mNodes[child2Index].mBoundingBox.perimeter() + inheritedCost;
 
         index = (cost1 < cost2) ? child1Index : child2Index;
     }
@@ -568,14 +570,14 @@ NodeIndex DynamicBVH<IdType>::findBestSiblingIndex(AABB leaf) const
 template <typename IdType>
 NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 {
-    BVHNode<IdType>& node = nodes[index];
+    BVHNode<IdType>& node = mNodes[index];
 
-    const NodeIndex child1Index = node.child1Index;
-    const NodeIndex child2Index = node.child2Index;
-    const BVHNode<IdType>& child1 = nodes[child1Index];
-    const BVHNode<IdType>& child2 = nodes[child2Index];
+    const NodeIndex child1Index = node.mChild1Index;
+    const NodeIndex child2Index = node.mChild2Index;
+    const BVHNode<IdType>& child1 = mNodes[child1Index];
+    const BVHNode<IdType>& child2 = mNodes[child2Index];
 
-    const int32_t unbalanceBetweenChildren = child2.height - child1.height;
+    const int32_t unbalanceBetweenChildren = child2.mHeight - child1.mHeight;
 
     NodeIndex movingUpChildIndex;
     NodeIndex grandChild1Index;
@@ -584,16 +586,16 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
     if (unbalanceBetweenChildren > 1)
     {
         // Rotate Child2 up
-        grandChild1Index = child2.child1Index;
-        grandChild2Index = child2.child2Index;
+        grandChild1Index = child2.mChild1Index;
+        grandChild2Index = child2.mChild2Index;
         movingUpChildIndex = child2Index;
         isRightRotation = true;
     }
     else if (unbalanceBetweenChildren < -1)
     {
         // Rotate Child1 up
-        grandChild1Index = child1.child1Index;
-        grandChild2Index = child1.child2Index;
+        grandChild1Index = child1.mChild1Index;
+        grandChild2Index = child1.mChild2Index;
         movingUpChildIndex = child1Index;
         isRightRotation = false;
     }
@@ -603,29 +605,29 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
         return index;
     }
 
-    BVHNode<IdType>& movingUpChild = nodes[movingUpChildIndex];
+    BVHNode<IdType>& movingUpChild = mNodes[movingUpChildIndex];
 
     // Swap node and movingUpChild
-    movingUpChild.child1Index = index;
-    movingUpChild.parentIndex = node.parentIndex;
-    node.parentIndex = movingUpChildIndex;
+    movingUpChild.mChild1Index = index;
+    movingUpChild.mParentIndex = node.mParentIndex;
+    node.mParentIndex = movingUpChildIndex;
 
-    if (movingUpChild.parentIndex != INVALID_NODE_INDEX)
+    if (movingUpChild.mParentIndex != INVALID_NODE_INDEX)
     {
-        BVHNode<IdType>& parent = nodes[movingUpChild.parentIndex];
-        if (parent.child1Index == index)
-            parent.child1Index = movingUpChildIndex;
+        BVHNode<IdType>& parent = mNodes[movingUpChild.mParentIndex];
+        if (parent.mChild1Index == index)
+            parent.mChild1Index = movingUpChildIndex;
         else
-            parent.child2Index = movingUpChildIndex;
+            parent.mChild2Index = movingUpChildIndex;
     }
     else
     {
-        rootIndex = movingUpChildIndex;
+        mRootIndex = movingUpChildIndex;
     }
 
     // Pick the taller child for attachment
     NodeIndex attachIndex, remainIndex;
-    if ((nodes[grandChild1Index].height > nodes[grandChild2Index].height))
+    if ((mNodes[grandChild1Index].mHeight > mNodes[grandChild2Index].mHeight))
     {
         attachIndex = grandChild1Index;
         remainIndex = grandChild2Index;
@@ -638,40 +640,40 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 
     if (isRightRotation)
     {
-        movingUpChild.child2Index = attachIndex;
-        node.child2Index = remainIndex;
+        movingUpChild.mChild2Index = attachIndex;
+        node.mChild2Index = remainIndex;
     }
     else
     {
-        movingUpChild.child2Index = attachIndex;
-        node.child1Index = remainIndex;
+        movingUpChild.mChild2Index = attachIndex;
+        node.mChild1Index = remainIndex;
     }
 
-    nodes[attachIndex].parentIndex = movingUpChildIndex;
-    nodes[remainIndex].parentIndex = index;
+    mNodes[attachIndex].mParentIndex = movingUpChildIndex;
+    mNodes[remainIndex].mParentIndex = index;
 
     // Recompute AABBs and heights
     if (isRightRotation)
     {
-        node.aabb = AABB::combine(child1.aabb, nodes[remainIndex].aabb);
-        movingUpChild.aabb = AABB::combine(node.aabb, nodes[attachIndex].aabb);
+        node.mBoundingBox = AABB::combine(child1.mBoundingBox, mNodes[remainIndex].mBoundingBox);
+        movingUpChild.mBoundingBox = AABB::combine(node.mBoundingBox, mNodes[attachIndex].mBoundingBox);
 
-        node.height = 1 + std::max(child1.height, nodes[remainIndex].height);
-        movingUpChild.height = 1 + std::max(node.height, nodes[attachIndex].height);
+        node.mHeight = 1 + std::max(child1.mHeight, mNodes[remainIndex].mHeight);
+        movingUpChild.mHeight = 1 + std::max(node.mHeight, mNodes[attachIndex].mHeight);
 
-        node.categoryBits = child1.categoryBits | nodes[remainIndex].categoryBits;
-        movingUpChild.categoryBits = node.categoryBits | nodes[attachIndex].categoryBits;
+        node.mCategoryBits = child1.mCategoryBits | mNodes[remainIndex].mCategoryBits;
+        movingUpChild.mCategoryBits = node.mCategoryBits | mNodes[attachIndex].mCategoryBits;
     }
     else
     {
-        node.aabb = AABB::combine(child2.aabb, nodes[remainIndex].aabb);
-        movingUpChild.aabb = AABB::combine(node.aabb, nodes[attachIndex].aabb);
+        node.mBoundingBox = AABB::combine(child2.mBoundingBox, mNodes[remainIndex].mBoundingBox);
+        movingUpChild.mBoundingBox = AABB::combine(node.mBoundingBox, mNodes[attachIndex].mBoundingBox);
 
-        node.height = 1 + std::max(child2.height, nodes[remainIndex].height);
-        movingUpChild.height = 1 + std::max(node.height, nodes[attachIndex].height);
+        node.mHeight = 1 + std::max(child2.mHeight, mNodes[remainIndex].mHeight);
+        movingUpChild.mHeight = 1 + std::max(node.mHeight, mNodes[attachIndex].mHeight);
 
-        node.categoryBits = child2.categoryBits | nodes[remainIndex].categoryBits;
-        movingUpChild.categoryBits = node.categoryBits | nodes[attachIndex].categoryBits;
+        node.mCategoryBits = child2.mCategoryBits | mNodes[remainIndex].mCategoryBits;
+        movingUpChild.mCategoryBits = node.mCategoryBits | mNodes[attachIndex].mCategoryBits;
     }
 
     return movingUpChildIndex;
@@ -680,16 +682,16 @@ NodeIndex DynamicBVH<IdType>::balance(NodeIndex index)
 template <typename IdType>
 std::vector<std::pair<IdType, AABB>> DynamicBVH<IdType>::data() const
 {
-    if (rootIndex == INVALID_NODE_INDEX)
+    if (mRootIndex == INVALID_NODE_INDEX)
         return {};
 
     std::vector<std::pair<IdType, AABB>> result;
 
-    for (uint32_t i = 0; i < nodeCount; ++i)
+    for (uint32_t i = 0; i < mNodeCount; ++i)
     {
-        const auto& node = nodes[i];
+        const auto& node = mNodes[i];
         if (node.isLeaf())
-            result.emplace_back(node.id, node.aabb);
+            result.emplace_back(node.mId, node.mBoundingBox);
     }
 
     return result;
@@ -698,8 +700,8 @@ std::vector<std::pair<IdType, AABB>> DynamicBVH<IdType>::data() const
 template <typename IdType>
 auto DynamicBVH<IdType>::leavesView() const
 {
-    return nodes | std::views::filter([](const auto& node) { return node.isLeaf(); }) |
-           std::views::transform([](const auto& node) { return std::pair<IdType, AABB>{node.id, node.aabb}; });
+    return mNodes | std::views::filter([](const auto& node) { return node.isLeaf(); }) |
+           std::views::transform([](const auto& node) { return std::pair<IdType, AABB>{node.mId, node.mBoundingBox}; });
 }
 
 template <typename IdType>
@@ -708,32 +710,32 @@ void DynamicBVH<IdType>::query(AABB queryAABB,
                                std::vector<IdType, Allocator>& intersections,
                                BitMaskType maskBits) const
 {
-    if (rootIndex == INVALID_NODE_INDEX)
+    if (mRootIndex == INVALID_NODE_INDEX)
         return;
 
-    std::vector<NodeIndex> stack = {rootIndex};
+    std::vector<NodeIndex> stack = {mRootIndex};
 
     while (!stack.empty())
     {
         const NodeIndex nodeIndex = stack.back();
         stack.pop_back();
-        const auto& node = nodes[nodeIndex];
+        const auto& node = mNodes[nodeIndex];
 
         // Collision detected only if the node's categoryBits match the maskBits
         if (!node.matchesMask(maskBits))
             continue;
         // Skip the whole subtree (since it is contained in the node's AABB)
-        if (!node.aabb.intersects(queryAABB))
+        if (!node.mBoundingBox.intersects(queryAABB))
             continue;
 
         if (node.isLeaf())
         {
-            intersections.push_back(node.id);
+            intersections.push_back(node.mId);
         }
         else
         {
-            stack.push_back(node.child1Index);
-            stack.push_back(node.child2Index);
+            stack.push_back(node.mChild1Index);
+            stack.push_back(node.mChild2Index);
         }
     }
 }
@@ -772,33 +774,33 @@ void DynamicBVH<IdType>::batchQuery(const std::vector<std::pair<AABB, BitMaskTyp
 template <typename IdType>
 void DynamicBVH<IdType>::piercingRaycast(Ray ray, std::set<RaycastInfo>& hits, BitMaskType maskBits) const
 {
-    if (rootIndex == INVALID_NODE_INDEX)
+    if (mRootIndex == INVALID_NODE_INDEX)
         return;
 
-    std::vector<NodeIndex> stack = {rootIndex};
+    std::vector<NodeIndex> stack = {mRootIndex};
 
     while (!stack.empty())
     {
         const NodeIndex nodeIndex = stack.back();
         stack.pop_back();
-        const auto& node = nodes[nodeIndex];
+        const auto& node = mNodes[nodeIndex];
 
         // Collision detected only if the node's categoryBits match the maskBits
         if (!node.matchesMask(maskBits))
             continue;
 
-        const auto intersection = node.aabb.intersects(ray);
+        const auto intersection = node.mBoundingBox.intersects(ray);
         if (!intersection)
             continue;
 
         if (node.isLeaf())
         {
-            hits.insert(RaycastInfo::fromRay(node.id, ray, *intersection));
+            hits.insert(RaycastInfo::fromRay(node.mId, ray, *intersection));
         }
         else
         {
-            stack.push_back(node.child1Index);
-            stack.push_back(node.child2Index);
+            stack.push_back(node.mChild1Index);
+            stack.push_back(node.mChild2Index);
         }
     }
 }
@@ -807,25 +809,25 @@ template <typename IdType>
 std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firstHitRaycast(Ray ray,
                                                                                             BitMaskType maskBits) const
 {
-    if (rootIndex == INVALID_NODE_INDEX)
+    if (mRootIndex == INVALID_NODE_INDEX)
         return std::nullopt;
 
     std::optional<RaycastInfo> firstHit;
     float firstHitTime = std::numeric_limits<float>::max();
 
-    std::vector<NodeIndex> stack = {rootIndex};
+    std::vector<NodeIndex> stack = {mRootIndex};
 
     while (!stack.empty())
     {
         const NodeIndex nodeIndex = stack.back();
         stack.pop_back();
-        const auto& node = nodes[nodeIndex];
+        const auto& node = mNodes[nodeIndex];
 
         // Collision detected only if the node's categoryBits match the maskBits
         if (!node.matchesMask(maskBits))
             continue;
 
-        const auto intersection = node.aabb.intersects(ray);
+        const auto intersection = node.mBoundingBox.intersects(ray);
         if (!intersection)
             continue;
 
@@ -834,13 +836,13 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
             if (intersection->first < firstHitTime)
             {
                 firstHitTime = intersection->first;
-                firstHit = RaycastInfo::fromRay(node.id, ray, *intersection);
+                firstHit = RaycastInfo::fromRay(node.mId, ray, *intersection);
             }
         }
         else
         {
-            stack.push_back(node.child1Index);
-            stack.push_back(node.child2Index);
+            stack.push_back(node.mChild1Index);
+            stack.push_back(node.mChild2Index);
         }
     }
 
@@ -850,33 +852,33 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
 template <typename IdType>
 void DynamicBVH<IdType>::piercingRaycast(InfiniteRay ray, std::set<RaycastInfo>& hits, BitMaskType maskBits) const
 {
-    if (rootIndex == INVALID_NODE_INDEX)
+    if (mRootIndex == INVALID_NODE_INDEX)
         return;
 
-    std::vector<NodeIndex> stack = {rootIndex};
+    std::vector<NodeIndex> stack = {mRootIndex};
 
     while (!stack.empty())
     {
         const NodeIndex nodeIndex = stack.back();
         stack.pop_back();
-        const auto& node = nodes[nodeIndex];
+        const auto& node = mNodes[nodeIndex];
 
         // Collision detected only if the node's categoryBits match the maskBits
         if (!node.matchesMask(maskBits))
             continue;
 
-        const auto intersection = node.aabb.intersects(ray);
+        const auto intersection = node.mBoundingBox.intersects(ray);
         if (!intersection)
             continue;
 
         if (node.isLeaf())
         {
-            hits.insert(RaycastInfo::fromRay(node.id, ray, *intersection));
+            hits.insert(RaycastInfo::fromRay(node.mId, ray, *intersection));
         }
         else
         {
-            stack.push_back(node.child1Index);
-            stack.push_back(node.child2Index);
+            stack.push_back(node.mChild1Index);
+            stack.push_back(node.mChild2Index);
         }
     }
 }
@@ -885,25 +887,25 @@ template <typename IdType>
 std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firstHitRaycast(InfiniteRay ray,
                                                                                             BitMaskType maskBits) const
 {
-    if (rootIndex == INVALID_NODE_INDEX)
+    if (mRootIndex == INVALID_NODE_INDEX)
         return std::nullopt;
 
     std::optional<RaycastInfo> firstHit;
     float firstHitTime = std::numeric_limits<float>::max();
 
-    std::vector<NodeIndex> stack = {rootIndex};
+    std::vector<NodeIndex> stack = {mRootIndex};
 
     while (!stack.empty())
     {
         const NodeIndex nodeIndex = stack.back();
         stack.pop_back();
-        const auto& node = nodes[nodeIndex];
+        const auto& node = mNodes[nodeIndex];
 
         // Collision detected only if the node's categoryBits match the maskBits
         if (!node.matchesMask(maskBits))
             continue;
 
-        const auto intersection = node.aabb.intersects(ray);
+        const auto intersection = node.mBoundingBox.intersects(ray);
         if (!intersection)
             continue;
 
@@ -912,13 +914,13 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
             if (intersection->first < firstHitTime)
             {
                 firstHitTime = intersection->first;
-                firstHit = RaycastInfo::fromRay(node.id, ray, *intersection);
+                firstHit = RaycastInfo::fromRay(node.mId, ray, *intersection);
             }
         }
         else
         {
-            stack.push_back(node.child1Index);
-            stack.push_back(node.child2Index);
+            stack.push_back(node.mChild1Index);
+            stack.push_back(node.mChild2Index);
         }
     }
 
@@ -928,14 +930,14 @@ std::optional<typename DynamicBVH<IdType>::RaycastInfo> DynamicBVH<IdType>::firs
 template <typename IdType>
 void DynamicBVH<IdType>::findAllCollisions(const std::function<void(IdType, IdType)>& callback) const
 {
-    findAllCollisionsRecursive(rootIndex, callback);
+    findAllCollisionsRecursive(mRootIndex, callback);
 }
 
 template <typename IdType>
 void DynamicBVH<IdType>::findAllCollisions(const DynamicBVH<IdType>& other,
                                            const std::function<void(IdType, IdType)>& callback) const
 {
-    findPairsBetween(other, rootIndex, other.rootIndex, callback);
+    findPairsBetween(other, mRootIndex, other.mRootIndex, callback);
 }
 
 template <typename IdType>
@@ -946,31 +948,31 @@ void DynamicBVH<IdType>::findPairsBetween(NodeIndex nodeAIdx,
     if (nodeAIdx == INVALID_NODE_INDEX || nodeBIdx == INVALID_NODE_INDEX || nodeAIdx == nodeBIdx)
         return;
 
-    const auto& nodeA = nodes[nodeAIdx];
-    const auto& nodeB = nodes[nodeBIdx];
+    const auto& nodeA = mNodes[nodeAIdx];
+    const auto& nodeB = mNodes[nodeBIdx];
 
     // Check bitmask compatibility
-    if (!nodeA.matchesMask(nodeB.categoryBits) || !nodeB.matchesMask(nodeA.categoryBits))
+    if (!nodeA.matchesMask(nodeB.mCategoryBits) || !nodeB.matchesMask(nodeA.mCategoryBits))
         return;
-    if (!nodeA.aabb.intersects(nodeB.aabb))
+    if (!nodeA.mBoundingBox.intersects(nodeB.mBoundingBox))
         return;
 
     if (nodeA.isLeaf() && nodeB.isLeaf())
     {
-        callback(nodeA.id, nodeB.id);
+        callback(nodeA.mId, nodeB.mId);
         return;
     }
 
     // Expand the node with greater height (heuristic)
-    if (nodeA.isLeaf() || (!nodeB.isLeaf() && nodeB.height > nodeA.height))
+    if (nodeA.isLeaf() || (!nodeB.isLeaf() && nodeB.mHeight > nodeA.mHeight))
     {
-        findPairsBetween(nodeAIdx, nodeB.child1Index, callback);
-        findPairsBetween(nodeAIdx, nodeB.child2Index, callback);
+        findPairsBetween(nodeAIdx, nodeB.mChild1Index, callback);
+        findPairsBetween(nodeAIdx, nodeB.mChild2Index, callback);
     }
     else
     {
-        findPairsBetween(nodeA.child1Index, nodeBIdx, callback);
-        findPairsBetween(nodeA.child2Index, nodeBIdx, callback);
+        findPairsBetween(nodeA.mChild1Index, nodeBIdx, callback);
+        findPairsBetween(nodeA.mChild2Index, nodeBIdx, callback);
     }
 }
 
@@ -983,29 +985,29 @@ void DynamicBVH<IdType>::findPairsBetween(const DynamicBVH<IdType>& other,
     if (nodeAIdx == INVALID_NODE_INDEX || nodeBIdx == INVALID_NODE_INDEX)
         return;
 
-    const auto& nodeA = nodes[nodeAIdx];
-    const auto& nodeB = other.nodes[nodeBIdx];
+    const auto& nodeA = mNodes[nodeAIdx];
+    const auto& nodeB = other.mNodes[nodeBIdx];
 
-    if (!nodeA.matchesMask(nodeB.categoryBits) || !nodeB.matchesMask(nodeA.categoryBits))
+    if (!nodeA.matchesMask(nodeB.mCategoryBits) || !nodeB.matchesMask(nodeA.mCategoryBits))
         return;
-    if (!nodeA.aabb.intersects(nodeB.aabb))
+    if (!nodeA.mBoundingBox.intersects(nodeB.mBoundingBox))
         return;
 
     if (nodeA.isLeaf() && nodeB.isLeaf())
     {
-        callback(nodeA.id, nodeB.id);
+        callback(nodeA.mId, nodeB.mId);
         return;
     }
 
-    if (nodeA.isLeaf() || (!nodeB.isLeaf() && nodeB.height > nodeA.height))
+    if (nodeA.isLeaf() || (!nodeB.isLeaf() && nodeB.mHeight > nodeA.mHeight))
     {
-        findPairsBetween(other, nodeAIdx, nodeB.child1Index, callback);
-        findPairsBetween(other, nodeAIdx, nodeB.child2Index, callback);
+        findPairsBetween(other, nodeAIdx, nodeB.mChild1Index, callback);
+        findPairsBetween(other, nodeAIdx, nodeB.mChild2Index, callback);
     }
     else
     {
-        findPairsBetween(other, nodeA.child1Index, nodeBIdx, callback);
-        findPairsBetween(other, nodeA.child2Index, nodeBIdx, callback);
+        findPairsBetween(other, nodeA.mChild1Index, nodeBIdx, callback);
+        findPairsBetween(other, nodeA.mChild2Index, nodeBIdx, callback);
     }
 }
 
@@ -1016,16 +1018,16 @@ void DynamicBVH<IdType>::findAllCollisionsRecursive(NodeIndex nodeIdx,
     if (nodeIdx == INVALID_NODE_INDEX)
         return;
 
-    const auto& node = nodes[nodeIdx];
+    const auto& node = mNodes[nodeIdx];
     if (node.isLeaf())
         return;
 
     // Check all pairs between children
-    findPairsBetween(node.child1Index, node.child2Index, callback);
+    findPairsBetween(node.mChild1Index, node.mChild2Index, callback);
 
     // Check pairs within each child
-    findAllCollisionsRecursive(node.child1Index, callback);
-    findAllCollisionsRecursive(node.child2Index, callback);
+    findAllCollisionsRecursive(node.mChild1Index, callback);
+    findAllCollisionsRecursive(node.mChild2Index, callback);
 }
 
 template <typename IdType>
@@ -1033,18 +1035,18 @@ void DynamicBVH<IdType>::serialize(std::ostream& out) const
 {
     Writer writer(out);
 
-    writer(fatAABBMargin);
-    writer(rootIndex);
-    writer(nodeCount);
-    writer(proxyCount);
-    writer(nextAvailableIndex);
+    writer(mFatAABBMargin);
+    writer(mRootIndex);
+    writer(mNodeCount);
+    writer(mProxyCount);
+    writer(mNextAvailableIndex);
 
     // Write nodes vector size
-    const size_t nodesSize = nodes.size();
+    const size_t nodesSize = mNodes.size();
     writer(nodesSize);
 
     // Write nodes
-    for (const auto& node : nodes)
+    for (const auto& node : mNodes)
         node.serialize(out);
 }
 
@@ -1058,51 +1060,51 @@ DynamicBVH<IdType> DynamicBVH<IdType>::deserialize(std::istream& in)
 
     DynamicBVH<IdType> bvh(fatAABBMargin);
 
-    reader(bvh.rootIndex);
-    reader(bvh.nodeCount);
-    reader(bvh.proxyCount);
-    reader(bvh.nextAvailableIndex);
+    reader(bvh.mRootIndex);
+    reader(bvh.mNodeCount);
+    reader(bvh.mProxyCount);
+    reader(bvh.mNextAvailableIndex);
 
     size_t nodesSize;
     reader(nodesSize);
 
     // Replace the preallocated storage created by the constructor
-    bvh.nodes.clear();
-    bvh.nodes.reserve(nodesSize);
+    bvh.mNodes.clear();
+    bvh.mNodes.reserve(nodesSize);
     for (size_t i = 0; i < nodesSize; ++i)
-        bvh.nodes.emplace_back(BVHNode<IdType>::deserialize(in));
+        bvh.mNodes.emplace_back(BVHNode<IdType>::deserialize(in));
 
     return bvh;
 }
 
 #ifdef C2D_USE_CEREAL
 template <typename IdType>
-template <class Archive>
+template <IsCerealArchive Archive>
 void DynamicBVH<IdType>::serialize(Archive& archive)
 {
-    archive(fatAABBMargin);
-    archive(rootIndex);
-    archive(nodeCount);
-    archive(proxyCount);
-    archive(nextAvailableIndex);
-    archive(nodes);
+    archive(mFatAABBMargin);
+    archive(mRootIndex);
+    archive(mNodeCount);
+    archive(mProxyCount);
+    archive(mNextAvailableIndex);
+    archive(mNodes);
 }
 #endif
 
 template <typename IdType>
 bool DynamicBVH<IdType>::operator==(const DynamicBVH& other) const
 {
-    if (!float_equals(fatAABBMargin, other.fatAABBMargin))
+    if (!float_equals(mFatAABBMargin, other.mFatAABBMargin))
         return false;
-    if (nodeCount != other.nodeCount)
+    if (mNodeCount != other.mNodeCount)
         return false;
-    if (proxyCount != other.proxyCount)
+    if (mProxyCount != other.mProxyCount)
         return false;
-    if (rootIndex != other.rootIndex)
+    if (mRootIndex != other.mRootIndex)
         return false;
-    if (nextAvailableIndex != other.nextAvailableIndex)
+    if (mNextAvailableIndex != other.mNextAvailableIndex)
         return false;
-    if (nodes != other.nodes)
+    if (mNodes != other.mNodes)
         return false;
 
     return true;
@@ -1113,17 +1115,17 @@ void BVHNode<IdType>::serialize(std::ostream& out) const
 {
     Writer writer(out);
 
-    writer(aabb.min.x);
-    writer(aabb.min.y);
-    writer(aabb.max.x);
-    writer(aabb.max.y);
-    writer(categoryBits);
-    writer(isHittingBits);
-    writer(parentIndex);
-    writer(child1Index);
-    writer(child2Index);
-    writer(height);
-    writer(id);
+    writer(mBoundingBox.min.x);
+    writer(mBoundingBox.min.y);
+    writer(mBoundingBox.max.x);
+    writer(mBoundingBox.max.y);
+    writer(mCategoryBits);
+    writer(mIsHittingBits);
+    writer(mParentIndex);
+    writer(mChild1Index);
+    writer(mChild2Index);
+    writer(mHeight);
+    writer(mId);
 }
 
 template <typename IdType>
@@ -1132,48 +1134,48 @@ BVHNode<IdType> BVHNode<IdType>::deserialize(std::istream& in)
     Reader reader(in);
     BVHNode<IdType> node;
 
-    reader(node.aabb);
-    reader(node.categoryBits);
-    reader(node.isHittingBits);
-    reader(node.parentIndex);
-    reader(node.child1Index);
-    reader(node.child2Index);
-    reader(node.height);
-    reader(node.id);
+    reader(node.mBoundingBox);
+    reader(node.mCategoryBits);
+    reader(node.mIsHittingBits);
+    reader(node.mParentIndex);
+    reader(node.mChild1Index);
+    reader(node.mChild2Index);
+    reader(node.mHeight);
+    reader(node.mId);
 
     return node;
 }
 
 #ifdef C2D_USE_CEREAL
 template <typename IdType>
-template <class Archive>
+template <IsCerealArchive Archive>
 void BVHNode<IdType>::serialize(Archive& archive)
 {
-    archive(aabb, categoryBits, isHittingBits, parentIndex, child1Index, child2Index, height, id);
+    archive(mBoundingBox, mCategoryBits, mIsHittingBits, mParentIndex, mChild1Index, mChild2Index, mHeight, mId);
 }
 #endif
 
 template <typename IdType>
 bool BVHNode<IdType>::operator==(const BVHNode& other) const
 {
-    if (aabb != other.aabb)
+    if (mBoundingBox != other.mBoundingBox)
         return false;
-    if (categoryBits != other.categoryBits)
+    if (mCategoryBits != other.mCategoryBits)
         return false;
-    if (isHittingBits != other.isHittingBits)
-        return false;
-
-    if (parentIndex != other.parentIndex)
-        return false;
-    if (child1Index != other.child1Index)
-        return false;
-    if (child2Index != other.child2Index)
+    if (mIsHittingBits != other.mIsHittingBits)
         return false;
 
-    if (height != other.height)
+    if (mParentIndex != other.mParentIndex)
+        return false;
+    if (mChild1Index != other.mChild1Index)
+        return false;
+    if (mChild2Index != other.mChild2Index)
         return false;
 
-    if (id != other.id)
+    if (mHeight != other.mHeight)
+        return false;
+
+    if (mId != other.mId)
         return false;
 
     return true;

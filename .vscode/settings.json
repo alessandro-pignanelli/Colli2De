@@ -11,6 +11,8 @@
         "-isystem${workspaceFolder}/build/Debug/_deps/catch2-build/generated-includes",
         "-isystem${workspaceFolder}/libs/catch2/install/Debug/include",
         "-isystem${workspaceFolder}/build/Debug/_deps/tsl-robin-map-src/include",
-        "-isystem${workspaceFolder}/libs/robin-map/install/Debug/include"
+        "-isystem${workspaceFolder}/libs/robin-map/install/Debug/include",
+        "-isystem${workspaceFolder}/build/Debug/_deps/cereal-src/include",
+        "-isystem${workspaceFolder}/libs/cereal/include"
     ],
 }

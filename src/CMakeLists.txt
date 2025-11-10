@@ -56,6 +56,10 @@ set(CMAKE_DEBUG_POSTFIX "d")
 
 if (C2D_USE_CEREAL)
     target_compile_definitions(${PROJECT_NAME} PUBLIC C2D_USE_CEREAL)
+    target_link_libraries(${PROJECT_NAME}
+        PUBLIC
+        cereal::cereal
+    )
 endif()
 
 target_link_libraries(${PROJECT_NAME}
@@ -71,7 +75,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
 
-if(ENABLE_LTO)
+if(C2D_ENABLE_LTO)
     message(STATUS "IPO / LTO enabled")
     set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
@@ -124,7 +128,7 @@ install(
 
 # Install library
 install(
-    TARGETS ${PROJECT_NAME} ${ROBIN_MAP_TARGET}
+    TARGETS ${PROJECT_NAME} ${ROBIN_MAP_TARGET} ${CEREAL_TARGET}
     EXPORT ${PROJECT_NAME}Config
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

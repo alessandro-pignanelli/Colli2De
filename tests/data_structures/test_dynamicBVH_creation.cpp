@@ -106,18 +106,18 @@ TEST_CASE("DynamicBVH | Create proxy inserts node into tree", "[DynamicBVH]")
     REQUIRE_FALSE(root.isLeaf());
 
     // Root children should be the two inserted proxies
-    const auto& child1 = bvh.getNode(root.child1Index);
-    const auto& child2 = bvh.getNode(root.child2Index);
+    const auto& child1 = bvh.getNode(root.mChild1Index);
+    const auto& child2 = bvh.getNode(root.mChild2Index);
 
-    REQUIRE((child1.id == id1 || child1.id == id2));
-    REQUIRE((child2.id == id1 || child2.id == id2));
+    REQUIRE((child1.mId == id1 || child1.mId == id2));
+    REQUIRE((child2.mId == id1 || child2.mId == id2));
 
     // Verify AABB of root is the union
     AABB expected = AABB::combine(aabb1, aabb2).fattened(margin);
-    REQUIRE(root.aabb.min.x == Approx(expected.min.x));
-    REQUIRE(root.aabb.min.y == Approx(expected.min.y));
-    REQUIRE(root.aabb.max.x == Approx(expected.max.x));
-    REQUIRE(root.aabb.max.y == Approx(expected.max.y));
+    REQUIRE(root.mBoundingBox.min.x == Approx(expected.min.x));
+    REQUIRE(root.mBoundingBox.min.y == Approx(expected.min.y));
+    REQUIRE(root.mBoundingBox.max.x == Approx(expected.max.x));
+    REQUIRE(root.mBoundingBox.max.y == Approx(expected.max.y));
 }
 
 TEST_CASE("DynamicBVH | balancing: height after sequential insertions", "[DynamicBVH][Balance]")
@@ -134,7 +134,7 @@ TEST_CASE("DynamicBVH | balancing: height after sequential insertions", "[Dynami
 
     // Check: height should be at most log2(100) * 2 ~= 13 (AVL-like)
     // Optimal height for 100 nodes is ceil(log2(100)) = 7, so we allow some overhead
-    int height = bvh.getNode(bvh.getRootIndex()).height;
+    int height = bvh.getNode(bvh.getRootIndex()).mHeight;
     REQUIRE(height <= 13);
 
     // Root should not be a leaf
@@ -155,12 +155,12 @@ TEST_CASE("DynamicBVH | balancing: height after sequential insertions", "[Dynami
         }
         else
         {
-            stack.push_back(node.child1Index);
-            stack.push_back(node.child2Index);
+            stack.push_back(node.mChild1Index);
+            stack.push_back(node.mChild2Index);
 
             // Both children point back to this node as parent
-            REQUIRE(bvh.getNode(node.child1Index).parentIndex == idx);
-            REQUIRE(bvh.getNode(node.child2Index).parentIndex == idx);
+            REQUIRE(bvh.getNode(node.mChild1Index).mParentIndex == idx);
+            REQUIRE(bvh.getNode(node.mChild2Index).mParentIndex == idx);
         }
     }
 
@@ -179,7 +179,7 @@ TEST_CASE("DynamicBVH | balancing: tree remains valid after zigzag insertions", 
     }
 
     // Check tree height is not degenerate
-    int height = bvh.getNode(bvh.getRootIndex()).height;
+    int height = bvh.getNode(bvh.getRootIndex()).mHeight;
     REQUIRE(height <= 12);
 
     // All proxies are present in leaves
@@ -194,8 +194,8 @@ TEST_CASE("DynamicBVH | balancing: tree remains valid after zigzag insertions", 
             ++leaves;
         else
         {
-            stack.push_back(node.child1Index);
-            stack.push_back(node.child2Index);
+            stack.push_back(node.mChild1Index);
+            stack.push_back(node.mChild2Index);
         }
     }
     REQUIRE(leaves == 50);
@@ -233,14 +233,14 @@ TEST_CASE("DynamicBVH | removes proxies and maintains balance", "[DynamicBVH][Re
             ++leaves;
         else
         {
-            stack.push_back(node.child1Index);
-            stack.push_back(node.child2Index);
+            stack.push_back(node.mChild1Index);
+            stack.push_back(node.mChild2Index);
         }
     }
     REQUIRE(leaves == 10);
 
     // Tree remains balanced
-    int height = bvh.getNode(bvh.getRootIndex()).height;
+    int height = bvh.getNode(bvh.getRootIndex()).mHeight;
     REQUIRE(height <= 5);
 }
 
@@ -253,8 +253,8 @@ TEST_CASE("DynamicBVH | uses fattened AABB for proxies", "[DynamicBVH][Fattened]
     NodeIndex idx = bvh.addProxy(123, aabb);
 
     const auto& node = bvh.getNode(idx);
-    REQUIRE(node.aabb.min.x == Approx(aabb.min.x - margin));
-    REQUIRE(node.aabb.max.y == Approx(aabb.max.y + margin));
+    REQUIRE(node.mBoundingBox.min.x == Approx(aabb.min.x - margin));
+    REQUIRE(node.mBoundingBox.max.y == Approx(aabb.max.y + margin));
 }
 
 TEST_CASE("DynamicBVH | proxy update skips tree change for small moves", "[DynamicBVH][Fattened][MoveProxy]")
@@ -277,8 +277,8 @@ TEST_CASE("DynamicBVH | proxy update skips tree change for small moves", "[Dynam
 
     // Confirm that the node's AABB is now fattened in the +X direction
     const auto& node = bvh.getNode(nodeId);
-    CHECK(node.aabb.min == largeMove.min - margin);
-    CHECK(node.aabb.max > (largeMove.max + margin + 10.0f)); // Ensure fattening and displacement is applied
+    CHECK(node.mBoundingBox.min == largeMove.min - margin);
+    CHECK(node.mBoundingBox.max > (largeMove.max + margin + 10.0f)); // Ensure fattening and displacement is applied
 }
 
 TEST_CASE("DynamicBVH | handles moving proxies with remove and reinsert", "[DynamicBVH][Advanced][Move]")

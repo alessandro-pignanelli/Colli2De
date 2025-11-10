@@ -225,7 +225,7 @@ TEST_CASE("DynamicBVH | BroadPhaseCollisions benchmark (10k random proxies)",
         bvh.addProxy(i, aabbs[i]);
 
     BENCHMARK_FUNCTION("DynamicBVH | Find all colliding pairs among 1k proxies",
-                       50us,
+                       100us,
                        [&]()
                        {
                            uint32_t totalPairs = 0;

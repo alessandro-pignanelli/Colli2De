@@ -29,7 +29,7 @@ uint32_t insertRemoveAndCheckBalancing(const std::vector<AABB>& aabbs)
         REQUIRE(rootIndex != -1);
 
         // Tree height should be O(log2(N))
-        const int32_t height = bvh.getNode(rootIndex).height;
+        const int32_t height = bvh.getNode(rootIndex).mHeight;
         const int logN = static_cast<int>(std::ceil(std::log2(bvh.proxies())));
 
         // Allow a little extra for imperfect balancing and fattening
@@ -53,16 +53,16 @@ uint32_t insertRemoveAndCheckBalancing(const std::vector<AABB>& aabbs)
             if (node.isLeaf())
             {
                 ++leafCount;
-                CHECK(node.id < aabbs.size());
-                foundIds.insert(node.id);
+                CHECK(node.mId < aabbs.size());
+                foundIds.insert(node.mId);
             }
             else
             {
                 // Child points back to parent
-                CHECK(bvh.getNode(node.child1Index).parentIndex == idx);
-                CHECK(bvh.getNode(node.child2Index).parentIndex == idx);
-                stack.push_back(node.child1Index);
-                stack.push_back(node.child2Index);
+                CHECK(bvh.getNode(node.mChild1Index).mParentIndex == idx);
+                CHECK(bvh.getNode(node.mChild2Index).mParentIndex == idx);
+                stack.push_back(node.mChild1Index);
+                stack.push_back(node.mChild2Index);
             }
         }
 

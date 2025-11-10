@@ -40,7 +40,7 @@ if (WIN32)
     )
 endif()
 
-if(ENABLE_LTO)
+if(C2D_ENABLE_LTO)
     message(STATUS "IPO / LTO enabled")
     set_property(TARGET Colli2DeTests PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
