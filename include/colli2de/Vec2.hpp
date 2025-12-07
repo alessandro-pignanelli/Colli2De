@@ -74,7 +74,7 @@ class Vec2
 
     constexpr float operator[](int index) const
     {
-        DEBUG_ASSERT(index == 0 || index == 1);
+        C2D_DEBUG_ASSERT(index == 0 || index == 1);
         const float arr[2] = {x, y};
         return arr[index];
     }

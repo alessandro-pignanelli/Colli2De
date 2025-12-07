@@ -119,12 +119,27 @@ endif()
 
 # ---- Installation ----
 
-# Install public and internal headers to include/colli2de
+# Install public headers to include/colli2de
 install(
     DIRECTORY ${PROJECT_SOURCE_DIR}/include/
     DESTINATION include
     FILES_MATCHING PATTERN "*.hpp"
+    PATTERN "internal" EXCLUDE
 )
+
+# Install robin-map headers (dependency of colli2de)
+if (USE_LOCAL_ROBIN_MAP)
+    install(
+        DIRECTORY ${COLLI2DE_SOURCE_DIR}/libs/robin-map/include/
+        DESTINATION include
+    )
+else()
+    # When using FetchContent, install from the fetched source
+    install(
+        DIRECTORY ${tsl-robin-map_SOURCE_DIR}/include/
+        DESTINATION include
+    )
+endif()
 
 # Install library
 install(

@@ -226,7 +226,7 @@ BroadPhaseTreeHandle BroadPhaseTree<IdType>::addProxy(IdType entityId,
 template <typename IdType>
 void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
 {
-    DEBUG_ASSERT(isValidHandle(handle));
+    C2D_DEBUG_ASSERT(isValidHandle(handle));
 
     Proxy& proxy = mProxies.at(handle);
 
@@ -251,7 +251,7 @@ void BroadPhaseTree<IdType>::removeProxy(BroadPhaseTreeHandle handle)
 template <typename IdType>
 void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB boundingBox)
 {
-    DEBUG_ASSERT(isValidHandle(handle));
+    C2D_DEBUG_ASSERT(isValidHandle(handle));
     Proxy& proxy = mProxies.at(handle);
 
     if (proxy.mBoundingBox.contains(boundingBox))
@@ -295,7 +295,7 @@ void BroadPhaseTree<IdType>::moveProxy(BroadPhaseTreeHandle handle, AABB boundin
         // Destroy the proxy from the BVH in that region and remove the bvh handle
         auto& proxy = mProxies.at(handle);
         const auto bvhHandleInRegion = proxy.mBvhHandles.find(cell);
-        DEBUG_ASSERT(bvhHandleInRegion != proxy.mBvhHandles.end());
+        C2D_DEBUG_ASSERT(bvhHandleInRegion != proxy.mBvhHandles.end());
         bvh.removeProxy(bvhHandleInRegion->second);
         proxy.mBvhHandles.erase(bvhHandleInRegion);
 

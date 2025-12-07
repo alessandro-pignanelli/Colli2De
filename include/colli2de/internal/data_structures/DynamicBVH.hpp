@@ -297,10 +297,10 @@ void DynamicBVH<IdType>::allocateNodes(int32_t capacity)
 template <typename IdType>
 void DynamicBVH<IdType>::doubleCapacity()
 {
-    DEBUG_ASSERT(mNextAvailableIndex == INVALID_NODE_INDEX);
+    C2D_DEBUG_ASSERT(mNextAvailableIndex == INVALID_NODE_INDEX);
 
     const size_t currentCapacity = capacity();
-    DEBUG_ASSERT(mNodeCount == static_cast<uint32_t>(currentCapacity));
+    C2D_DEBUG_ASSERT(mNodeCount == static_cast<uint32_t>(currentCapacity));
 
     const size_t newCapacity = currentCapacity <= 4096 ? currentCapacity << 1 : currentCapacity << 1;
     mNodes.resize(newCapacity);
@@ -335,7 +335,7 @@ NodeIndex DynamicBVH<IdType>::createNode()
 template <typename IdType>
 void DynamicBVH<IdType>::destroyNode(NodeIndex nodeId)
 {
-    DEBUG_ASSERT(0 <= nodeId && nodeId < static_cast<NodeIndex>(mNodes.size()));
+    C2D_DEBUG_ASSERT(0 <= nodeId && nodeId < static_cast<NodeIndex>(mNodes.size()));
     BVHNode<IdType>& node = mNodes[nodeId];
 
     node.mParentIndex = mNextAvailableIndex;

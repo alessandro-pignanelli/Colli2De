@@ -10,7 +10,7 @@
 
 #if defined(DBG) || defined(ENABLE_ASSERT)
 
-#define _DEBUG_ASSERT_2_ARGS(condition, message)                                                                       \
+#define _C2D_DEBUG_ASSERT_2_ARGS(condition, message)                                                                   \
     do                                                                                                                 \
     {                                                                                                                  \
         if (!(condition))                                                                                              \
@@ -19,7 +19,7 @@
         }                                                                                                              \
     } while (0)
 
-#define _DEBUG_ASSERT_1_ARG(condition)                                                                                 \
+#define _C2D_DEBUG_ASSERT_1_ARG(condition)                                                                             \
     do                                                                                                                 \
     {                                                                                                                  \
         if (!(condition))                                                                                              \
@@ -28,9 +28,10 @@
         }                                                                                                              \
     } while (0)
 
-#define _DEBUG_ASSERT_GET_MACRO(_1, _2, NAME, ...) NAME
-#define DEBUG_ASSERT(...) _DEBUG_ASSERT_GET_MACRO(__VA_ARGS__, _DEBUG_ASSERT_2_ARGS, _DEBUG_ASSERT_1_ARG)(__VA_ARGS__)
+#define _C2D_DEBUG_ASSERT_GET_MACRO(_1, _2, NAME, ...) NAME
+#define C2D_DEBUG_ASSERT(...)                                                                                          \
+    _C2D_DEBUG_ASSERT_GET_MACRO(__VA_ARGS__, _C2D_DEBUG_ASSERT_2_ARGS, _C2D_DEBUG_ASSERT_1_ARG)(__VA_ARGS__)
 
 #else
-#define DEBUG_ASSERT(...)
+#define C2D_DEBUG_ASSERT(...)
 #endif

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "colli2de/internal/utils/Methods.hpp"
-
 #include <colli2de/Manifold.hpp>
 #include <colli2de/Ray.hpp>
 #include <colli2de/Shapes.hpp>
@@ -12,6 +10,7 @@
 #include <colli2de/internal/geometry/RaycastShapes.hpp>
 #include <colli2de/internal/geometry/ShapesUtils.hpp>
 #include <colli2de/internal/utils/Debug.hpp>
+#include <colli2de/internal/utils/Methods.hpp>
 #include <colli2de/internal/utils/Serialization.hpp>
 
 #include <tsl/robin_map.h>
@@ -264,7 +263,7 @@ class Registry
 template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::createEntity(EntityId id, BodyType type, const Transform& transform)
 {
-    DEBUG_ASSERT(mEntities.find(id) == mEntities.end(), "Entity with this ID already exists");
+    C2D_DEBUG_ASSERT(mEntities.find(id) == mEntities.end(), "Entity with this ID already exists");
     mEntities.emplace(id, EntityInfo{.mShapeIds = {}, .mTransform = transform, .mType = type});
 
     if (type == BodyType::Bullet)
@@ -278,7 +277,7 @@ ShapeId Registry<EntityId, Method>::addShape(EntityId entityId,
                                              uint64_t categoryBits,
                                              uint64_t maskBits)
 {
-    DEBUG_ASSERT(mEntities.find(entityId) != mEntities.end(), "Entity with this ID does not exist");
+    C2D_DEBUG_ASSERT(mEntities.find(entityId) != mEntities.end(), "Entity with this ID does not exist");
     EntityInfo& entity = mEntities.at(entityId);
 
     const bool reuseShapeId = !mFreeShapeIds.empty();
@@ -291,8 +290,8 @@ ShapeId Registry<EntityId, Method>::addShape(EntityId entityId,
     else
     {
         shapeId = mShapes.size();
-        DEBUG_ASSERT(shapeId == mShapeEntity.size());
-        DEBUG_ASSERT(shapeId == mShapeTreeHandles.size());
+        C2D_DEBUG_ASSERT(shapeId == mShapeEntity.size());
+        C2D_DEBUG_ASSERT(shapeId == mShapeTreeHandles.size());
     }
 
     auto& tree = treeFor(entity.mType);
@@ -334,10 +333,10 @@ ShapeId Registry<EntityId, Method>::addShape(EntityId entityId,
 template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::removeShape(ShapeId shapeId)
 {
-    DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
+    C2D_DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
     const EntityId entityId = mShapeEntity.at(shapeId);
 
-    DEBUG_ASSERT(mEntities.find(entityId) != mEntities.end(), "Entity with this ID does not exist");
+    C2D_DEBUG_ASSERT(mEntities.find(entityId) != mEntities.end(), "Entity with this ID does not exist");
     EntityInfo& entity = mEntities.at(entityId);
 
     const auto treeHandle = mShapeTreeHandles.at(shapeId);
@@ -347,14 +346,14 @@ void Registry<EntityId, Method>::removeShape(ShapeId shapeId)
     mFreeShapeIds.push_back(shapeId);
 
     const auto shapeIt = std::find(entity.mShapeIds.begin(), entity.mShapeIds.end(), shapeId);
-    DEBUG_ASSERT(shapeIt != entity.mShapeIds.end(), "Shape with this ID does not exist in the entity");
+    C2D_DEBUG_ASSERT(shapeIt != entity.mShapeIds.end(), "Shape with this ID does not exist in the entity");
     entity.mShapeIds.erase(shapeIt);
 }
 
 template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::setShapeActive(ShapeId shapeId, bool isActive)
 {
-    DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
+    C2D_DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
     mShapes[shapeId].mIsActive = isActive;
 }
 
@@ -362,13 +361,13 @@ template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::removeEntity(EntityId id)
 {
     auto entityIt = mEntities.find(id);
-    DEBUG_ASSERT(entityIt != mEntities.end(), "Entity with this ID does not exist");
+    C2D_DEBUG_ASSERT(entityIt != mEntities.end(), "Entity with this ID does not exist");
     auto& entity = entityIt->second;
 
     auto& tree = treeFor(entity.mType);
     for (const auto shapeId : entity.mShapeIds)
     {
-        DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
+        C2D_DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
         const auto treeHandle = mShapeTreeHandles[shapeId];
         tree.removeProxy(treeHandle);
         mFreeShapeIds.push_back(shapeId);
@@ -383,13 +382,13 @@ void Registry<EntityId, Method>::removeEntity(EntityId id)
 template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::teleportEntity(EntityId entityId, const Transform& transform)
 {
-    DEBUG_ASSERT(mEntities.find(entityId) != mEntities.end());
+    C2D_DEBUG_ASSERT(mEntities.find(entityId) != mEntities.end());
     EntityInfo& entity = mEntities.at(entityId);
     auto& tree = treeFor(entity.mType);
 
     for (const auto shapeId : entity.mShapeIds)
     {
-        DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
+        C2D_DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
         const auto treeHandle = mShapeTreeHandles[shapeId];
         auto& shape = mShapes[shapeId];
         mMoveFnc[shape.mMoveFncIndices.first][shape.mMoveFncIndices.second](shape, transform, tree, treeHandle);
@@ -404,7 +403,7 @@ void Registry<EntityId, Method>::teleportEntity(EntityId entityId, const Transfo
 template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::teleportEntity(EntityId entityId, Translation translation)
 {
-    DEBUG_ASSERT(mEntities.find(entityId) != mEntities.end());
+    C2D_DEBUG_ASSERT(mEntities.find(entityId) != mEntities.end());
     const EntityInfo& entity = mEntities.at(entityId);
 
     const auto deltaTranslation = translation - entity.mTransform.translation;
@@ -414,7 +413,7 @@ void Registry<EntityId, Method>::teleportEntity(EntityId entityId, Translation t
 template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::moveEntity(EntityId entityId, const Transform& delta)
 {
-    DEBUG_ASSERT(mEntities.find(entityId) != mEntities.end());
+    C2D_DEBUG_ASSERT(mEntities.find(entityId) != mEntities.end());
     auto& entity = mEntities.at(entityId);
     auto& tree = treeFor(entity.mType);
 
@@ -425,7 +424,7 @@ void Registry<EntityId, Method>::moveEntity(EntityId entityId, const Transform& 
 
     for (const auto shapeId : entity.mShapeIds)
     {
-        DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
+        C2D_DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
         const auto treeHandle = mShapeTreeHandles[shapeId];
         auto& shape = mShapes[shapeId];
         mMoveFnc[shape.mMoveFncIndices.first][shape.mMoveFncIndices.second](shape, entity.mTransform, tree, treeHandle);
@@ -435,13 +434,13 @@ void Registry<EntityId, Method>::moveEntity(EntityId entityId, const Transform& 
 template <typename EntityId, PartitioningMethod Method>
 void Registry<EntityId, Method>::moveEntity(EntityId id, Translation deltaTranslation)
 {
-    DEBUG_ASSERT(mEntities.find(id) != mEntities.end());
+    C2D_DEBUG_ASSERT(mEntities.find(id) != mEntities.end());
     auto& entity = mEntities.at(id);
     auto& tree = treeFor(entity.mType);
 
     for (const auto shapeId : entity.mShapeIds)
     {
-        DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
+        C2D_DEBUG_ASSERT(shapeId < mShapes.size(), "Shape ID out of bounds");
         const auto treeHandle = mShapeTreeHandles[shapeId];
         auto& shape = mShapes[shapeId];
         mTranslateFnc[shape.mTranslateFncIndex](shape, deltaTranslation, tree, treeHandle);
@@ -456,7 +455,7 @@ void Registry<EntityId, Method>::moveEntity(EntityId id, Translation deltaTransl
 template <typename EntityId, PartitioningMethod Method>
 Transform Registry<EntityId, Method>::getEntityTransform(EntityId id) const
 {
-    DEBUG_ASSERT(mEntities.find(id) != mEntities.end());
+    C2D_DEBUG_ASSERT(mEntities.find(id) != mEntities.end());
     const EntityInfo& entity = mEntities.at(id);
     return entity.mTransform;
 }
@@ -553,7 +552,7 @@ template <typename EntityId, PartitioningMethod Method>
 std::vector<typename Registry<EntityId, Method>::EntityCollision> Registry<EntityId, Method>::getCollisions(
     EntityId id) const
 {
-    DEBUG_ASSERT(mEntities.find(id) != mEntities.end());
+    C2D_DEBUG_ASSERT(mEntities.find(id) != mEntities.end());
     const EntityInfo& entity = mEntities.at(id);
 
     std::vector<std::pair<AABB, BitMaskType>> queries;
@@ -706,7 +705,7 @@ void Registry<EntityId, Method>::narrowPhaseCollision(ShapeId shapeAId,
     if (!manifold)
         return;
 
-    DEBUG_ASSERT(manifold->isColliding());
+    C2D_DEBUG_ASSERT(manifold->isColliding());
     outCollisionsInfo.emplace_back(EntityCollision{entityAId, entityBId, shapeAId, shapeBId, std::move(*manifold)});
 }
 
@@ -749,8 +748,8 @@ void Registry<EntityId, Method>::narrowPhaseCollisions(ShapeId shapeQueried,
 template <typename EntityId, PartitioningMethod Method>
 bool Registry<EntityId, Method>::areColliding(EntityId entityAId, EntityId entityBId) const
 {
-    DEBUG_ASSERT(mEntities.find(entityAId) != mEntities.end(), "Entity A does not exist");
-    DEBUG_ASSERT(mEntities.find(entityBId) != mEntities.end(), "Entity B does not exist");
+    C2D_DEBUG_ASSERT(mEntities.find(entityAId) != mEntities.end(), "Entity A does not exist");
+    C2D_DEBUG_ASSERT(mEntities.find(entityBId) != mEntities.end(), "Entity B does not exist");
 
     const auto& entityA = mEntities.at(entityAId);
     const auto& entityB = mEntities.at(entityBId);
